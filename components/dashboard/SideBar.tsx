@@ -37,7 +37,7 @@ const menuItems = [
   {
     icon: FaBuilding,
     label: "Organizaciones",
-    path: "/organizations",
+    path: "/dashboard/organizations",
   },
   {
     icon: FaFileAlt,
@@ -47,38 +47,62 @@ const menuItems = [
       {
         icon: FaFileInvoiceDollar,
         label: "Facturas",
-        path: "/documents/bills",
+        path: "/dashboard/documents/bills",
       },
       {
         icon: FaFileUpload,
         label: "Devoluciones de facturas",
-        path: "/documents/devolutions",
+        path: "/dashboard/documents/devolutions",
       },
-      { icon: FaShoppingCart, label: "Pedidos", path: "/documents/orders" },
+      {
+        icon: FaShoppingCart,
+        label: "Pedidos",
+        path: "/dashboard/documents/orders",
+      },
       {
         icon: FaClipboardList,
         label: "Presupuestos",
-        path: "/documents/budgets",
+        path: "/dashboard/documents/budgets",
       },
       {
         icon: FaTruck,
         label: "Notas de entrega",
-        path: "/documents/deliveryNotes",
+        path: "/dashboard/documents/deliveryNotes",
       },
     ],
   },
-  { icon: FaCreditCard, label: "Cobranzas", path: "/collections" },
-  { icon: FaUsers, label: "Visitas", path: "/visits" },
-  { icon: FaMapMarkerAlt, label: "Geolocalización", path: "/geolocalizaton" },
+  { icon: FaCreditCard, label: "Cobranzas", path: "/dashboard/collections" },
+  { icon: FaUsers, label: "Visitas", path: "/dashboard/visits" },
+  {
+    icon: FaMapMarkerAlt,
+    label: "Geolocalización",
+    path: "/dashboard/geolocalization",
+  },
   {
     icon: FaFolder,
     label: "Maestros",
     hasSubmenu: true,
     submenuItems: [
-      { icon: FaUserCheck, label: "Clientes", path: "/masters/clients" },
-      { icon: FaBookOpen, label: "Instancias", path: "/masters/instances" },
-      { icon: FaBoxOpen, label: "Productos", path: "/masters/products" },
-      { icon: FaLandmark, label: "Servicios", path: "/masters/services" },
+      {
+        icon: FaUserCheck,
+        label: "Clientes",
+        path: "/dashboard/masters/clients",
+      },
+      {
+        icon: FaBookOpen,
+        label: "Instancias",
+        path: "/dashboard/masters/instances",
+      },
+      {
+        icon: FaBoxOpen,
+        label: "Productos",
+        path: "/dashboard/masters/products",
+      },
+      {
+        icon: FaLandmark,
+        label: "Servicios",
+        path: "/dashboard/masters/services",
+      },
     ],
   },
   {
@@ -89,22 +113,22 @@ const menuItems = [
       {
         icon: FaChartLine,
         label: "Operaciones",
-        path: "/statistics/operations",
+        path: "/dashboard/statistics/operations",
       },
     ],
   },
-  { icon: FaChartPie, label: "Reportes", path: "/reports" },
+  { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
   {
     icon: FaCog,
     label: "Configuración",
     hasSubmenu: true,
     submenuItems: [
-      { icon: FaUser, label: "General", path: "/settings/general" },
-      { icon: FaShieldAlt, label: "Metas", path: "/settings/goals" },
+      { icon: FaUser, label: "General", path: "/dashboard/settings/general" },
+      { icon: FaShieldAlt, label: "Metas", path: "/dashboard/settings/goals" },
       {
         icon: FaBell,
         label: "Planificación",
-        path: "/settings/planification",
+        path: "/dashboard/settings/planification",
       },
     ],
   },

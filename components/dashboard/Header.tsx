@@ -1,3 +1,5 @@
+"use client";
+
 import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation"; // Importa useRouter
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -16,6 +19,13 @@ const DashboardHeader = ({
   onToggleSidebar,
   isSidebarOpen,
 }: DashboardHeaderProps) => {
+  const router = useRouter(); // Obtiene el router
+
+  const handleLogout = () => {
+    // Aquí puedes agregar lógica adicional para cerrar sesión si es necesario
+    router.push("http://localhost:3000/"); // Redirige a la página principal
+  };
+
   return (
     <header className="bg-white/95 backdrop-blur-sm border-b border-gray_xxl px-8 py-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -68,7 +78,10 @@ const DashboardHeader = ({
               align="end"
               className="w-48 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
             >
-              <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1">
+              <DropdownMenuItem
+                className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1"
+                onClick={handleLogout} // Añade el manejador de eventos
+              >
                 Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>
