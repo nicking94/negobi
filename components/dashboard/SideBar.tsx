@@ -1,124 +1,254 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-
-import { Menu, Package2, FileText, LayoutDashboard } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Button } from "../ui/button";
+import {
+  FaHome,
+  FaBuilding,
+  FaFileAlt,
+  FaFileInvoiceDollar,
+  FaFileUpload,
+  FaShoppingCart,
+  FaClipboardList,
+  FaTruck,
+  FaCreditCard,
+  FaUsers,
+  FaMapMarkerAlt,
+  FaUserCheck,
+  FaBookOpen,
+  FaBoxOpen,
+  FaLandmark,
+  FaChartBar,
+  FaChartLine,
+  FaChartPie,
+  FaCog,
+  FaUser,
+  FaShieldAlt,
+  FaBell,
+  FaFolder,
+} from "react-icons/fa";
+import { HiChevronRight, HiChevronDown } from "react-icons/hi";
+import { cn } from "@/lib/utils";
+import { useSidebar } from "@/context/SidebarContext";
 
-export function DashboardSidebar() {
+const menuItems = [
+  { icon: FaHome, label: "Inicio", path: "/dashboard" },
+  {
+    icon: FaBuilding,
+    label: "Organizaciones",
+    path: "/organizations",
+  },
+  {
+    icon: FaFileAlt,
+    label: "Documentos",
+    hasSubmenu: true,
+    submenuItems: [
+      {
+        icon: FaFileInvoiceDollar,
+        label: "Facturas",
+        path: "/documents/bills",
+      },
+      {
+        icon: FaFileUpload,
+        label: "Devoluciones de facturas",
+        path: "/documents/devolutions",
+      },
+      { icon: FaShoppingCart, label: "Pedidos", path: "/documents/orders" },
+      {
+        icon: FaClipboardList,
+        label: "Presupuestos",
+        path: "/documents/budgets",
+      },
+      {
+        icon: FaTruck,
+        label: "Notas de entrega",
+        path: "/documents/deliveryNotes",
+      },
+    ],
+  },
+  { icon: FaCreditCard, label: "Cobranzas", path: "/collections" },
+  { icon: FaUsers, label: "Visitas", path: "/visits" },
+  { icon: FaMapMarkerAlt, label: "Geolocalización", path: "/geolocalizaton" },
+  {
+    icon: FaFolder,
+    label: "Maestros",
+    hasSubmenu: true,
+    submenuItems: [
+      { icon: FaUserCheck, label: "Clientes", path: "/masters/clients" },
+      { icon: FaBookOpen, label: "Instancias", path: "/masters/instances" },
+      { icon: FaBoxOpen, label: "Productos", path: "/masters/products" },
+      { icon: FaLandmark, label: "Servicios", path: "/masters/services" },
+    ],
+  },
+  {
+    icon: FaChartBar,
+    label: "Estadísticas de ventas",
+    hasSubmenu: true,
+    submenuItems: [
+      {
+        icon: FaChartLine,
+        label: "Operaciones",
+        path: "/statistics/operations",
+      },
+    ],
+  },
+  { icon: FaChartPie, label: "Reportes", path: "/reports" },
+  {
+    icon: FaCog,
+    label: "Configuración",
+    hasSubmenu: true,
+    submenuItems: [
+      { icon: FaUser, label: "General", path: "/settings/general" },
+      { icon: FaShieldAlt, label: "Metas", path: "/settings/goals" },
+      {
+        icon: FaBell,
+        label: "Planificación",
+        path: "/settings/planification",
+      },
+    ],
+  },
+];
+
+const Sidebar = () => {
+  const { sidebarOpen } = useSidebar();
+  const [openDropdowns, setOpenDropdowns] = useState<number[]>([]);
   const pathname = usePathname();
 
-  const links = [
-    {
-      href: "/dashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      label: "Dashboard",
-    },
-    {
-      href: "/dashboard/documentos/facturas",
-      icon: <FileText className="h-5 w-5" />,
-      label: "Documentos",
-      subItems: [
-        {
-          href: "/dashboard/documentos/facturas",
-          label: "Facturas",
-        },
-      ],
-    },
-  ];
+  const toggleDropdown = (index: number) => {
+    setOpenDropdowns((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  // Función para verificar si un item está activo
+  const isItemActive = (path?: string) => {
+    if (!path) return false;
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   return (
-    <>
-      {/* Mobile */}
-      <Sheet>
-        <SheetTrigger asChild className="lg:hidden">
-          <Button variant="outline" size="icon" className="shrink-0">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="flex flex-col">
-          <nav className="grid gap-2 text-lg font-medium">
-            <SheetClose asChild>
-              <Link
-                href="#"
-                className="flex items-center gap-2 text-lg font-semibold mb-6"
-              >
-                <Package2 className="h-6 w-6" />
-                <span>Negobi</span>
-              </Link>
-            </SheetClose>
-            {links.map((link) => (
-              <SheetClose key={link.href} asChild>
-                <Link
-                  href={link.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                    pathname === link.href
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-primary"
-                  }`}
-                >
-                  {link.icon}
-                  {link.label}
-                </Link>
-              </SheetClose>
-            ))}
-          </nav>
-        </SheetContent>
-      </Sheet>
+    <div
+      className={cn(
+        "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out",
+        sidebarOpen ? "w-72" : "w-0 opacity-0 overflow-hidden"
+      )}
+    >
+      <nav className="flex-1 py-6 overflow-y-auto">
+        <ul className="space-y-1 px-4">
+          {menuItems.map((item, index) => (
+            <li key={index}>
+              {item.hasSubmenu ? (
+                <>
+                  <button
+                    onClick={() => toggleDropdown(index)}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+                      isItemActive(item.path)
+                        ? "bg-gradient-to-r from-green_m to-green_b text-white shadow-lg shadow-green_m/25"
+                        : "text-gray_b hover:bg-gray_xxl hover:text-black hover:shadow-md"
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "w-5 h-5 transition-transform duration-300",
+                        isItemActive(item.path)
+                          ? "text-white"
+                          : "text-gray_m group-hover:text-gray_b",
+                        "group-hover:scale-110"
+                      )}
+                    />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {openDropdowns.includes(index) ? (
+                      <HiChevronDown
+                        className={cn(
+                          "w-4 h-4 transition-all duration-300",
+                          isItemActive(item.path)
+                            ? "text-white"
+                            : "text-gray_m group-hover:text-gray_b"
+                        )}
+                      />
+                    ) : (
+                      <HiChevronRight
+                        className={cn(
+                          "w-4 h-4 transition-all duration-300",
+                          isItemActive(item.path)
+                            ? "text-white"
+                            : "text-gray_m group-hover:text-gray_b",
+                          "group-hover:translate-x-1"
+                        )}
+                      />
+                    )}
+                  </button>
 
-      {/* Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r bg-background">
-        <div className="flex h-14 items-center border-b px-4">
-          <Link href="#" className="flex items-center gap-2 font-semibold">
-            <Package2 className="h-6 w-6" />
-            <span>Negobi</span>
-          </Link>
-        </div>
-        <nav className="flex-1 overflow-auto py-2">
-          <div className="grid gap-1 px-2">
-            {links.map((link) => (
-              <div key={link.href}>
-                <Link
-                  href={link.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                    pathname === link.href
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-primary"
-                  }`}
-                >
-                  {link.icon}
-                  {link.label}
-                </Link>
-                {link.subItems && (
-                  <div className="ml-8 mt-1 space-y-1">
-                    {link.subItems.map((subItem) => (
-                      <Link
-                        key={subItem.href}
-                        href={subItem.href}
-                        className={`block rounded-lg px-3 py-2 text-sm transition-all ${
-                          pathname === subItem.href
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:text-primary"
-                        }`}
-                      >
-                        {subItem.label}
-                      </Link>
-                    ))}
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out",
+                      openDropdowns.includes(index)
+                        ? "max-h-48 opacity-100 mt-2"
+                        : "max-h-0 opacity-0"
+                    )}
+                  >
+                    <ul className="space-y-1 ml-6 pl-4 border-l-2 border-slate-200">
+                      {item.submenuItems?.map((subItem, subIndex) => (
+                        <li key={subIndex}>
+                          <Link
+                            href={subItem.path}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-300 group",
+                              isItemActive(subItem.path)
+                                ? "text-black bg-gray_xl"
+                                : "text-gray_b hover:text-black hover:bg-gray_xxl"
+                            )}
+                          >
+                            <subItem.icon
+                              className={cn(
+                                "w-4 h-4 transition-colors duration-300",
+                                isItemActive(subItem.path)
+                                  ? "text-gray_b"
+                                  : "text-gray_m group-hover:text-gray_b"
+                              )}
+                            />
+                            <span className="text-left">{subItem.label}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </nav>
-      </aside>
-    </>
+                </>
+              ) : (
+                <Link
+                  href={item.path || "#"}
+                  className={cn(
+                    "w-full flex items-center gap-4 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+                    isItemActive(item.path)
+                      ? "bg-gradient-to-r from-green_m to-green_b text-white shadow-lg shadow-green_m/25"
+                      : "text-gray_b hover:bg-gray_xxl hover:text-black hover:shadow-md"
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "w-5 h-5 transition-transform duration-300",
+                      isItemActive(item.path)
+                        ? "text-white"
+                        : "text-gray_m group-hover:text-gray_b",
+                      "group-hover:scale-110"
+                    )}
+                  />
+                  <span className="flex-1 text-left">{item.label}</span>
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="p-4 border-t border-gray_xxl">
+        <div className="text-xs text-gray_m text-center">
+          © Buisuch Technology <br /> Todos los derechos reservados{" "}
+        </div>
+      </div>
+    </div>
   );
-}
+};
+export default Sidebar;

@@ -23,28 +23,31 @@ const Hero = () => {
               desde la toma de pedidos hasta la entrega final.
             </p>
             <div className="flex flex-col-reverse lg:flex-row  gap-4">
-              <Button
-                variant={"default"}
-                className="bg-white text-green_b hover:bg-white  transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
+              <Button variant="outline" asChild>
                 <a
-                  href={
-                    "https://negobi.nyc3.digitaloceanspaces.com/negobi-sync/latest/Nesync-1.6.4-setup.exe"
-                  }
+                  href="https://negobi.nyc3.digitaloceanspaces.com/negobi-sync/latest/Nesync-1.6.4-setup.exe"
                   rel="noopener noreferrer"
+                  className="text-black backdrop-blur-md border-green_m "
                 >
                   Descargar Sincronizador
                 </a>
               </Button>
-              <div className="flex justify-center cursor-pointer transition-all duration-300 transform hover:scale-105">
+
+              <a
+                href="https://negobi.nyc3.digitaloceanspaces.com/negobi-app/production/negobi-1.0.47.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer inline-block transition-all duration-300 hover:scale-105 relative"
+              >
                 <Image
                   src={playIcon}
-                  alt="Play Store"
+                  alt="Descargar App Negobi"
                   width={120}
                   height={120}
-                  className="mr-2"
+                  className="mr-2 pointer-events-none"
+                  priority
                 />
-              </div>
+              </a>
             </div>
           </div>
           <div className="hidden lg:block w-1/2">

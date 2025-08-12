@@ -7,8 +7,8 @@ export default function RegisterPage() {
       <div className="text-white font-bold mb-4">LOGO AQUÍ</div>
       <div className=" w-full max-w-lg p-8 space-y-6 bg-gray_xxl rounded-lg shadow-lg shadow-green_b border border-green_b">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-semibold">Crear cuenta</h1>
-          <p className="text-gray_b">Completa el formulario para registrarte</p>
+          <h1 className="text-3xl font-semibold">Registrar Compañía</h1>
+          <p className="text-gray_b">Completa los datos de tu compañía</p>
         </div>
         <RegisterForm />
         <div className="text-center text-md">

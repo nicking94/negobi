@@ -68,10 +68,10 @@ const Features = () => {
     <section className="py-20 px-4 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-4">
             Nuestra <span className="text-green_m">Propuesta de Valor</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray_m max-w-3xl mx-auto">
             Soluciones diseñadas para optimizar cada aspecto de tu fuerza de
             ventas
           </p>
@@ -83,8 +83,8 @@ const Features = () => {
               key={index}
               className="group bg-gray-50 p-8 rounded-xl hover:bg-white transition-all duration-300 border border-gray-100 hover:border-green_m/30 hover:shadow-lg"
             >
-              <div className="bg-green-100 group-hover:bg-green_m w-14 h-14 rounded-full flex items-center justify-center mb-6 transition-all duration-300">
-                <div className="text-green_m group-hover:text-white transition-all duration-300">
+              <div className="bg-green_b text-white group-hover:bg-green_m w-14 h-14 rounded-full flex items-center justify-center mb-6 transition-all duration-300">
+                <div className="text-green_white transition-all duration-300">
                   {feature.icon}
                 </div>
               </div>

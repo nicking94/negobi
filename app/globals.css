@@ -40,11 +40,11 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --color-green_xxl: #d9f0d9;
-  --color-green_xl: #9ace93;
-  --color-green_l: #6fa86d;
-  --color-green_m: #3f8c5a;
-  --color-green_b: #256843;
+  --color-green_xxl: #b2f5ea;
+  --color-green_xl: #81e6d9;
+  --color-green_l: #26a69a;
+  --color-green_m: #319795;
+  --color-green_b: #00796b;
 
   --color-red_xxl: #f8d7d4;
   --color-red_xl: #ea7e75;
@@ -95,7 +95,7 @@
   --sidebar-ring: var(--color-green_l);
 }
 input {
-  @apply bg-white border-green-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-green-500;
+  @apply bg-white border-teal-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-teal-700;
 }
 button {
   @apply cursor-pointer;
