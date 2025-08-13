@@ -9,37 +9,37 @@ import Sidebar from "@/components/dashboard/SideBar";
 const Dashboard = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/30">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl  to-green_xxl/30">
       <Sidebar />
 
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 w-full">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-180px)]">
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm flex flex-col">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray_xxl  to-gray_l/20 overflow-hidden">
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:gap-8 h-full">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm flex flex-col h-full">
+              <CardHeader className="pb-2 md:pb-3 lg:pb-4">
+                <CardTitle className="text-base md:text-lg font-semibold text-slate-800 flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   Compras mensuales 2025
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
+              <CardContent className="flex-1 p-2 md:p-4 lg:p-6 overflow-auto">
                 <MonthlyPurchasesChart />
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm flex flex-col">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm flex flex-col h-full">
+              <CardHeader className="pb-2 md:pb-3 lg:pb-4">
+                <CardTitle className="text-base md:text-lg font-semibold text-slate-800 flex items-center gap-2">
                   <div className="w-2 h-2 bg-green_b rounded-full"></div>
                   Ventas mensuales 2025
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
+              <CardContent className="flex-1 p-2 md:p-4 lg:p-6 overflow-auto">
                 <MonthlySalesChart />
               </CardContent>
             </Card>

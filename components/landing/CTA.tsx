@@ -4,7 +4,6 @@ import { Button } from "../ui/button";
 const CTA = () => {
   return (
     <section className="relative py-20 px-4 bg-gradient-to-r from-green_m to-green_b text-white overflow-hidden">
-      {/* Efectos de fondo */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-green_m/30 to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-1/2 h-full bg-gradient-to-r from-green_b/30 to-transparent"></div>

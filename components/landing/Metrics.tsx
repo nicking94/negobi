@@ -36,8 +36,8 @@ const Metrics = () => {
   const [counters, setCounters] = useState(metricsData.map(() => 0));
 
   useEffect(() => {
-    const duration = 2000; // Duración total de la animación en ms
-    const steps = 50; // Número de pasos de la animación
+    const duration = 2000;
+    const steps = 50;
     const incrementTimes = duration / steps;
 
     metricsData.forEach((metric, index) => {
