@@ -252,7 +252,7 @@ function DataTable({ data }: { data: Organization[] }) {
   });
 
   return (
-    <div className="bg-white  backdrop-blur-sm  shadow-xl rounded-md flex-1 overflow-hidden flex flex-col">
+    <div className="bg-white h-[80vh] max-h-[80vh] backdrop-blur-sm  shadow-xl rounded-md flex-1 overflow-hidden flex flex-col">
       <div className="rounded-md overflow-hidden flex flex-col h-full">
         <div className="flex-1 overflow-auto">
           <table className="min-w-full">
