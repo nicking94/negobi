@@ -32,23 +32,27 @@ export function RecoveryForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className="text-sm text-[var(--color-gray_b)]">
+                Email
+              </FormLabel>
               <FormControl>
                 <Input placeholder="tu@email.com" {...field} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
-        <div className="flex justify-center">
-          {" "}
-          <Button type="submit" className="w-full">
+        <div className="flex justify-center pt-2">
+          <Button
+            type="submit"
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
+          >
             Enviar
           </Button>
         </div>

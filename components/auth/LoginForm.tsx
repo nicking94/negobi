@@ -44,17 +44,19 @@ export function LoginForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className="text-sm text-[var(--color-gray_b)]">
+                Email
+              </FormLabel>
               <FormControl>
                 <Input placeholder="tu@email.com" {...field} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
@@ -63,7 +65,9 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contraseña</FormLabel>
+              <FormLabel className="text-sm text-[var(--color-gray_b)]">
+                Contraseña
+              </FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input
@@ -84,7 +88,7 @@ export function LoginForm() {
                   </button>
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
@@ -92,25 +96,33 @@ export function LoginForm() {
           control={form.control}
           name="rememberMe"
           render={({ field }) => (
-            <FormItem className="flex items-center ">
+            <FormItem className="flex items-center space-x-2">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  className="border-2 border-green_l"
+                  className="border-2 border-[var(--color-green_l)]"
                 />
               </FormControl>
-              <FormLabel className="font-normal text-sm">Recuérdame</FormLabel>
+              <FormLabel className="text-sm font-normal text-[var(--color-gray_b)]">
+                Recuérdame
+              </FormLabel>
             </FormItem>
           )}
         />
-        <div className="w-full flex justify-center">
-          <Button type="submit" className="w-full">
+        <div className="w-full flex justify-center pt-2">
+          <Button
+            type="submit"
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
+          >
             Iniciar sesión
           </Button>
         </div>
         <div className="mt-4 text-center text-sm">
-          <a href="/recovery" className="text-green_b hover:underline">
+          <a
+            href="/recovery"
+            className="text-[var(--color-green_b)] hover:underline"
+          >
             ¿Olvidaste tu contraseña?
           </a>
         </div>
