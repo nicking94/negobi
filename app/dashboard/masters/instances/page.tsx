@@ -25,10 +25,9 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 
 export type Instance = {
-  id: string;
   code: string;
+  name: string;
   description: string;
-  products: number;
 };
 
 const columns: ColumnDef<Instance>[] = [
@@ -37,6 +36,13 @@ const columns: ColumnDef<Instance>[] = [
     header: "Código",
     cell: ({ row }) => (
       <div className="font-medium min-w-[150px]">{row.getValue("code")}</div>
+    ),
+  },
+  {
+    accessorKey: "name",
+    header: "Nombre",
+    cell: ({ row }) => (
+      <div className="font-medium min-w-[150px]">{row.getValue("name")}</div>
     ),
   },
   {
@@ -94,89 +100,27 @@ const InstancesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [instanceCode, setInstanceCode] = useState("");
+  const [instanceName, setInstanceName] = useState("");
   const [instanceDescription, setInstanceDescription] = useState("");
   const [instances, setInstances] = useState<Instance[]>([
     {
-      id: "1",
       code: "INST-001",
+      name: "Instancia principal de producción",
       description: "Instancia principal de producción",
-      products: 42,
     },
     {
-      id: "2",
       code: "INST-002",
+      name: "Instancia de pruebas y desarrollo",
       description: "Instancia de pruebas y desarrollo",
-      products: 15,
-    },
-    {
-      id: "3",
-      code: "INST-003",
-      description: "Instancia de demostración para clientes",
-      products: 8,
-    },
-    {
-      id: "4",
-      code: "INST-004",
-      description: "Instancia de backup",
-      products: 42,
-    },
-    {
-      id: "5",
-      code: "INST-005",
-      description: "Instancia de staging",
-      products: 25,
-    },
-    {
-      id: "6",
-      code: "INST-006",
-      description: "Instancia de QA",
-      products: 18,
-    },
-    {
-      id: "7",
-      code: "INST-007",
-      description: "Instancia de desarrollo móvil",
-      products: 12,
-    },
-    {
-      id: "8",
-      code: "INST-008",
-      description: "Instancia de integración continua",
-      products: 7,
-    },
-    {
-      id: "9",
-      code: "INST-009",
-      description: "Instancia de pre-producción",
-      products: 35,
-    },
-    {
-      id: "10",
-      code: "INST-010",
-      description: "Instancia de análisis de datos",
-      products: 22,
-    },
-    {
-      id: "11",
-      code: "INST-011",
-      description: "Instancia de inteligencia artificial",
-      products: 15,
-    },
-    {
-      id: "12",
-      code: "INST-012",
-      description: "Instancia de machine learning",
-      products: 9,
     },
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newInstance: Instance = {
-      id: (instances.length + 1).toString(),
       code: instanceCode,
+      name: instanceName,
       description: instanceDescription,
-      products: 0,
     };
 
     setInstances([...instances, newInstance]);
@@ -235,6 +179,19 @@ const InstancesPage = () => {
                   className="col-span-1 sm:col-span-3"
                   required
                   placeholder="Ej: INST-001"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="sm:text-right">
+                  Nombre
+                </Label>
+                <Input
+                  id="name"
+                  value={instanceName}
+                  onChange={(e) => setInstanceName(e.target.value)}
+                  className="col-span-1 sm:col-span-3"
+                  required
+                  placeholder="Nombre de la instancia"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">

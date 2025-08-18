@@ -93,7 +93,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] ",
         className
       )}
       {...props}
@@ -114,7 +114,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  className = "bg-white h-[75vh] max-h-[75vh] md:h-[80vh] md:max-h-[80vh]",
+  className = "bg-white max-h-[75vh] md:max-h-[80vh]",
   headerClassName = "bg-green_m text-white font-semibold",
   rowClassName = "bg-white hover:bg-green_xxl/20 border-b border-gray_xxl",
   cellClassName = "py-3 px-4 text-left",
@@ -138,7 +138,7 @@ export function DataTable<TData, TValue>({
     <div className={cn("flex flex-col ", className)}>
       <div className="rounded-md overflow-hidden flex flex-col">
         <div className=" overflow-auto">
-          <Table className=" min-w-full">
+          <Table>
             <TableHeader className="sticky top-0 z-10 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -165,11 +165,7 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} className={rowClassName}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cellClassName}
-                        style={{ width: `${cell.column.getSize()}px` }}
-                      >
+                      <TableCell key={cell.id} className={cellClassName}>
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -180,10 +176,7 @@ export function DataTable<TData, TValue>({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className=" text-center">
                     {noResultsText}
                   </TableCell>
                 </TableRow>
