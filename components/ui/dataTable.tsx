@@ -67,7 +67,7 @@ export function DataTable<TData, TValue>({
       sorting,
     },
   });
-
+  //comentario para guardar cambios en gh
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <div className="rounded-md overflow-hidden flex flex-col h-full">
