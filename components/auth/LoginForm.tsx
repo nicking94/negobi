@@ -17,15 +17,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import useLogin from "@/hooks/auth/useLogin";
+import { Toaster } from "sonner";
 
 const formSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  taxId: z.string().min(1, "El RUC debe tener al menos 10 caracteres"),
   rememberMe: z.boolean().optional(),
 });
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const { onLogin } = useLogin();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -33,17 +37,22 @@ export function LoginForm() {
     defaultValues: {
       email: "",
       password: "",
+      taxId: "",
       rememberMe: false,
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    router.push("/dashboard");
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const { email, password, taxId} = values;
+    const result = await onLogin({ email, password, legal_tax_id: taxId });
+    if(result === 200){ 
+      router.push("/dashboard");
+    }
   }
 
   return (
     <Form {...form}>
+      <Toaster />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
@@ -87,6 +96,21 @@ export function LoginForm() {
                     )}
                   </button>
                 </div>
+              </FormControl>
+              <FormMessage className="text-xs text-[var(--color-red_l)]" />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="taxId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm text-[var(--color-gray_b)]">
+                RUC
+              </FormLabel>
+              <FormControl>
+                <Input placeholder="12345556" {...field} />
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
