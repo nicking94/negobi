@@ -24,6 +24,14 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 
+// 🔥 React Hook Form + Zod
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import usePostOrganizations from "@/hooks/organizations/useAddOrganization";
+import useGetOrganizations from "@/hooks/organizations/useGetOrganizations";
+import { toast, Toaster } from "sonner";
+
 export type Organization = {
   id: string;
   name: string;
@@ -31,6 +39,25 @@ export type Organization = {
   roles: string[];
   logo?: string;
 };
+
+// ✅ Schema de validación con Zod
+const organizationSchema = z.object({
+  name: z
+    .string()
+    .min(3, "El nombre debe tener al menos 3 caracteres"),
+  ruc: z
+    .string()
+    .min(10, "RUC inválido")
+    .max(13, "RUC inválido"),
+  email: z.string().email("Email inválido"),
+  phone: z
+    .string()
+    .min(7, "Teléfono inválido")
+    .max(15, "Teléfono inválido"),
+});
+
+// Tipo inferido del schema
+type OrganizationForm = z.infer<typeof organizationSchema>;
 
 const columns: ColumnDef<Organization>[] = [
   {
@@ -41,40 +68,50 @@ const columns: ColumnDef<Organization>[] = [
     ),
   },
   {
-    accessorKey: "companies",
-    header: "Empresas",
+    accessorKey: "legal_tax_id",
+    header: "NIT",
     cell: ({ row }) => {
-      const companies = row.getValue("companies") as string[];
-      return (
-        <div className="flex flex-wrap gap-1">
-          {companies.map((company, index) => (
-            <span
-              key={index}
-              className="text-xs bg-gray_xxl px-2 py-1 rounded whitespace-nowrap"
-            >
-              {company}
-            </span>
-          ))}
-        </div>
+      const nit = row.getValue("legal_tax_id") as string | null;
+      return nit ? (
+        <span>{nit}</span>
+      ) : (
+        <span className="text-gray-400 text-sm">Sin NIT</span>
       );
     },
   },
   {
-    accessorKey: "roles",
-    header: "Roles",
+    accessorKey: "contact_email",
+    header: "Correo",
     cell: ({ row }) => {
-      const roles = row.getValue("roles") as string[];
-      return (
-        <div className="flex flex-wrap gap-1">
-          {roles.map((role, index) => (
-            <span
-              key={index}
-              className="text-xs bg-green_xxl px-2 py-1 rounded whitespace-nowrap"
-            >
-              {role}
-            </span>
-          ))}
-        </div>
+      const email = row.getValue("contact_email") as string | null;
+      return email ? (
+        <span>{email}</span>
+      ) : (
+        <span className="text-gray-400 text-sm">Sin correo</span>
+      );
+    },
+  },
+  {
+    accessorKey: "main_phone",
+    header: "Teléfono",
+    cell: ({ row }) => {
+      const phone = row.getValue("main_phone") as string | null;
+      return phone ? (
+        <span>{phone}</span>
+      ) : (
+        <span className="text-gray-400 text-sm">Sin teléfono</span>
+      );
+    },
+  },
+  {
+    accessorKey: "is_active",
+    header: "Estado",
+    cell: ({ row }) => {
+      const active = row.getValue("is_active") as boolean;
+      return active ? (
+        <span className="text-green-600 font-medium">Activo</span>
+      ) : (
+        <span className="text-red-600 font-medium">Inactivo</span>
       );
     },
   },
@@ -111,214 +148,46 @@ const columns: ColumnDef<Organization>[] = [
 const OrganizationsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [organizationName, setOrganizationName] = useState("");
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([
-    {
-      id: "1",
-      name: "Tech Solutions Inc.",
-      companies: ["Tech Solutions USA", "Tech Solutions Europe"],
-      roles: ["Administrador", "Desarrollador", "QA"],
-      logo: "/logos/tech-solutions.png",
-    },
-    {
-      id: "2",
-      name: "Global Finance Group",
-      companies: ["GFG Investments", "GFG Bank", "GFG Insurance"],
-      roles: ["Analista Financiero", "Gerente", "Asesor"],
-      logo: "/logos/global-finance.png",
-    },
-    {
-      id: "3",
-      name: "HealthPlus Systems",
-      companies: ["HealthPlus Clinics", "HealthPlus Pharma"],
-      roles: ["Médico", "Enfermero", "Administrativo"],
-      logo: "/logos/healthplus.png",
-    },
-    {
-      id: "4",
-      name: "EduFuture",
-      companies: ["EduFuture Schools", "EduFuture Online"],
-      roles: ["Profesor", "Coordinador", "Tutor"],
-      logo: "/logos/edufuture.png",
-    },
-    {
-      id: "5",
-      name: "GreenEnergy Corp",
-      companies: ["GreenEnergy Solar", "GreenEnergy Wind"],
-      roles: ["Ingeniero", "Técnico", "Ventas"],
-      logo: "/logos/greenenergy.png",
-    },
-    {
-      id: "6",
-      name: "AutoMasters",
-      companies: ["AutoMasters Dealership", "AutoMasters Parts"],
-      roles: ["Vendedor", "Mecánico", "Gerente"],
-      logo: "/logos/automasters.png",
-    },
-    {
-      id: "7",
-      name: "BuildRight",
-      companies: ["BuildRight Construction", "BuildRight Materials"],
-      roles: ["Arquitecto", "Ingeniero Civil", "Obrero"],
-      logo: "/logos/buildright.png",
-    },
-    {
-      id: "8",
-      name: "FashionHub",
-      companies: ["FashionHub Retail", "FashionHub Design"],
-      roles: ["Diseñador", "Vendedor", "Marketing"],
-      logo: "/logos/fashionhub.png",
-    },
-    {
-      id: "9",
-      name: "LogiTrans",
-      companies: ["LogiTrans Shipping", "LogiTrans Warehousing"],
-      roles: ["Coordinador", "Conductor", "Almacenista"],
-      logo: "/logos/logitrans.png",
-    },
-    {
-      id: "10",
-      name: "MediaSphere",
-      companies: ["MediaSphere Productions", "MediaSphere Digital"],
-      roles: ["Editor", "Diseñador Gráfico", "Productor"],
-      logo: "/logos/mediasphere.png",
-    },
-    {
-      id: "11",
-      name: "AgroViva",
-      companies: ["AgroViva Farms", "AgroViva Exports"],
-      roles: ["Agrónomo", "Supervisor", "Técnico Agrícola"],
-      logo: "/logos/agroviva.png",
-    },
-    {
-      id: "12",
-      name: "Tourismo",
-      companies: ["Tourismo Travel", "Tourismo Hotels"],
-      roles: ["Guía", "Recepcionista", "Gerente"],
-      logo: "/logos/tourismo.png",
-    },
-    {
-      id: "13",
-      name: "LegalTrust",
-      companies: ["LegalTrust Law Firm", "LegalTrust Consulting"],
-      roles: ["Abogado", "Asistente Legal", "Paralegal"],
-      logo: "/logos/legaltrust.png",
-    },
-    {
-      id: "14",
-      name: "TechNova",
-      companies: ["TechNova Software", "TechNova Cloud"],
-      roles: ["Desarrollador", "QA Tester", "DevOps"],
-      logo: "/logos/technova.png",
-    },
-    {
-      id: "15",
-      name: "BeautyCare",
-      companies: ["BeautyCare Salons", "BeautyCare Products"],
-      roles: ["Estilista", "Cosmetólogo", "Vendedor"],
-      logo: "/logos/beautycare.png",
-    },
-    {
-      id: "16",
-      name: "SportLife",
-      companies: ["SportLife Gyms", "SportLife Nutrition"],
-      roles: ["Entrenador", "Nutricionista", "Recepcionista"],
-      logo: "/logos/sportlife.png",
-    },
-    {
-      id: "17",
-      name: "HomeSweet",
-      companies: ["HomeSweet Realty", "HomeSweet Property Management"],
-      roles: ["Agente", "Administrador", "Corredor"],
-      logo: "/logos/homesweet.png",
-    },
-    {
-      id: "18",
-      name: "PetFriends",
-      companies: ["PetFriends Clinics", "PetFriends Stores"],
-      roles: ["Veterinario", "Asistente", "Vendedor"],
-      logo: "/logos/petfriends.png",
-    },
-    {
-      id: "19",
-      name: "CreativeMinds",
-      companies: ["CreativeMinds Advertising", "CreativeMinds PR"],
-      roles: ["Diseñador", "Copywriter", "Estratega"],
-      logo: "/logos/creativeminds.png",
-    },
-    {
-      id: "20",
-      name: "SecureNet",
-      companies: ["SecureNet Cybersecurity", "SecureNet IT"],
-      roles: ["Analista de Seguridad", "Soporte Técnico", "Consultor"],
-      logo: "/logos/securenet.png",
-    },
-    {
-      id: "21",
-      name: "OceanBlue",
-      companies: ["OceanBlue Shipping", "OceanBlue Logistics"],
-      roles: ["Operador", "Planificador", "Agente"],
-      logo: "/logos/oceanblue.png",
-    },
-    {
-      id: "22",
-      name: "EduTech",
-      companies: ["EduTech Solutions", "EduTech Labs"],
-      roles: [
-        "Desarrollador Educativo",
-        "Diseñador Instruccional",
-        "Consultor",
-      ],
-      logo: "/logos/edutech.png",
-    },
-    {
-      id: "23",
-      name: "GreenLife",
-      companies: ["GreenLife Organic", "GreenLife Markets"],
-      roles: ["Gerente de Tienda", "Comprador", "Vendedor"],
-      logo: "/logos/greenlife.png",
-    },
-    {
-      id: "24",
-      name: "FoodExpress",
-      companies: ["FoodExpress Delivery", "FoodExpress Kitchens"],
-      roles: ["Repartidor", "Cocinero", "Operador"],
-      logo: "/logos/foodexpress.png",
-    },
-    {
-      id: "25",
-      name: "SmartHome",
-      companies: ["SmartHome Devices", "SmartHome Installations"],
-      roles: ["Técnico", "Vendedor", "Diseñador"],
-      logo: "/logos/smarthome.png",
-    },
-  ]);
+ 
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setLogoFile(e.target.files[0]);
+  // ⛏️ React Hook Form setup
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<OrganizationForm>({
+    resolver: zodResolver(organizationSchema),
+    defaultValues: {
+      name: "",
+      ruc: "",
+      email: "",
+      phone: "",
+    },
+  });
+  const { newOrganizations } = usePostOrganizations()
+  const { organizationsResponse,setModified } = useGetOrganizations()
+  const onSubmit = async (values: OrganizationForm) => {
+    const {name,ruc,email,phone} = values;
+    const newData = {name,contact_email: email,legal_tax_id:ruc,main_phone:phone}
+    const response = await newOrganizations(newData) 
+    if (
+      typeof response === "object" &&
+      response !== null &&
+      "status" in response &&
+      response.status === 201
+    ) {
+      setModified((prev) => !prev);
+      toast.success("Organización creada exitosamente");
     }
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newOrganization: Organization = {
-      id: (organizations.length + 1).toString(),
-      name: organizationName,
-      companies: [],
-      roles: [],
-      logo: logoFile ? URL.createObjectURL(logoFile) : undefined,
-    };
-
-    setOrganizations([...organizations, newOrganization]);
-    setOrganizationName("");
-    setLogoFile(null);
+    reset();
     setIsModalOpen(false);
   };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
+      <Toaster richColors position="top-right" />
       <Sidebar />
 
       <div className="flex flex-col flex-1 w-full">
@@ -343,7 +212,7 @@ const OrganizationsPage = () => {
 
           <DataTable<Organization, Organization>
             columns={columns}
-            data={organizations}
+            data={organizationsResponse || []}
             className="bg-white h-[80vh] max-h-[80vh] backdrop-blur-sm shadow-xl rounded-md"
             noResultsText="No hay organizaciones registradas"
           />
@@ -355,33 +224,59 @@ const OrganizationsPage = () => {
           <DialogHeader>
             <DialogTitle>Nueva organización</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
+
+          {/* ✅ Formulario con React Hook Form */}
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
                 <Label htmlFor="name" className="sm:text-right">
                   Nombre
                 </Label>
-                <Input
-                  id="name"
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  className="col-span-1 sm:col-span-3"
-                  required
-                />
+                <div className="col-span-1 sm:col-span-3 space-y-1">
+                  <Input id="name" {...register("name")} required />
+                  {errors.name && (
+                    <p className="text-xs text-red-600">{errors.name.message}</p>
+                  )}
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="logo" className="sm:text-right">
-                  Logo
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
+                <Label htmlFor="ruc" className="sm:text-right">
+                  RUC
                 </Label>
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="col-span-1 sm:col-span-3"
-                />
+                <div className="col-span-1 sm:col-span-3 space-y-1">
+                  <Input id="ruc" {...register("ruc")} required />
+                  {errors.ruc && (
+                    <p className="text-xs text-red-600">{errors.ruc.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
+                <Label htmlFor="email" className="sm:text-right">
+                  Email
+                </Label>
+                <div className="col-span-1 sm:col-span-3 space-y-1">
+                  <Input id="email" type="email" {...register("email")} required />
+                  {errors.email && (
+                    <p className="text-xs text-red-600">{errors.email.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
+                <Label htmlFor="phone" className="sm:text-right">
+                  Teléfono
+                </Label>
+                <div className="col-span-1 sm:col-span-3 space-y-1">
+                  <Input id="phone" inputMode="tel" {...register("phone")} required />
+                  {errors.phone && (
+                    <p className="text-xs text-red-600">{errors.phone.message}</p>
+                  )}
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
@@ -391,7 +286,9 @@ const OrganizationsPage = () => {
               >
                 Cerrar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

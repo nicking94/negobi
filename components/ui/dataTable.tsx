@@ -51,7 +51,7 @@ export function DataTable<TData, TValue>({
   className,
   headerClassName = "bg-green_m text-white font-semibold",
   rowClassName = "hover:bg-green_xxl/20 border-b border-gray-100",
-  cellClassName = "py-3 px-4 text-left",
+  cellClassName = "px-4 text-left min-h-[80px] align-middle",
   noResultsText = "No hay resultados",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -97,12 +97,18 @@ export function DataTable<TData, TValue>({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className={rowClassName}>
+                  <TableRow
+                    key={row.id}
+                    className={rowClassName}
+                    style={{
+                      height: "80px",
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         className={cellClassName}
-                        style={{ width: `${cell.column.getSize()}px` }}
+                        style={{ height: "80px", verticalAlign: "middle" }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
