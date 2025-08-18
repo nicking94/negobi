@@ -53,7 +53,7 @@ const DashboardHeader = ({
           </div>
 
           <div className="block text-xs text-gray_b font-medium">
-            ORGANIZACIÓN Perez Silva
+            ORGANIZACIÓN Negobi
           </div>
 
           <DropdownMenu>
@@ -67,7 +67,7 @@ const DashboardHeader = ({
                 </div>
                 <div className="hidden sm:block text-left">
                   <div className="font-semibold text-black text-xs md:text-sm">
-                    Perez Silva
+                    Negobi
                   </div>
                   <div className="text-[10px] md:text-xs text-gray_m">
                     Propietario

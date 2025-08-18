@@ -42,18 +42,10 @@ export type Organization = {
 
 // ✅ Schema de validación con Zod
 const organizationSchema = z.object({
-  name: z
-    .string()
-    .min(3, "El nombre debe tener al menos 3 caracteres"),
-  ruc: z
-    .string()
-    .min(10, "RUC inválido")
-    .max(13, "RUC inválido"),
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  rif: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
   email: z.string().email("Email inválido"),
-  phone: z
-    .string()
-    .min(7, "Teléfono inválido")
-    .max(15, "Teléfono inválido"),
+  phone: z.string().min(7, "Teléfono inválido").max(15, "Teléfono inválido"),
 });
 
 // Tipo inferido del schema
@@ -148,7 +140,6 @@ const columns: ColumnDef<Organization>[] = [
 const OrganizationsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
- 
 
   // ⛏️ React Hook Form setup
   const {
@@ -160,17 +151,22 @@ const OrganizationsPage = () => {
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       name: "",
-      ruc: "",
+      rif: "",
       email: "",
       phone: "",
     },
   });
-  const { newOrganizations } = usePostOrganizations()
-  const { organizationsResponse,setModified } = useGetOrganizations()
+  const { newOrganizations } = usePostOrganizations();
+  const { organizationsResponse, setModified } = useGetOrganizations();
   const onSubmit = async (values: OrganizationForm) => {
-    const {name,ruc,email,phone} = values;
-    const newData = {name,contact_email: email,legal_tax_id:ruc,main_phone:phone}
-    const response = await newOrganizations(newData) 
+    const { name, rif, email, phone } = values;
+    const newData = {
+      name,
+      contact_email: email,
+      legal_tax_id: rif,
+      main_phone: phone,
+    };
+    const response = await newOrganizations(newData);
     if (
       typeof response === "object" &&
       response !== null &&
@@ -235,19 +231,21 @@ const OrganizationsPage = () => {
                 <div className="col-span-1 sm:col-span-3 space-y-1">
                   <Input id="name" {...register("name")} required />
                   {errors.name && (
-                    <p className="text-xs text-red-600">{errors.name.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.name.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
-                <Label htmlFor="ruc" className="sm:text-right">
-                  RUC
+                <Label htmlFor="rif" className="sm:text-right">
+                  RIF
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
-                  <Input id="ruc" {...register("ruc")} required />
-                  {errors.ruc && (
-                    <p className="text-xs text-red-600">{errors.ruc.message}</p>
+                  <Input id="rif" {...register("rif")} required />
+                  {errors.rif && (
+                    <p className="text-xs text-red-600">{errors.rif.message}</p>
                   )}
                 </div>
               </div>
@@ -257,9 +255,16 @@ const OrganizationsPage = () => {
                   Email
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
-                  <Input id="email" type="email" {...register("email")} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register("email")}
+                    required
+                  />
                   {errors.email && (
-                    <p className="text-xs text-red-600">{errors.email.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -269,9 +274,16 @@ const OrganizationsPage = () => {
                   Teléfono
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
-                  <Input id="phone" inputMode="tel" {...register("phone")} required />
+                  <Input
+                    id="phone"
+                    inputMode="tel"
+                    {...register("phone")}
+                    required
+                  />
                   {errors.phone && (
-                    <p className="text-xs text-red-600">{errors.phone.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.phone.message}
+                    </p>
                   )}
                 </div>
               </div>

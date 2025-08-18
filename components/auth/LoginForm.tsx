@@ -23,7 +23,7 @@ import { Toaster } from "sonner";
 const formSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  taxId: z.string().min(1, "El RUC debe tener al menos 10 caracteres"),
+  taxId: z.string().min(1, "El RIF debe tener al menos 10 caracteres"),
   rememberMe: z.boolean().optional(),
 });
 
@@ -43,12 +43,12 @@ export function LoginForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const { email, password, taxId} = values;
+    const { email, password, taxId } = values;
     const result = await onLogin({ email, password, legal_tax_id: taxId });
-    if(result === 200){ 
+    if (result === 200) {
       router.push("/dashboard");
     }
-  }
+  };
 
   return (
     <Form {...form}>
@@ -101,13 +101,13 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-         <FormField
+        <FormField
           control={form.control}
           name="taxId"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                RUC
+                RIF
               </FormLabel>
               <FormControl>
                 <Input placeholder="12345556" {...field} />

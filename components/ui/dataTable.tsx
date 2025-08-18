@@ -51,7 +51,7 @@ export function DataTable<TData, TValue>({
   className,
   headerClassName = "bg-green_m text-white font-semibold",
   rowClassName = "hover:bg-green_xxl/20 border-b border-gray-100",
-  cellClassName = "px-4 text-left min-h-[80px] align-middle",
+  cellClassName = "py-3 px-4 text-left",
   noResultsText = "No hay resultados",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -67,7 +67,7 @@ export function DataTable<TData, TValue>({
       sorting,
     },
   });
-  //comentario para guardar cambios en gh
+
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <div className="rounded-md overflow-hidden flex flex-col h-full">
@@ -97,18 +97,12 @@ export function DataTable<TData, TValue>({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className={rowClassName}
-                    style={{
-                      height: "80px",
-                    }}
-                  >
+                  <TableRow key={row.id} className={rowClassName}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         className={cellClassName}
-                        style={{ height: "80px", verticalAlign: "middle" }}
+                        style={{ width: `${cell.column.getSize()}px` }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

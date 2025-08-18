@@ -18,7 +18,7 @@ import useRecoveryPassword from "@/hooks/auth/useRecoveryPassword";
 // Validaciones con Zod
 const formSchema = z.object({
   email: z.string().email("Email inválido"),
-  taxId: z.string().min(5, "RUC inválido").max(13, "RUC inválido"),
+  taxId: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
 });
 
 export function RecoveryForm() {
@@ -61,21 +61,17 @@ export function RecoveryForm() {
           )}
         />
 
-        {/* Campo RUC */}
+        {/* Campo RIF */}
         <FormField
           control={form.control}
           name="taxId"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                RUC
+                RIF
               </FormLabel>
               <FormControl>
-                <Input
-                  placeholder="RUC"
-                  {...field}
-                  value={field.value ?? ""} // <-- evita undefined
-                />
+                <Input placeholder="RIF" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
