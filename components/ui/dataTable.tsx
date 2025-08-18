@@ -11,14 +11,6 @@ import {
   Table as TanstackTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -35,6 +27,80 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function Table({ className, ...props }: React.ComponentProps<"table">) {
+  return (
+    <div
+      data-slot="table-container"
+      className=" backdrop-blur-sm shadow-xl rounded-md relative w-full "
+    >
+      <table
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
+    </div>
+  );
+}
+
+function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+  return (
+    <thead
+      data-slot="table-header"
+      className={cn("[&_tr]:border-b", className)}
+      {...props}
+    />
+  );
+}
+
+function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+  return (
+    <tbody
+      data-slot="table-body"
+      className={cn("[&_tr:last-child]:border-0", className)}
+      {...props}
+    />
+  );
+}
+
+function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+  return (
+    <tr
+      data-slot="table-row"
+      className={cn(
+        "hover:bg-green_xxl/20 data-[state=selected]:bg-green_xxl/30 border-b transition-colors",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+  return (
+    <th
+      data-slot="table-head"
+      className={cn(
+        "text-black h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+  return (
+    <td
+      data-slot="table-cell"
+      className={cn(
+        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -48,9 +114,9 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  className,
+  className = "bg-white h-[75vh] max-h-[75vh] md:h-[80vh] md:max-h-[80vh]",
   headerClassName = "bg-green_m text-white font-semibold",
-  rowClassName = "hover:bg-green_xxl/20 border-b border-gray-100",
+  rowClassName = "bg-white hover:bg-green_xxl/20 border-b border-gray_xxl",
   cellClassName = "py-3 px-4 text-left",
   noResultsText = "No hay resultados",
 }: DataTableProps<TData, TValue>) {
@@ -69,10 +135,10 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      <div className="rounded-md overflow-hidden flex flex-col h-full">
-        <div className="flex-1 overflow-auto">
-          <Table className="min-w-full">
+    <div className={cn("flex flex-col ", className)}>
+      <div className="rounded-md overflow-hidden flex flex-col">
+        <div className=" overflow-auto">
+          <Table className=" min-w-full">
             <TableHeader className="sticky top-0 z-10 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>

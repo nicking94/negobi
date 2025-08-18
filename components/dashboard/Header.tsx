@@ -43,7 +43,7 @@ const DashboardHeader = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
-          <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1 md:gap-2">
+          <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1 ">
             <button className="px-2 md:px-3 lg:px-4 py-1 md:py-2 bg-gradient-to-r from-green_m to-green_b text-white text-xs font-medium rounded-md shadow-sm transition-all duration-300">
               VES
             </button>

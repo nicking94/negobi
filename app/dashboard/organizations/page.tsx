@@ -61,13 +61,13 @@ const columns: ColumnDef<Organization>[] = [
   },
   {
     accessorKey: "legal_tax_id",
-    header: "NIT",
+    header: "RIF",
     cell: ({ row }) => {
-      const nit = row.getValue("legal_tax_id") as string | null;
-      return nit ? (
-        <span>{nit}</span>
+      const rif = row.getValue("legal_tax_id") as string | null;
+      return rif ? (
+        <span>{rif}</span>
       ) : (
-        <span className="text-gray-400 text-sm">Sin NIT</span>
+        <span className="text-gray_l text-sm">Sin RIF</span>
       );
     },
   },
@@ -79,7 +79,7 @@ const columns: ColumnDef<Organization>[] = [
       return email ? (
         <span>{email}</span>
       ) : (
-        <span className="text-gray-400 text-sm">Sin correo</span>
+        <span className="text-gray_l text-sm">Sin correo</span>
       );
     },
   },
@@ -91,7 +91,7 @@ const columns: ColumnDef<Organization>[] = [
       return phone ? (
         <span>{phone}</span>
       ) : (
-        <span className="text-gray-400 text-sm">Sin teléfono</span>
+        <span className="text-gray_l text-sm">Sin teléfono</span>
       );
     },
   },
@@ -209,7 +209,6 @@ const OrganizationsPage = () => {
           <DataTable<Organization, Organization>
             columns={columns}
             data={organizationsResponse || []}
-            className="bg-white h-[80vh] max-h-[80vh] backdrop-blur-sm shadow-xl rounded-md"
             noResultsText="No hay organizaciones registradas"
           />
         </main>

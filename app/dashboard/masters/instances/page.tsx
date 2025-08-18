@@ -212,7 +212,6 @@ const InstancesPage = () => {
           <DataTable<Instance, Instance>
             columns={columns}
             data={instances}
-            className="bg-white h-[80vh] max-h-[80vh] backdrop-blur-sm shadow-xl rounded-md"
             noResultsText="No hay instancias registradas"
           />
         </main>
