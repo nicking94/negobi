@@ -157,7 +157,16 @@ const OrganizationsPage = () => {
     },
   });
   const { newOrganizations } = usePostOrganizations();
-  const { organizationsResponse, setModified } = useGetOrganizations();
+  const {
+    setModified,
+    organizationsResponse,
+    totalPage,
+    total,
+    setPage,
+    setItemsPerPage,
+    page,
+    itemsPerPage,
+  } = useGetOrganizations();
   const onSubmit = async (values: OrganizationForm) => {
     const { name, rif, email, phone } = values;
     const newData = {
@@ -210,6 +219,12 @@ const OrganizationsPage = () => {
             columns={columns}
             data={organizationsResponse || []}
             noResultsText="No hay organizaciones registradas"
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>

@@ -16,3 +16,8 @@ export type OrganizationType = {
     main_phone: string;
 }
 
+export type OrganizationQueryType = {
+    search: string,
+    page: number,
+    itemsPerPage: number,
+}

@@ -1,11 +1,11 @@
 import api from "@/utils/api";
 import * as OrganizationsRoute from "./organizations.route";
-import { OrganizationType } from "@/types";
+import { OrganizationQueryType, OrganizationType } from "@/types";
 
 
 
 export class OrganizationsService {
     static AddOrganizations = async (data: OrganizationType) => await api.post(OrganizationsRoute.addOrganization, data);
 
-    static GetOrganizations = async () => await api.get(OrganizationsRoute.getOrganizations);
+    static GetOrganizations = async (data: OrganizationQueryType) => await api.get(OrganizationsRoute.getOrganizations, { params: data });
 }

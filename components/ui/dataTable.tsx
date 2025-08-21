@@ -109,6 +109,12 @@ interface DataTableProps<TData, TValue> {
   rowClassName?: string;
   cellClassName?: string;
   noResultsText?: string;
+  page: number;
+  setPage: (page: number) => void;
+  totalPage: number;
+  total: number;
+  itemsPerPage: number;
+  setItemsPerPage: (size: number) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -119,6 +125,12 @@ export function DataTable<TData, TValue>({
   rowClassName = "bg-white hover:bg-green_xxl/20 border-b border-gray_xxl",
   cellClassName = "py-3 px-4 text-left",
   noResultsText = "No hay resultados",
+  page,
+  setPage,
+  totalPage,
+  total,
+  itemsPerPage,
+  setItemsPerPage,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -185,40 +197,54 @@ export function DataTable<TData, TValue>({
           </Table>
         </div>
       </div>
-      <DataTablePagination table={table} />
+      <DataTablePagination
+        page={page}
+        setPage={setPage}
+        totalPage={totalPage}
+        total={total}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={setItemsPerPage}
+      />
     </div>
   );
 }
 
-function DataTablePagination<TData>({
-  table,
-}: {
-  table: TanstackTable<TData>;
-}) {
-  const firstItem =
-    table.getState().pagination.pageIndex *
-      table.getState().pagination.pageSize +
-    1;
-  const lastItem = Math.min(
-    (table.getState().pagination.pageIndex + 1) *
-      table.getState().pagination.pageSize,
-    table.getFilteredRowModel().rows.length
-  );
-  const totalItems = table.getFilteredRowModel().rows.length;
+type DataTablePaginationProps = {
+  page: number;
+  setPage: (page: number) => void;
+  totalPage: number;
+  total: number;
+  itemsPerPage: number;
+  setItemsPerPage: (size: number) => void;
+};
+
+function DataTablePagination({
+  page,
+  setPage,
+  totalPage,
+  total,
+  itemsPerPage,
+  setItemsPerPage,
+}: DataTablePaginationProps) {
+  // 🔹 Cálculo de rangos visibles
+  const firstItem = (page - 1) * itemsPerPage + 1;
+  const lastItem = Math.min(page * itemsPerPage, total);
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 mt-4">
+      {/* ---- Sección izquierda ---- */}
       <div className="flex items-center gap-4">
         <div className="flex items-center space-x-2">
           <p className="text-sm text-muted-foreground">Filas por página</p>
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${itemsPerPage}`}
             onValueChange={(value) => {
-              table.setPageSize(Number(value));
+              setItemsPerPage(Number(value));
+              setPage(1); // Opcional: volver a primera página
             }}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={itemsPerPage} />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -231,50 +257,58 @@ function DataTablePagination<TData>({
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Mostrando {firstItem}-{lastItem} de {totalItems} resultados
+          Mostrando {firstItem}-{lastItem} de {total} resultados
         </div>
       </div>
 
+      {/* ---- Sección derecha (navegación) ---- */}
       <div className="flex items-center space-x-1">
+        {/* Primera página */}
         <Button
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => setPage(1)}
+          disabled={page === 1}
           title="Primera página"
         >
           <span className="sr-only">Primera página</span>
           <ChevronsLeft className="h-3 w-3" />
         </Button>
+
+        {/* Página anterior */}
         <Button
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => setPage(Math.max(page - 1, 1))}
+          disabled={page === 1}
           title="Página anterior"
         >
           <span className="sr-only">Página anterior</span>
           <ChevronLeft className="h-3 w-3" />
         </Button>
+
+        {/* Página siguiente */}
         <Button
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-          title="Próxima página"
+          onClick={() => setPage(Math.min(page + 1, totalPage))}
+          disabled={page === totalPage}
+          title="Página siguiente"
         >
           <span className="sr-only">Página siguiente</span>
           <ChevronRight className="h-3 w-3" />
         </Button>
+
+        {/* Última página */}
         <Button
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          disabled={!table.getCanNextPage()}
+          onClick={() => setPage(totalPage)}
+          disabled={page === totalPage}
           title="Última página"
         >
           <span className="sr-only">Última página</span>
