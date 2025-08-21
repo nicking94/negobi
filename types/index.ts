@@ -21,3 +21,5 @@ export type OrganizationQueryType = {
     page: number,
     itemsPerPage: number,
 }
+
+

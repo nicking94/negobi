@@ -23,11 +23,25 @@ import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { z } from "zod";
+import useAddInstance from "@/hooks/instances/useAddInstance";
+
+const instanceSchema = z.object({
+  category_code: z.string().min(1, "El código es requerido"),
+  category_name: z.string().min(1, "El nombre es requerido"),
+  description: z.string().min(1, "La descripción es requerida"),
+});
+
+type InstanceFormValues = z.infer<typeof instanceSchema>;
 
 export type Instance = {
-  code: string;
-  name: string;
+  category_code: string;
+  category_name: string;
   description: string;
+  parentCategoryId: number;
 };
 
 const columns: ColumnDef<Instance>[] = [
@@ -104,29 +118,45 @@ const InstancesPage = () => {
   const [instanceDescription, setInstanceDescription] = useState("");
   const [instances, setInstances] = useState<Instance[]>([
     {
-      code: "INST-001",
-      name: "Instancia principal de producción",
+      category_code: "INST-001",
+      category_name: "Instancia principal de producción",
       description: "Instancia principal de producción",
+      parentCategoryId: 0,
     },
     {
-      code: "INST-002",
-      name: "Instancia de pruebas y desarrollo",
+      category_code: "INST-002",
+      category_name: "Instancia de pruebas y desarrollo",
       description: "Instancia de pruebas y desarrollo",
+      parentCategoryId: 0,
     },
   ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newInstance: Instance = {
-      code: instanceCode,
-      name: instanceName,
-      description: instanceDescription,
-    };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<InstanceFormValues>({
+    resolver: zodResolver(instanceSchema),
+    defaultValues: {
+      category_code: "",
+      category_name: "",
+      description: "",
+    },
+  });
 
-    setInstances([...instances, newInstance]);
-    setInstanceCode("");
-    setInstanceDescription("");
-    setIsModalOpen(false);
+  const { newInstance } = useAddInstance();
+
+  const onSubmit = async (data: InstanceFormValues) => {
+    const newInstanceData: Instance = {
+      category_code: data.category_code,
+      category_name: data.category_name,
+      description: data.description,
+      parentCategoryId: 0, // Asignar el ID de la categoría padre según sea necesario
+    };
+    const result = await newInstance(newInstanceData);
+    if (result) {
+      alert("Instancia creada exitosamente");
+    }
   };
 
   return (
@@ -166,48 +196,66 @@ const InstancesPage = () => {
           <DialogHeader>
             <DialogTitle>Nueva instancia</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
+              {/* Código */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="code" className="sm:text-right">
                   Código
                 </Label>
-                <Input
-                  id="code"
-                  value={instanceCode}
-                  onChange={(e) => setInstanceCode(e.target.value)}
-                  className="col-span-1 sm:col-span-3"
-                  required
-                  placeholder="Ej: INST-001"
-                />
+                <div className="col-span-1 sm:col-span-3">
+                  <Input
+                    id="category_code"
+                    placeholder="Ej: INST-001"
+                    {...register("category_code")}
+                  />
+                  {errors.category_code && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.category_code.message}
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {/* Nombre */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="sm:text-right">
                   Nombre
                 </Label>
-                <Input
-                  id="name"
-                  value={instanceName}
-                  onChange={(e) => setInstanceName(e.target.value)}
-                  className="col-span-1 sm:col-span-3"
-                  required
-                  placeholder="Nombre de la instancia"
-                />
+                <div className="col-span-1 sm:col-span-3">
+                  <Input
+                    id="category_name"
+                    placeholder="Nombre de la instancia"
+                    {...register("category_name")}
+                  />
+                  {errors.category_name && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.category_name.message}
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {/* Descripción */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="sm:text-right">
                   Descripción
                 </Label>
-                <Input
-                  id="description"
-                  value={instanceDescription}
-                  onChange={(e) => setInstanceDescription(e.target.value)}
-                  className="col-span-1 sm:col-span-3"
-                  required
-                  placeholder="Descripción de la instancia"
-                />
+                <div className="col-span-1 sm:col-span-3">
+                  <Input
+                    id="description"
+                    placeholder="Descripción de la instancia"
+                    {...register("description")}
+                  />
+                  {errors.description && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.description.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
