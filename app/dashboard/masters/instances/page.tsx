@@ -182,12 +182,12 @@ const InstancesPage = () => {
               <span>Nueva instancia</span>
             </Button>
           </div>
-
+          {/* 
           <DataTable<Instance, Instance>
             columns={columns}
             data={instances}
             noResultsText="No hay instancias registradas"
-          />
+          /> */}
         </main>
       </div>
 
