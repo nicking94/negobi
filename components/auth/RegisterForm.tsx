@@ -13,82 +13,74 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import useAddCompanies from "@/hooks/companies/useAddCompanies";
 
-const formSchema = z
-  .object({
-    company_name: z
-      .string()
-      .min(2, "El nombre debe tener al menos 2 caracteres"),
-    company_email: z.string().email("Email inválido"),
-    company_phone: z
-      .string()
-      .min(10, "El teléfono debe tener al menos 10 dígitos")
-      .max(15, "El teléfono no puede exceder 15 dígitos")
-      .regex(
-        /^[0-9+]+$/,
-        "El teléfono solo puede contener números y el signo +"
-      ),
-    company_address: z
-      .string()
-      .min(5, "La dirección debe tener al menos 5 caracteres"),
-    company_tax_id: z
-      .string()
-      .min(5, "El Tax ID debe tener al menos 5 caracteres")
-      .max(20, "El Tax ID no puede exceder 20 caracteres"),
-    company_code: z
-      .string()
-      .min(3, "El código debe tener al menos 3 caracteres")
-      .max(10, "El código no puede exceder 10 caracteres")
-      .regex(
-        /^[a-zA-Z0-9]+$/,
-        "El código solo puede contener letras y números"
-      ),
+const formSchema = z.object({
+  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  contact_email: z.string().email("Email inválido"),
+  main_phone: z
+    .string()
+    .min(10, "El teléfono debe tener al menos 10 dígitos")
+    .max(15, "El teléfono no puede exceder 15 dígitos")
+    .regex(/^[0-9+]+$/, "El teléfono solo puede contener números y el signo +"),
+  fiscal_address: z
+    .string()
+    .min(5, "La dirección debe tener al menos 5 caracteres"),
+  legal_tax_id: z
+    .string()
+    .min(5, "El Tax ID debe tener al menos 5 caracteres")
+    .max(20, "El Tax ID no puede exceder 20 caracteres"),
+  code: z
+    .string()
+    .min(3, "El código debe tener al menos 3 caracteres")
+    .max(10, "El código no puede exceder 10 caracteres")
+    .regex(/^[a-zA-Z0-9]+$/, "El código solo puede contener letras y números"),
 
-    user_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-    user_lastname: z
-      .string()
-      .min(2, "El apellido debe tener al menos 2 caracteres"),
-    user_email: z.string().email("Email inválido"),
-    user_phone: z
-      .string()
-      .min(10, "El teléfono debe tener al menos 10 dígitos")
-      .max(15, "El teléfono no puede exceder 15 dígitos")
-      .regex(
-        /^[0-9+]+$/,
-        "El teléfono solo puede contener números y el signo +"
-      ),
-    password: z
-      .string()
-      .min(6, "La contraseña debe tener al menos 6 caracteres"),
-    confirm_password: z.string(),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirm_password"],
-  });
+  admin_first_name: z
+    .string()
+    .min(2, "El nombre debe tener al menos 2 caracteres"),
+  admin_last_name: z
+    .string()
+    .min(2, "El apellido debe tener al menos 2 caracteres"),
+  admin_email: z.string().email("Email inválido"),
+  admin_phone: z
+    .string()
+    .min(10, "El teléfono debe tener al menos 10 dígitos")
+    .max(15, "El teléfono no puede exceder 15 dígitos")
+    .regex(/^[0-9+]+$/, "El teléfono solo puede contener números y el signo +"),
+  admin_password: z
+    .string()
+    .min(6, "La contraseña debe tener al menos 6 caracteres"),
+  admin_username: z
+    .string()
+    .min(2, "El nombre de usuario debe tener al menos 2 caracteres"),
+});
 
 export function RegisterForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      company_name: "",
-      company_email: "",
-      company_phone: "",
-      company_address: "",
-      company_tax_id: "",
-      company_code: "",
-      user_name: "",
-      user_lastname: "",
-      user_email: "",
-      user_phone: "",
-      password: "",
-      confirm_password: "",
+      name: "",
+      contact_email: "",
+      main_phone: "",
+      fiscal_address: "",
+      legal_tax_id: "",
+      code: "",
+      admin_first_name: "",
+      admin_last_name: "",
+      admin_email: "",
+      admin_phone: "",
+      admin_password: "",
+      admin_username: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-  }
+  const { newCompany } = useAddCompanies();
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const result = await newCompany(values);
+    console.log(result);
+  };
 
   return (
     <Form {...form}>
@@ -103,7 +95,7 @@ export function RegisterForm() {
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
                 control={form.control}
-                name="company_name"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -119,7 +111,7 @@ export function RegisterForm() {
 
               <FormField
                 control={form.control}
-                name="company_email"
+                name="contact_email"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -137,7 +129,7 @@ export function RegisterForm() {
             {/* Teléfono en una fila independiente */}
             <FormField
               control={form.control}
-              name="company_phone"
+              name="main_phone"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
@@ -154,7 +146,7 @@ export function RegisterForm() {
             {/* Dirección en una fila independiente */}
             <FormField
               control={form.control}
-              name="company_address"
+              name="fiscal_address"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
@@ -172,7 +164,7 @@ export function RegisterForm() {
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
                 control={form.control}
-                name="company_tax_id"
+                name="legal_tax_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -188,7 +180,7 @@ export function RegisterForm() {
 
               <FormField
                 control={form.control}
-                name="company_code"
+                name="code"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -213,7 +205,7 @@ export function RegisterForm() {
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
                 control={form.control}
-                name="user_name"
+                name="admin_first_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -229,7 +221,7 @@ export function RegisterForm() {
 
               <FormField
                 control={form.control}
-                name="user_lastname"
+                name="admin_last_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
@@ -246,7 +238,7 @@ export function RegisterForm() {
 
             <FormField
               control={form.control}
-              name="user_email"
+              name="admin_email"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
@@ -262,7 +254,7 @@ export function RegisterForm() {
 
             <FormField
               control={form.control}
-              name="user_phone"
+              name="admin_phone"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
@@ -280,7 +272,25 @@ export function RegisterForm() {
               <div className="space-y-2">
                 <FormField
                   control={form.control}
-                  name="password"
+                  name="admin_username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[var(--color-gray_b)]">
+                        Username
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nombre de usuario" {...field} />
+                      </FormControl>
+                      <FormMessage className="text-[var(--color-red_l)]" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="admin_password"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[var(--color-gray_b)]">
@@ -294,28 +304,6 @@ export function RegisterForm() {
                         />
                       </FormControl>
                       <FormMessage className="text-[var(--color-red_l)] text-sm" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FormField
-                  control={form.control}
-                  name="confirm_password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[var(--color-gray_b)]">
-                        Repetir contraseña
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="••••••"
-                          {...field}
-                          type="password"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-[var(--color-red_l)] text-xs" />
                     </FormItem>
                   )}
                 />

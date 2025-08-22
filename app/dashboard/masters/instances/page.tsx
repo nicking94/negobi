@@ -28,23 +28,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { z } from "zod";
 import useAddInstance from "@/hooks/instances/useAddInstance";
+import { InstanceType } from "@/services/instances/types";
 
 const instanceSchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
   category_name: z.string().min(1, "El nombre es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
+  prefix: z.string().min(1, "El prefijo es requerido"),
+  correlative_length: z.number(),
 });
 
 type InstanceFormValues = z.infer<typeof instanceSchema>;
 
-export type Instance = {
-  category_code: string;
-  category_name: string;
-  description: string;
-  parentCategoryId: number;
-};
-
-const columns: ColumnDef<Instance>[] = [
+const columns: ColumnDef<InstanceType>[] = [
   {
     accessorKey: "code",
     header: "Código",
@@ -113,23 +109,6 @@ const columns: ColumnDef<Instance>[] = [
 const InstancesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [instanceCode, setInstanceCode] = useState("");
-  const [instanceName, setInstanceName] = useState("");
-  const [instanceDescription, setInstanceDescription] = useState("");
-  const [instances, setInstances] = useState<Instance[]>([
-    {
-      category_code: "INST-001",
-      category_name: "Instancia principal de producción",
-      description: "Instancia principal de producción",
-      parentCategoryId: 0,
-    },
-    {
-      category_code: "INST-002",
-      category_name: "Instancia de pruebas y desarrollo",
-      description: "Instancia de pruebas y desarrollo",
-      parentCategoryId: 0,
-    },
-  ]);
 
   const {
     register,
@@ -141,17 +120,21 @@ const InstancesPage = () => {
       category_code: "",
       category_name: "",
       description: "",
+      prefix: "",
+      correlative_length: 0, // Valor por defecto para la longitud del correlativo
     },
   });
 
   const { newInstance } = useAddInstance();
 
   const onSubmit = async (data: InstanceFormValues) => {
-    const newInstanceData: Instance = {
+    const newInstanceData: InstanceType = {
       category_code: data.category_code,
       category_name: data.category_name,
       description: data.description,
       parentCategoryId: 0, // Asignar el ID de la categoría padre según sea necesario
+      correlative_length: data.correlative_length,
+      prefix: data.prefix,
     };
     const result = await newInstance(newInstanceData);
     if (result) {
@@ -250,6 +233,24 @@ const InstancesPage = () => {
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">
                       {errors.description.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label htmlFor="prefix" className="sm:text-right">
+                  Prefijo
+                </Label>
+                <div className="col-span-1 sm:col-span-3">
+                  <Input
+                    id="prefix"
+                    placeholder="Prefijo"
+                    {...register("prefix")}
+                  />
+                  {errors.prefix && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.prefix.message}
                     </p>
                   )}
                 </div>
