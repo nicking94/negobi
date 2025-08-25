@@ -1,13 +1,19 @@
 "use client";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X, Settings, Building, Briefcase, MapPin, Users, Shield, Target, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -78,8 +84,80 @@ const DashboardHeader = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-40 md:w-48 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
+              className="w-56 md:w-64 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
             >
+              {/* Nuevo item de Perfil */}
+              <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                <Link href="/dashboard/settings/profile" className="flex items-center w-full">
+                  <User className="w-4 h-4 mr-2" />
+                  Perfil
+                </Link>
+              </DropdownMenuItem>
+              
+             
+              
+              {/* Submenú de Configuración */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm flex items-center">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configuración
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="shadow-xl border-0 bg-white/95 backdrop-blur-sm w-48">
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/organizations" className="flex items-center w-full">
+                        <Building className="w-4 h-4 mr-2" />
+                        Organizaciones
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/companies" className="flex items-center w-full">
+                        <Briefcase className="w-4 h-4 mr-2" />
+                        Empresas
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/branches" className="flex items-center w-full">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Sucursal
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/users" className="flex items-center w-full">
+                        <Users className="w-4 h-4 mr-2" />
+                        Usuarios
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/roles" className="flex items-center w-full">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Roles
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/general" className="flex items-center w-full">
+                        <Settings className="w-4 h-4 mr-2" />
+                        General
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/goals" className="flex items-center w-full">
+                        <Target className="w-4 h-4 mr-2" />
+                        Metas
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                      <Link href="/dashboard/settings/planification" className="flex items-center w-full">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Planificación
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              
+             
+              
               <DropdownMenuItem
                 className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm"
                 onClick={handleLogout}

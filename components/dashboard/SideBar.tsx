@@ -23,11 +23,14 @@ import {
   FaChartBar,
   FaChartLine,
   FaChartPie,
-  FaCog,
-  FaUser,
-  FaShieldAlt,
-  FaBell,
   FaFolder,
+  FaCogs,
+  FaUserTie,
+  FaTags,
+  FaWarehouse,
+  FaDollarSign, // Icono para ventas
+  FaBox, // Icono para productos
+  FaUserFriends, // Icono para vendedores
 } from "react-icons/fa";
 import { HiChevronRight, HiChevronDown } from "react-icons/hi";
 import { cn } from "@/lib/utils";
@@ -48,11 +51,6 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { icon: FaHome, label: "Inicio", path: "/dashboard" },
-  {
-    icon: FaBuilding,
-    label: "Organizaciones",
-    path: "/dashboard/organizations",
-  },
   {
     icon: FaFileAlt,
     label: "Documentos",
@@ -85,12 +83,27 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  { icon: FaCreditCard, label: "Cobranzas", path: "/dashboard/collections" },
-  { icon: FaUsers, label: "Visitas", path: "/dashboard/visits" },
   {
-    icon: FaMapMarkerAlt,
-    label: "Geolocalización",
-    path: "/dashboard/geolocalization",
+    icon: FaCogs,
+    label: "Operaciones",
+    hasSubmenu: true,
+    submenuItems: [
+      {
+        icon: FaCreditCard,
+        label: "Cobranzas",
+        path: "/dashboard/collections",
+      },
+      {
+        icon: FaUsers,
+        label: "Visitas",
+        path: "/dashboard/visits",
+      },
+      {
+        icon: FaMapMarkerAlt,
+        label: "Geolocalización",
+        path: "/dashboard/geolocalization",
+      },
+    ],
   },
   {
     icon: FaFolder,
@@ -103,9 +116,19 @@ const menuItems: MenuItem[] = [
         path: "/dashboard/masters/clients",
       },
       {
-        icon: FaBookOpen,
+        icon: FaUserTie,
+        label: "Proveedores",
+        path: "/dashboard/masters/suppliers",
+      },
+      {
+        icon: FaTags,
         label: "Instancias",
         path: "/dashboard/masters/instances",
+      },
+      {
+        icon: FaWarehouse,
+        label: "Almacenes",
+        path: "/dashboard/masters/warehouses",
       },
       {
         icon: FaBoxOpen,
@@ -121,31 +144,32 @@ const menuItems: MenuItem[] = [
   },
   {
     icon: FaChartBar,
-    label: "Estadísticas de ventas",
+    label: "Indicadores",
     hasSubmenu: true,
     submenuItems: [
       {
         icon: FaChartLine,
         label: "Operaciones",
-        path: "/dashboard/statistics/operations",
+        path: "/dashboard/indicators/operations",
+      },
+      {
+        icon: FaDollarSign,
+        label: "Ventas",
+        path: "/dashboard/indicators/sales",
+      },
+      {
+        icon: FaBox,
+        label: "Productos",
+        path: "/dashboard/indicators/products",
+      },
+      {
+        icon: FaUserFriends,
+        label: "Vendedores",
+        path: "/dashboard/indicators/sellers",
       },
     ],
   },
   { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
-  {
-    icon: FaCog,
-    label: "Configuración",
-    hasSubmenu: true,
-    submenuItems: [
-      { icon: FaUser, label: "General", path: "/dashboard/settings/general" },
-      { icon: FaShieldAlt, label: "Metas", path: "/dashboard/settings/goals" },
-      {
-        icon: FaBell,
-        label: "Planificación",
-        path: "/dashboard/settings/planification",
-      },
-    ],
-  },
 ];
 
 const Sidebar = () => {
@@ -193,7 +217,7 @@ const Sidebar = () => {
     return pathname === path || pathname.startsWith(`${path}/`);
   };
 
-  return (
+return (
     <>
       <div
         className={cn(
@@ -207,7 +231,7 @@ const Sidebar = () => {
 
       <div
         className={cn(
-          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen",
+          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen sticky top-0", // Añadí sticky top-0 aquí
           sidebarOpen
             ? "w-64 md:w-72 left-0 opacity-100"
             : "w-0 md:w-0 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
@@ -275,7 +299,7 @@ const Sidebar = () => {
                       className={cn(
                         "overflow-hidden transition-all duration-300 ease-in-out",
                         openDropdowns.includes(index)
-                          ? "max-h-48 opacity-100 mt-2"
+                          ? "max-h-96 opacity-100 mt-2"
                           : "max-h-0 opacity-0"
                       )}
                     >

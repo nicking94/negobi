@@ -6,6 +6,12 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  return <SidebarProvider>{children}</SidebarProvider>;
+  return (
+    <SidebarProvider>
+      <div className="w-full h-screen max-h-screen overflow-hidden flex-1">
+        {children}
+      </div>
+    </SidebarProvider>
+  );
 };
 export default DashboardLayout;

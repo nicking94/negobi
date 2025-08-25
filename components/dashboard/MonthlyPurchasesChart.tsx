@@ -9,7 +9,31 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const data = [
+interface MonthlyPurchasesChartProps {
+  timeRange: "day" | "week" | "month" | "year";
+}
+
+// Datos de ejemplo para diferentes rangos de tiempo
+const dailyData = [
+  { hour: "00:00", value: 500 },
+  { hour: "04:00", value: 800 },
+  { hour: "08:00", value: 3000 },
+  { hour: "12:00", value: 8000 },
+  { hour: "16:00", value: 10000 },
+  { hour: "20:00", value: 6000 },
+];
+
+const weeklyData = [
+  { day: "Lun", value: 30000 },
+  { day: "Mar", value: 45000 },
+  { day: "Mié", value: 60000 },
+  { day: "Jue", value: 75000 },
+  { day: "Vie", value: 90000 },
+  { day: "Sáb", value: 65000 },
+  { day: "Dom", value: 40000 },
+];
+
+const monthlyData = [
   { month: "Enero", value: 120000 },
   { month: "Febrero", value: 150000 },
   { month: "Marzo", value: 180000 },
@@ -24,7 +48,34 @@ const data = [
   { month: "Diciembre", value: 60000 },
 ];
 
-const MonthlyPurchasesChart = () => {
+const yearlyData = [
+  { year: "2019", value: 1200000 },
+  { year: "2020", value: 1800000 },
+  { year: "2021", value: 2400000 },
+  { year: "2022", value: 3000000 },
+  { year: "2023", value: 3600000 },
+];
+
+const MonthlyPurchasesChart = ({ timeRange }: MonthlyPurchasesChartProps) => {
+  // Seleccionar datos según el rango de tiempo
+  const getData = () => {
+    switch (timeRange) {
+      case "day":
+        return dailyData;
+      case "week":
+        return weeklyData;
+      case "month":
+        return monthlyData;
+      case "year":
+        return yearlyData;
+      default:
+        return dailyData;
+    }
+  };
+
+  const data = getData();
+  const xAxisKey = timeRange === "day" ? "hour" : timeRange === "week" ? "day" : timeRange === "month" ? "month" : "year";
+
   return (
     <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -40,7 +91,7 @@ const MonthlyPurchasesChart = () => {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
-            dataKey="month"
+            dataKey={xAxisKey}
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 11, fill: "#6b7280" }}
@@ -50,8 +101,6 @@ const MonthlyPurchasesChart = () => {
             tickLine={false}
             tick={{ fontSize: 11, fill: "#6b7280" }}
             tickFormatter={(value) => `VES ${(value / 1000).toFixed(0)}K`}
-            domain={[0, 400000]}
-            ticks={[0, 50000, 100000, 150000, 200000, 250000, 300000]}
           />
           <Area
             type="monotone"
@@ -66,4 +115,5 @@ const MonthlyPurchasesChart = () => {
     </div>
   );
 };
+
 export default MonthlyPurchasesChart;
