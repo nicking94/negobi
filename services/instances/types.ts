@@ -1,10 +1,11 @@
 export type InstanceType = {
-    category_name: string;
-    category_code: string;
-    description: string;
-    parentCategoryId: number;
+    companyId?: number;
+    category_name?: string;
+    category_code?: string;
+    description?: string;
+    parentCategoryId?: number;
     correlative_length?: number;
-    prefix: string;
+    prefix?: string;
 }
 
 export type InstanceQueryType = {

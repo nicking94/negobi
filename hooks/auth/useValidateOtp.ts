@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { RecoveryPasswordType } from "@/types";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";
 
 
 
 
-const useRecoveryPassword = () => {
+const useValidateOtp = () => {
     const [loading, setLoading] = useState(false);
 
-    const onRecoveryPassword = async (params: RecoveryPasswordType) => {
+    const onValidateOtp = async (params: { email: string; legal_tax_id: string; otp: string }) => {
         try {
             setLoading(true);
-            const { data, status } = await AuthService.recoveryPasswordAction(params);
+            const { data, status } = await AuthService.validateOtpAction(params);
             if (data) {
                 return { data, status }
             } else {
@@ -29,8 +28,7 @@ const useRecoveryPassword = () => {
         }
     };
 
-    return { onRecoveryPassword, loading };
+    return { onValidateOtp, loading };
 };
 
-export default useRecoveryPassword;
-
+export default useValidateOtp;

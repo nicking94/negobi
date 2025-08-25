@@ -24,13 +24,13 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 
-// 🔥 React Hook Form + Zod
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import usePostOrganizations from "@/hooks/organizations/useAddOrganization";
 import useGetOrganizations from "@/hooks/organizations/useGetOrganizations";
 import { toast, Toaster } from "sonner";
+import { OrganizationsService } from "@/services/organizations/organizations.service";
 
 export type Organization = {
   id: string;
@@ -38,9 +38,12 @@ export type Organization = {
   companies: string[];
   roles: string[];
   logo?: string;
+  contact_email?: string;
+  legal_tax_id?: string;
+  main_phone?: string;
+  is_active?: boolean;
 };
 
-// ✅ Schema de validación con Zod
 const organizationSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   rif: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
@@ -48,100 +51,13 @@ const organizationSchema = z.object({
   phone: z.string().min(7, "Teléfono inválido").max(15, "Teléfono inválido"),
 });
 
-// Tipo inferido del schema
 type OrganizationForm = z.infer<typeof organizationSchema>;
-
-const columns: ColumnDef<Organization>[] = [
-  {
-    accessorKey: "name",
-    header: "Organización",
-    cell: ({ row }) => (
-      <div className="font-medium min-w-[150px]">{row.getValue("name")}</div>
-    ),
-  },
-  {
-    accessorKey: "legal_tax_id",
-    header: "RIF",
-    cell: ({ row }) => {
-      const rif = row.getValue("legal_tax_id") as string | null;
-      return rif ? (
-        <span>{rif}</span>
-      ) : (
-        <span className="text-gray_l text-sm">Sin RIF</span>
-      );
-    },
-  },
-  {
-    accessorKey: "contact_email",
-    header: "Correo",
-    cell: ({ row }) => {
-      const email = row.getValue("contact_email") as string | null;
-      return email ? (
-        <span>{email}</span>
-      ) : (
-        <span className="text-gray_l text-sm">Sin correo</span>
-      );
-    },
-  },
-  {
-    accessorKey: "main_phone",
-    header: "Teléfono",
-    cell: ({ row }) => {
-      const phone = row.getValue("main_phone") as string | null;
-      return phone ? (
-        <span>{phone}</span>
-      ) : (
-        <span className="text-gray_l text-sm">Sin teléfono</span>
-      );
-    },
-  },
-  {
-    accessorKey: "is_active",
-    header: "Estado",
-    cell: ({ row }) => {
-      const active = row.getValue("is_active") as boolean;
-      return active ? (
-        <span className="text-green-600 font-medium">Activo</span>
-      ) : (
-        <span className="text-red-600 font-medium">Inactivo</span>
-      );
-    },
-  },
-  {
-    id: "actions",
-    header: () => <div className="text-center">Acciones</div>,
-    cell: ({ row }) => {
-      return (
-        <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Acciones</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                <Edit className="h-4 w-4" />
-                <span>Editar</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2 text-red-500">
-                <Trash2 className="h-4 w-4" />
-                <span>Eliminar</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    },
-  },
-];
 
 const OrganizationsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
 
-  // ⛏️ React Hook Form setup
   const {
     register,
     handleSubmit,
@@ -156,6 +72,7 @@ const OrganizationsPage = () => {
       phone: "",
     },
   });
+
   const { newOrganizations } = usePostOrganizations();
   const {
     setModified,
@@ -167,28 +84,166 @@ const OrganizationsPage = () => {
     page,
     itemsPerPage,
   } = useGetOrganizations();
+
+  // ✅ Crear o actualizar
   const onSubmit = async (values: OrganizationForm) => {
     const { name, rif, email, phone } = values;
-    const newData = {
+    const payload = {
       name,
       contact_email: email,
       legal_tax_id: rif,
       main_phone: phone,
     };
-    const response = await newOrganizations(newData);
-    if (
-      typeof response === "object" &&
-      response !== null &&
-      "status" in response &&
-      response.status === 201
-    ) {
-      setModified((prev) => !prev);
-      toast.success("Organización creada exitosamente");
+
+    if (editingOrg) {
+      // 🔥 Aquí llamas a tu hook de actualización (ej: useUpdateOrganization)
+      const response = await OrganizationsService.UpdateOrganization(
+        editingOrg.id,
+        payload
+      );
+      console.log("Actualizar org", editingOrg.id, payload);
+      if (response.status === 200) {
+        toast.success("Organización actualizada exitosamente");
+        setModified((prev) => !prev);
+      } else {
+        toast.error("Error al actualizar la organización");
+      }
+    } else {
+      const response = await newOrganizations(payload);
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "status" in response &&
+        response.status === 201
+      ) {
+        setModified((prev) => !prev);
+        toast.success("Organización creada exitosamente");
+      }
     }
 
     reset();
+    setEditingOrg(null);
     setIsModalOpen(false);
   };
+
+  // ✅ Eliminar
+  const handleDelete = (org: Organization) => {
+    toast.error(`¿Eliminar la organización "${org.name}"?`, {
+      description: "Esta acción no se puede deshacer.",
+      action: {
+        label: "Eliminar",
+        onClick: async () => {
+          const response = await OrganizationsService.DeleteOrganization(
+            org.id
+          );
+          if (response.status === 200) {
+            toast.success("Organización eliminada exitosamente");
+            setModified((prev) => !prev);
+          } else {
+            toast.error("Error al eliminar la organización");
+          }
+        },
+      },
+      cancel: {
+        label: "Cancelar",
+        onClick: () => {
+          toast.info("Eliminación cancelada");
+        },
+      },
+    });
+  };
+
+  // ✅ Editar
+  const handleEdit = (org: Organization) => {
+    setEditingOrg(org);
+    reset({
+      name: org.name || "",
+      rif: org.legal_tax_id || "",
+      email: org.contact_email || "",
+      phone: org.main_phone || "",
+    });
+    setIsModalOpen(true);
+  };
+
+  // ✅ Columnas con handlers
+  const columns: ColumnDef<Organization>[] = [
+    {
+      accessorKey: "name",
+      header: "Organización",
+      cell: ({ row }) => (
+        <div className="font-medium min-w-[150px]">{row.getValue("name")}</div>
+      ),
+    },
+    {
+      accessorKey: "legal_tax_id",
+      header: "RIF",
+      cell: ({ row }) =>
+        row.getValue("legal_tax_id") || (
+          <span className="text-gray_l text-sm">Sin RIF</span>
+        ),
+    },
+    {
+      accessorKey: "contact_email",
+      header: "Correo",
+      cell: ({ row }) =>
+        row.getValue("contact_email") || (
+          <span className="text-gray_l text-sm">Sin correo</span>
+        ),
+    },
+    {
+      accessorKey: "main_phone",
+      header: "Teléfono",
+      cell: ({ row }) =>
+        row.getValue("main_phone") || (
+          <span className="text-gray_l text-sm">Sin teléfono</span>
+        ),
+    },
+    {
+      accessorKey: "is_active",
+      header: "Estado",
+      cell: ({ row }) =>
+        row.getValue("is_active") ? (
+          <span className="text-green-600 font-medium">Activo</span>
+        ) : (
+          <span className="text-red-600 font-medium">Inactivo</span>
+        ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-center">Acciones</div>,
+      cell: ({ row }) => {
+        const org = row.original;
+        return (
+          <div className="flex justify-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">Acciones</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => handleEdit(org)}
+                  className="cursor-pointer flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Editar</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDelete(org)}
+                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Eliminar</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
@@ -207,7 +262,11 @@ const OrganizationsPage = () => {
               Organizaciones
             </h1>
             <Button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                reset();
+                setEditingOrg(null);
+                setIsModalOpen(true);
+              }}
               className="gap-2 w-full sm:w-auto"
             >
               <Plus className="h-4 w-4" />
@@ -229,13 +288,15 @@ const OrganizationsPage = () => {
         </main>
       </div>
 
+      {/* Modal de creación/edición */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Nueva organización</DialogTitle>
+            <DialogTitle>
+              {editingOrg ? "Editar organización" : "Nueva organización"}
+            </DialogTitle>
           </DialogHeader>
 
-          {/* ✅ Formulario con React Hook Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
@@ -313,7 +374,11 @@ const OrganizationsPage = () => {
                 Cerrar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Guardando..." : "Guardar"}
+                {isSubmitting
+                  ? "Guardando..."
+                  : editingOrg
+                  ? "Actualizar"
+                  : "Guardar"}
               </Button>
             </DialogFooter>
           </form>

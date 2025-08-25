@@ -14,14 +14,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import useRecoveryPassword from "@/hooks/auth/useRecoveryPassword";
+import { toast, Toaster } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Validaciones con Zod
 const formSchema = z.object({
   email: z.string().email("Email inválido"),
-  taxId: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
+  taxId: z.string().min(5, "RIF inválido").max(13, "RIF inválido"),
 });
 
 export function RecoveryForm() {
+  const route = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -34,11 +37,21 @@ export function RecoveryForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const { email, taxId } = values;
-    await onRecoveryPassword({ email, legal_tax_id: taxId });
+    const result = await onRecoveryPassword({ email, legal_tax_id: taxId });
+
+    if (result?.status === 201) {
+      toast.success(
+        "Correo de recuperación enviado, revisa tu bandeja de entrada."
+      );
+      setTimeout(() => {
+        route.push(`/validateOTP?email=${email}&taxId=${taxId}`);
+      }, 3000); // 3 segundos
+    }
   };
 
   return (
     <Form {...form}>
+      <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* Campo Email */}
         <FormField
