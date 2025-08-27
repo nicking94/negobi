@@ -23,7 +23,7 @@ function RecoveryPageContent() {
         {email && taxId ? (
           <OTPValidationForm email={email} legal_tax_id={taxId} />
         ) : (
-          <p className="text-red-600 text-center">
+          <p className="text-red_m text-center">
             Parámetros faltantes. Por favor, vuelve a la página de recuperación.
           </p>
         )}

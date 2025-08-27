@@ -8,7 +8,6 @@ import { useSidebar } from "@/context/SidebarContext";
 import Sidebar from "@/components/dashboard/SideBar";
 import Image from "next/image";
 
-// Interfaces para los datos
 interface MetricData {
   total: number;
   comparison: number;
@@ -370,7 +369,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 lg:mb-8">
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-gray_m">
                   Ingresos
                 </CardTitle>
               </CardHeader>
@@ -393,7 +392,7 @@ const Dashboard = () => {
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-gray_m">
                   Pedidos
                 </CardTitle>
               </CardHeader>
@@ -414,7 +413,7 @@ const Dashboard = () => {
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-gray_m">
                   Clientes
                 </CardTitle>
               </CardHeader>
@@ -437,7 +436,7 @@ const Dashboard = () => {
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-gray_m">
                   Ticket Medio
                 </CardTitle>
               </CardHeader>
@@ -463,7 +462,7 @@ const Dashboard = () => {
             {/* Gráfico de Compras */}
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2 md:pb-3 lg:pb-4">
-                <CardTitle className="text-base md:text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <CardTitle className="text-base md:text-lg font-semibold text-gray_b flex items-center gap-2">
                   <div className="w-2 h-2 bg-green_b rounded-full"></div>
                   Compras {getTimeRangeText()} {selectedPeriod}
                 </CardTitle>
@@ -477,7 +476,7 @@ const Dashboard = () => {
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2 md:pb-3 lg:pb-4">
-                <CardTitle className="text-base md:text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <CardTitle className="text-base md:text-lg font-semibold text-gray_b flex items-center gap-2">
                   <div className="w-2 h-2 bg-green_b rounded-full"></div>
                   Ventas {getTimeRangeText()} {selectedPeriod}
                 </CardTitle>
@@ -493,7 +492,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-base md:text-lg font-semibold text-slate-800">
+                <CardTitle className="text-base md:text-lg font-semibold text-gray_b">
                   Productos Más Vendidos
                 </CardTitle>
               </CardHeader>
@@ -541,7 +540,7 @@ const Dashboard = () => {
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-base md:text-lg font-semibold text-slate-800">
+                <CardTitle className="text-base md:text-lg font-semibold text-gray_b">
                   Productos Menos Vendidos
                 </CardTitle>
               </CardHeader>

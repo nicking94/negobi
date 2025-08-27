@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Edit, Plus, Search, Filter, Upload } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Filter,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -93,7 +101,6 @@ export type Product = {
   image?: string;
 };
 
-
 const productSchema = z.object({
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   sku: z.string().min(1, "El SKU es requerido"),
@@ -103,10 +110,16 @@ const productSchema = z.object({
   brand_id: z.number().min(1, "La marca es requerida"),
   unit_id: z.number().min(1, "La unidad es requerida"),
   current_cost: z.number().min(0, "El costo actual debe ser mayor o igual a 0"),
-  price_level_1: z.number().min(0, "El precio nivel 1 debe ser mayor o igual a 0"),
-  price_level_2: z.number().min(0, "El precio nivel 2 debe ser mayor o igual a 0"),
-  price_level_3: z.number().min(0, "El precio nivel 3 debe ser mayor o igual a 0"),
-  is_active: z.boolean(), 
+  price_level_1: z
+    .number()
+    .min(0, "El precio nivel 1 debe ser mayor o igual a 0"),
+  price_level_2: z
+    .number()
+    .min(0, "El precio nivel 2 debe ser mayor o igual a 0"),
+  price_level_3: z
+    .number()
+    .min(0, "El precio nivel 3 debe ser mayor o igual a 0"),
+  is_active: z.boolean(),
 });
 
 type ProductForm = z.infer<typeof productSchema>;
@@ -122,10 +135,11 @@ const ProductsPage = () => {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [bulkUploadFiles, setBulkUploadFiles] = useState<File[]>([]);
-  const [categories, setCategories] = useState<{id: number, name: string}[]>([]);
-  const [brands, setBrands] = useState<{id: number, name: string}[]>([]);
-  const [units, setUnits] = useState<{id: number, name: string}[]>([]);
-
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [units, setUnits] = useState<{ id: number; name: string }[]>([]);
 
   const [products, setProducts] = useState<Product[]>([
     {
@@ -227,13 +241,13 @@ const ProductsPage = () => {
       { id: 2, name: "Ropa" },
       { id: 3, name: "Hogar" },
     ]);
-    
+
     setBrands([
       { id: 1, name: "Marca Ejemplo" },
       { id: 2, name: "Otra Marca" },
       { id: 3, name: "Marca Premium" },
     ]);
-    
+
     setUnits([
       { id: 1, name: "Unidad" },
       { id: 2, name: "Kilogramo" },
@@ -247,36 +261,36 @@ const ProductsPage = () => {
       const matchesSearch = product.product_name
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      
+
       // Filtrar por existencia
       const matchesStock = !inStockOnly || product.stock_quantity > 0;
-      
+
       // Filtrar por categoría
-      const matchesCategory = 
-        selectedCategory === "all" || product.category_id.toString() === selectedCategory;
-      
+      const matchesCategory =
+        selectedCategory === "all" ||
+        product.category_id.toString() === selectedCategory;
+
       return matchesSearch && matchesStock && matchesCategory;
     });
   }, [products, searchTerm, inStockOnly, selectedCategory]);
 
- 
-const form = useForm<z.infer<typeof productSchema>>({
-  resolver: zodResolver(productSchema),
-  defaultValues: {
-    product_name: "",
-    sku: "",
-    description: "",
-    base_price: 0,
-    category_id: 0,
-    brand_id: 0,
-    unit_id: 0,
-    current_cost: 0,
-    price_level_1: 0,
-    price_level_2: 0,
-    price_level_3: 0,
-    is_active: true,
-  },
-});
+  const form = useForm<z.infer<typeof productSchema>>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      product_name: "",
+      sku: "",
+      description: "",
+      base_price: 0,
+      category_id: 0,
+      brand_id: 0,
+      unit_id: 0,
+      current_cost: 0,
+      price_level_1: 0,
+      price_level_2: 0,
+      price_level_3: 0,
+      is_active: true,
+    },
+  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,85 +304,83 @@ const form = useForm<z.infer<typeof productSchema>>({
     }
   };
 
+  const onSubmit = async (values: ProductForm) => {
+    try {
+      if (editingProduct) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editingProduct.id
+              ? {
+                  ...p,
+                  ...values,
+                  description: values.description || "",
 
-const onSubmit = async (values: ProductForm) => {
-  try {
-    if (editingProduct) {
-   
-      setProducts(prev =>
-        prev.map(p =>
-          p.id === editingProduct.id
-            ? {
-                ...p,
-                ...values,
-                description: values.description || "", 
-          
-                companyId: editingProduct.companyId,
-                previous_cost: editingProduct.previous_cost,
-                average_cost: editingProduct.average_cost,
-                price_level_4: editingProduct.price_level_4,
-                price_level_5: editingProduct.price_level_5,
-                stock_quantity: editingProduct.stock_quantity,
-                total_quantity_reserved: editingProduct.total_quantity_reserved,
-                total_quantity_on_order: editingProduct.total_quantity_on_order,
-              }
-            : p
-        )
-      );
-      toast.success("Producto actualizado exitosamente");
-    } else {
-   
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        ...values,
-        description: values.description || "", 
-      
-        companyId: 1, 
-        previous_cost: 0,
-        average_cost: values.current_cost,
-        price_level_4: 0,
-        price_level_5: 0,
-        default_warehouse_id: 1,
-        manages_serials: false,
-        manages_lots: false,
-        uses_decimals_in_quantity: false,
-        uses_scale_for_weight: false,
-        is_tax_exempt: false,
-        min_stock_level: 0,
-        max_stock_level: 0,
-        weight_value: 0,
-        weight_unit_id: 0,
-        volume_value: 0,
-        volume_unit_id: 0,
-        length_value: 0,
-        width_value: 0,
-        height_value: 0,
-        dimension_unit_id: 0,
-        show_in_ecommerce: true,
-        show_in_sales_app: true,
-        stock_quantity: 0,
-        total_quantity_reserved: 0,
-        total_quantity_on_order: 0,
-      };
-      setProducts(prev => [...prev, newProduct]);
-      toast.success("Producto creado exitosamente");
+                  companyId: editingProduct.companyId,
+                  previous_cost: editingProduct.previous_cost,
+                  average_cost: editingProduct.average_cost,
+                  price_level_4: editingProduct.price_level_4,
+                  price_level_5: editingProduct.price_level_5,
+                  stock_quantity: editingProduct.stock_quantity,
+                  total_quantity_reserved:
+                    editingProduct.total_quantity_reserved,
+                  total_quantity_on_order:
+                    editingProduct.total_quantity_on_order,
+                }
+              : p
+          )
+        );
+        toast.success("Producto actualizado exitosamente");
+      } else {
+        const newProduct: Product = {
+          id: Date.now().toString(),
+          ...values,
+          description: values.description || "",
+
+          companyId: 1,
+          previous_cost: 0,
+          average_cost: values.current_cost,
+          price_level_4: 0,
+          price_level_5: 0,
+          default_warehouse_id: 1,
+          manages_serials: false,
+          manages_lots: false,
+          uses_decimals_in_quantity: false,
+          uses_scale_for_weight: false,
+          is_tax_exempt: false,
+          min_stock_level: 0,
+          max_stock_level: 0,
+          weight_value: 0,
+          weight_unit_id: 0,
+          volume_value: 0,
+          volume_unit_id: 0,
+          length_value: 0,
+          width_value: 0,
+          height_value: 0,
+          dimension_unit_id: 0,
+          show_in_ecommerce: true,
+          show_in_sales_app: true,
+          stock_quantity: 0,
+          total_quantity_reserved: 0,
+          total_quantity_on_order: 0,
+        };
+        setProducts((prev) => [...prev, newProduct]);
+        toast.success("Producto creado exitosamente");
+      }
+
+      resetForm();
+      setIsModalOpen(false);
+    } catch (error) {
+      toast.error("Error al guardar el producto");
     }
+  };
 
-    resetForm();
-    setIsModalOpen(false);
-  } catch (error) {
-    toast.error("Error al guardar el producto");
-  }
-};
-
- 
   const handleDelete = (product: Product) => {
     toast.error(`¿Eliminar el producto "${product.product_name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          setProducts(prev => prev.filter(p => p.id !== product.id));
+          setProducts((prev) => prev.filter((p) => p.id !== product.id));
           toast.success("Producto eliminado exitosamente");
         },
       },
@@ -381,7 +393,6 @@ const onSubmit = async (values: ProductForm) => {
     });
   };
 
-  
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     form.reset({
@@ -402,7 +413,6 @@ const onSubmit = async (values: ProductForm) => {
     setIsModalOpen(true);
   };
 
- 
   const resetForm = () => {
     form.reset();
     setEditingProduct(null);
@@ -410,19 +420,17 @@ const onSubmit = async (values: ProductForm) => {
     setImagePreview(null);
   };
 
-  
   const handleBulkImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
-    const validFiles = Array.from(files).filter(file => {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      return extension === 'jpg' || extension === 'jpeg' || extension === 'png';
+
+    const validFiles = Array.from(files).filter((file) => {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      return extension === "jpg" || extension === "jpeg" || extension === "png";
     });
-    
+
     setBulkUploadFiles(validFiles);
   };
-
 
   const processBulkUpload = () => {
     if (bulkUploadFiles.length === 0) {
@@ -433,10 +441,10 @@ const onSubmit = async (values: ProductForm) => {
     let processedCount = 0;
     let errorCount = 0;
 
-    bulkUploadFiles.forEach(file => {
+    bulkUploadFiles.forEach((file) => {
       const fileName = file.name;
       const match = fileName.match(/^([A-Za-z0-9]+)-(\d+)\.(jpg|jpeg|png)$/i);
-      
+
       if (!match) {
         errorCount++;
         return;
@@ -444,16 +452,15 @@ const onSubmit = async (values: ProductForm) => {
 
       const productSKU = match[1];
       const imageNumber = match[2];
-   
-      const productIndex = products.findIndex(p => p.sku === productSKU);
-      
+
+      const productIndex = products.findIndex((p) => p.sku === productSKU);
+
       if (productIndex !== -1) {
-     
         const reader = new FileReader();
         reader.onloadend = () => {
           const imageDataUrl = reader.result as string;
-          setProducts(prev => 
-            prev.map((p, idx) => 
+          setProducts((prev) =>
+            prev.map((p, idx) =>
               idx === productIndex ? { ...p, image: imageDataUrl } : p
             )
           );
@@ -468,7 +475,7 @@ const onSubmit = async (values: ProductForm) => {
     toast.success(
       `Carga masiva completada: ${processedCount} imágenes procesadas, ${errorCount} errores`
     );
-    
+
     setBulkUploadFiles([]);
     setIsBulkUploadModalOpen(false);
   };
@@ -476,20 +483,21 @@ const onSubmit = async (values: ProductForm) => {
   const columns: ColumnDef<Product>[] = [
     {
       accessorKey: "product_name",
-      header: "Producto",  cell: ({ row }) => (
-    <div className="flex items-center gap-2 min-w-[150px]">
-      {row.original.image && (
-        <Image
-          src={row.original.image}
-          alt={row.getValue("product_name") || "Imagen de producto"}
-          width={40}
-          height={40}
-          className="h-10 w-10 object-cover rounded-md"
-        />
-      )}
-      <div className="font-medium">{row.getValue("product_name")}</div>
-    </div>
-  ),
+      header: "Producto",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 min-w-[150px]">
+          {row.original.image && (
+            <Image
+              src={row.original.image}
+              alt={row.getValue("product_name") || "Imagen de producto"}
+              width={40}
+              height={40}
+              className="h-10 w-10 object-cover rounded-md"
+            />
+          )}
+          <div className="font-medium">{row.getValue("product_name")}</div>
+        </div>
+      ),
     },
     {
       accessorKey: "sku",
@@ -503,8 +511,10 @@ const onSubmit = async (values: ProductForm) => {
       header: "Categoría",
       cell: ({ row }) => {
         const categoryId = row.getValue("category_id") as number;
-        const category = categories.find(c => c.id === categoryId);
-        return <div className="font-medium">{category?.name || categoryId}</div>;
+        const category = categories.find((c) => c.id === categoryId);
+        return (
+          <div className="font-medium">{category?.name || categoryId}</div>
+        );
       },
     },
     {
@@ -512,7 +522,7 @@ const onSubmit = async (values: ProductForm) => {
       header: "Marca",
       cell: ({ row }) => {
         const brandId = row.getValue("brand_id") as number;
-        const brand = brands.find(b => b.id === brandId);
+        const brand = brands.find((b) => b.id === brandId);
         return <div className="font-medium">{brand?.name || brandId}</div>;
       },
     },
@@ -565,7 +575,11 @@ const onSubmit = async (values: ProductForm) => {
       cell: ({ row }) => {
         const isActive = row.getValue("is_active") as boolean;
         return (
-          <div className={`font-medium ${isActive ? "text-green-600" : "text-red-600"}`}>
+          <div
+            className={`font-medium ${
+              isActive ? "text-green_b" : "text-red_b"
+            }`}
+          >
             {isActive ? "Activo" : "Inactivo"}
           </div>
         );
@@ -595,7 +609,7 @@ const onSubmit = async (values: ProductForm) => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(product)}
-                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -621,86 +635,97 @@ const onSubmit = async (values: ProductForm) => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Productos
             </h1>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                onClick={() => setIsBulkUploadModalOpen(true)}
-                variant="outline"
-                className="gap-2 w-full sm:w-auto"
-              >
-                <Upload className="h-4 w-4" />
-                <span>Cargar imágenes</span>
-              </Button>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsModalOpen(true);
-                }}
-                className="gap-2 w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nuevo producto</span>
-              </Button>
-            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar por nombre de producto..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span>Filtrar</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="flex items-center space-x-2 p-2">
-                  <Checkbox 
-                    id="in-stock-only" 
-                    checked={inStockOnly}
-                    onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                  />
-                  <label
-                    htmlFor="in-stock-only"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Solo con existencias
-                  </label>
-                </div>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5">
-                  <Label htmlFor="category-filter">Categoría</Label>
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={setSelectedCategory}
-                  >
-                    <SelectTrigger id="category-filter" className="mt-1">
-                      <SelectValue placeholder="Todas las categorías" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las categorías</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            <div className="flex gap-2 w-full ">
+              <div className="w-full max-w-[30rem] relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nombre de producto..."
+                  className="pl-8 "
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className=" gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center space-x-2 p-2">
+                    <Checkbox
+                      id="in-stock-only"
+                      checked={inStockOnly}
+                      onCheckedChange={(checked) =>
+                        setInStockOnly(checked === true)
+                      }
+                    />
+                    <label
+                      htmlFor="in-stock-only"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Solo con existencias
+                    </label>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5">
+                    <Label htmlFor="category-filter">Categoría</Label>
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={setSelectedCategory}
+                    >
+                      <SelectTrigger id="category-filter" className="mt-1">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          Todas las categorías
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={() => setIsBulkUploadModalOpen(true)}
+                  variant="outline"
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span>Cargar imágenes</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setIsModalOpen(true);
+                  }}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nuevo producto</span>
+                </Button>
+              </div>
+            </div>
           </div>
 
           <DataTable<Product, Product>
@@ -717,319 +742,343 @@ const onSubmit = async (values: ProductForm) => {
         </main>
       </div>
 
-  
-<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-  <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-    <DialogHeader className="px-0 sm:px-0">
-      <DialogTitle className="text-lg sm:text-xl">
-        {editingProduct ? "Editar producto" : "Nuevo producto"}
-      </DialogTitle>
-    </DialogHeader>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="px-0 sm:px-0">
+            <DialogTitle className="text-lg sm:text-xl">
+              {editingProduct ? "Editar producto" : "Nuevo producto"}
+            </DialogTitle>
+          </DialogHeader>
 
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <div className="grid gap-4 py-2 sm:py-4">
-       
-          <div className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-            <Label htmlFor="image" className="pt-2 sm:text-right">
-              Imagen
-            </Label>
-            <div className="w-full col-span-1 sm:col-span-3 space-y-2">
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="cursor-pointer w-full"
-              />
-          {imagePreview && (
-  <div className="mt-2 flex justify-center sm:justify-start">
-    <Image
-      src={imagePreview}
-      alt="Vista previa"
-      width={80}
-      height={80}
-      className="h-20 w-20 object-cover rounded-md"
-    />
-  </div>
-)}
-            </div>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="product_name"
-            render={({ field }) => (
-              <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                <FormLabel className="pt-2 sm:text-right">Nombre</FormLabel>
-                <div className="w-full col-span-1 sm:col-span-3">
-                  <FormControl>
-                    <Input {...field} className="w-full" />
-                  </FormControl>
-                  <FormMessage />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+              <div className="grid gap-4 py-2 sm:py-4">
+                <div className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
+                  <Label htmlFor="image" className="pt-2 sm:text-right">
+                    Imagen
+                  </Label>
+                  <div className="w-full col-span-1 sm:col-span-3 space-y-2">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="cursor-pointer w-full"
+                    />
+                    {imagePreview && (
+                      <div className="mt-2 flex justify-center sm:justify-start">
+                        <Image
+                          src={imagePreview}
+                          alt="Vista previa"
+                          width={80}
+                          height={80}
+                          className="h-20 w-20 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </FormItem>
-            )}
-          />
 
-          <FormField
-            control={form.control}
-            name="sku"
-            render={({ field }) => (
-              <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                <FormLabel className="pt-2 sm:text-right">SKU</FormLabel>
-                <div className="w-full col-span-1 sm:col-span-3">
-                  <FormControl>
-                    <Input {...field} className="w-full" />
-                  </FormControl>
-                  <FormMessage />
-                </div>
-              </FormItem>
-            )}
-          />
+                <FormField
+                  control={form.control}
+                  name="product_name"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
+                      <FormLabel className="pt-2 sm:text-right">
+                        Nombre
+                      </FormLabel>
+                      <div className="w-full col-span-1 sm:col-span-3">
+                        <FormControl>
+                          <Input {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                <FormLabel className="pt-2 sm:text-right">Descripción</FormLabel>
-                <div className="w-full col-span-1 sm:col-span-3">
-                  <FormControl>
-                    <textarea
-                      {...field}
-                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      rows={3}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </div>
-              </FormItem>
-            )}
-          />
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
+                      <FormLabel className="pt-2 sm:text-right">SKU</FormLabel>
+                      <div className="w-full col-span-1 sm:col-span-3">
+                        <FormControl>
+                          <Input {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoría</FormLabel>
-                  <Select
-                    value={field.value.toString()}
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
+                      <FormLabel className="pt-2 sm:text-right">
+                        Descripción
+                      </FormLabel>
+                      <div className="w-full col-span-1 sm:col-span-3">
+                        <FormControl>
+                          <textarea
+                            {...field}
+                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="brand_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Marca</FormLabel>
-                  <Select
-                    value={field.value.toString()}
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecciona una marca" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {brands.map((brand) => (
-                        <SelectItem key={brand.id} value={brand.id.toString()}>
-                          {brand.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="current_cost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Costo Actual</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={e => field.onChange(parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="base_price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Precio Base</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={e => field.onChange(parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="price_level_1"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Precio N1</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={e => field.onChange(parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="price_level_2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Precio N2</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={e => field.onChange(parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="price_level_3"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Precio N3</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={e => field.onChange(parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="is_active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Categoría</FormLabel>
+                        <Select
+                          value={field.value.toString()}
+                          onValueChange={(value) =>
+                            field.onChange(parseInt(value))
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecciona una categoría" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem
+                                key={category.id}
+                                value={category.id.toString()}
+                              >
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Producto activo
-                  </FormLabel>
-                  <FormDescription className="text-xs sm:text-sm">
-                    Los productos inactivos no estarán disponibles para la venta
-                  </FormDescription>
+
+                  <FormField
+                    control={form.control}
+                    name="brand_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Marca</FormLabel>
+                        <Select
+                          value={field.value.toString()}
+                          onValueChange={(value) =>
+                            field.onChange(parseInt(value))
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecciona una marca" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {brands.map((brand) => (
+                              <SelectItem
+                                key={brand.id}
+                                value={brand.id.toString()}
+                              >
+                                {brand.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </FormItem>
-            )}
-          />
-        </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setIsModalOpen(false);
-              resetForm();
-            }}
-            className="w-full sm:w-auto"
-          >
-            Cerrar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={form.formState.isSubmitting}
-            className="w-full sm:w-auto"
-          >
-            {form.formState.isSubmitting
-              ? "Guardando..."
-              : editingProduct
-              ? "Actualizar"
-              : "Guardar"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
-  </DialogContent>
-</Dialog>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="current_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Costo Actual</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-   
-      <Dialog open={isBulkUploadModalOpen} onOpenChange={setIsBulkUploadModalOpen}>
+                  <FormField
+                    control={form.control}
+                    name="base_price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Precio Base</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price_level_1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Precio N1</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="price_level_2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Precio N2</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="price_level_3"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Precio N3</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Producto activo</FormLabel>
+                        <FormDescription className="text-xs sm:text-sm">
+                          Los productos inactivos no estarán disponibles para la
+                          venta
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    resetForm();
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cerrar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={form.formState.isSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  {form.formState.isSubmitting
+                    ? "Guardando..."
+                    : editingProduct
+                    ? "Actualizar"
+                    : "Guardar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isBulkUploadModalOpen}
+        onOpenChange={setIsBulkUploadModalOpen}
+      >
         <DialogContent className="w-[95%] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Carga masiva de imágenes</DialogTitle>
             <DialogDescription>
-              Seleccione las imágenes para cargar. El nombre debe seguir el formato: SKU-NÚMERO (ej: SKU001-1.jpg)
+              Seleccione las imágenes para cargar. El nombre debe seguir el
+              formato: SKU-NÚMERO (ej: SKU001-1.jpg)
             </DialogDescription>
           </DialogHeader>
 

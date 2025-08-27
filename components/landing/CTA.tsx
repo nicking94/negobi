@@ -21,7 +21,7 @@ const CTA = () => {
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Button
             variant="default"
-            className="bg-white text-green_b hover:bg-gray-100 hover:scale-105 transition-all duration-300 shadow-lg"
+            className="bg-white text-green_b hover:bg-gray_xxl hover:scale-105 transition-all duration-300 shadow-lg"
           >
             <a
               href={"https://wa.me/584242346947"}

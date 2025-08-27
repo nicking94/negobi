@@ -195,7 +195,7 @@ const InstancesPage = () => {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                   onClick={() => {
                     setInstances((prev) =>
                       prev.filter(
@@ -227,7 +227,7 @@ const InstancesPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Instancias
             </h1>
             <Button
@@ -277,7 +277,7 @@ const InstancesPage = () => {
                     disabled={!!editingInstance}
                   />
                   {errors.category_code && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_code.message}
                     </p>
                   )}
@@ -295,7 +295,7 @@ const InstancesPage = () => {
                     {...register("category_name")}
                   />
                   {errors.category_name && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_name.message}
                     </p>
                   )}
@@ -313,7 +313,7 @@ const InstancesPage = () => {
                     {...register("description")}
                   />
                   {errors.description && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.description.message}
                     </p>
                   )}
@@ -331,7 +331,7 @@ const InstancesPage = () => {
                     {...register("prefix")}
                   />
                   {errors.prefix && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.prefix.message}
                     </p>
                   )}

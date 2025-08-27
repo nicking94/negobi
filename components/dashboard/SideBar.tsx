@@ -217,7 +217,7 @@ const Sidebar = () => {
     return pathname === path || pathname.startsWith(`${path}/`);
   };
 
-return (
+  return (
     <>
       <div
         className={cn(
@@ -303,7 +303,7 @@ return (
                           : "max-h-0 opacity-0"
                       )}
                     >
-                      <ul className="space-y-1 ml-6 pl-4 border-l-2 border-slate-200">
+                      <ul className="space-y-1 ml-6 pl-4 border-l-2 border-gray_xl">
                         {item.submenuItems?.map((subItem, subIndex) => (
                           <li key={subIndex}>
                             <Link

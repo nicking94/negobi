@@ -100,7 +100,3 @@ input {
 button {
   @apply cursor-pointer;
 }
-table {
-  height: 84vh;
-  max-height: 84vh;
-}

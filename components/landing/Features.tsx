@@ -81,14 +81,14 @@ const Features = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group bg-gray-50 p-8 rounded-xl hover:bg-white transition-all duration-300 border border-gray-100 hover:border-green_m/30 hover:shadow-lg"
+              className="group bg-gray_xxl p-8 rounded-xl hover:bg-white transition-all duration-300 border border-gray_xxl hover:border-green_m/30 hover:shadow-lg"
             >
               <div className="bg-green_b text-white group-hover:bg-green_m w-14 h-14 rounded-full flex items-center justify-center mb-6 transition-all duration-300">
                 <div className="text-green_white transition-all duration-300">
                   {feature.icon}
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 group-hover:text-green_m transition-all duration-300">
+              <h3 className="text-xl font-semibold mb-4 text-gray_b group-hover:text-green_m transition-all duration-300">
                 {feature.title}
               </h3>
               <p className="text-gray-600">{feature.description}</p>
