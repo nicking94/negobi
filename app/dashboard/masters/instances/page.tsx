@@ -43,20 +43,15 @@ const STORAGE_KEY = "instances_list";
 const InstancesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 👉 Estado local de instancias
   const [instances, setInstances] = useState<InstanceType[]>([]);
 
-  // 👉 Estado para edición
   const [editingInstance, setEditingInstance] = useState<InstanceType | null>(
     null
   );
 
-  // 👉 Estados para paginación
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // calcular datos de paginación
   const total = instances.length;
   const totalPage = Math.max(1, Math.ceil(total / itemsPerPage));
   const paginatedData = instances.slice(
@@ -80,7 +75,6 @@ const InstancesPage = () => {
     },
   });
 
-  // 🔹 Cargar desde localStorage al iniciar
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -92,12 +86,10 @@ const InstancesPage = () => {
     }
   }, []);
 
-  // 🔹 Guardar en localStorage cada vez que cambien las instancias
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(instances));
   }, [instances]);
 
-  // Cargar datos al editar
   useEffect(() => {
     if (editingInstance) {
       reset(editingInstance);
@@ -114,7 +106,6 @@ const InstancesPage = () => {
 
   const onSubmit = (data: InstanceFormValues) => {
     if (editingInstance) {
-      // Editar
       setInstances((prev) =>
         prev.map((item) =>
           item.category_code === editingInstance.category_code
@@ -141,7 +132,6 @@ const InstancesPage = () => {
         correlative_length: 0,
       });
 
-      // Si estás en la última página y se llena, mover a la nueva
       const newTotal = total + 1;
       const newTotalPage = Math.ceil(newTotal / itemsPerPage);
       if (newTotalPage > totalPage) {
@@ -153,7 +143,6 @@ const InstancesPage = () => {
     setEditingInstance(null);
   };
 
-  // 👉 Columnas con acciones
   const columns: ColumnDef<InstanceType>[] = [
     {
       accessorKey: "category_code",
@@ -205,7 +194,6 @@ const InstancesPage = () => {
                   <span>Editar</span>
                 </DropdownMenuItem>
 
-                {/* Eliminar */}
                 <DropdownMenuItem
                   className="cursor-pointer flex items-center gap-2 text-red-500"
                   onClick={() => {
@@ -254,7 +242,6 @@ const InstancesPage = () => {
             </Button>
           </div>
 
-          {/* DataTable con paginación controlada */}
           <DataTable<InstanceType, InstanceType>
             columns={columns}
             data={paginatedData}
@@ -269,7 +256,6 @@ const InstancesPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar instancia */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[425px]">
           <DialogHeader>
@@ -279,7 +265,6 @@ const InstancesPage = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
-              {/* Código */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_code" className="sm:text-right">
                   Código
@@ -289,7 +274,7 @@ const InstancesPage = () => {
                     id="category_code"
                     placeholder="Ej: INST-001"
                     {...register("category_code")}
-                    disabled={!!editingInstance} // 👈 no editable en modo edición
+                    disabled={!!editingInstance}
                   />
                   {errors.category_code && (
                     <p className="text-red-500 text-sm mt-1">
@@ -299,7 +284,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Nombre */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_name" className="sm:text-right">
                   Nombre
@@ -318,7 +302,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Descripción */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="sm:text-right">
                   Descripción
@@ -337,7 +320,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Prefijo */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="prefix" className="sm:text-right">
                   Prefijo
