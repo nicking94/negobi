@@ -219,6 +219,7 @@ const Sidebar = () => {
 
   return (
     <>
+      {/* Overlay para móviles */}
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden",
@@ -229,12 +230,13 @@ const Sidebar = () => {
         onClick={toggleSidebar}
       />
 
+      {/* Sidebar */}
       <div
         className={cn(
-          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen sticky top-0", // Añadí sticky top-0 aquí
+          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen",
           sidebarOpen
             ? "w-64 md:w-72 left-0 opacity-100"
-            : "w-0 md:w-0 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
+            : "w-0 md:w-20 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
         )}
       >
         <button
