@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   SortingState,
   getPaginationRowModel,
-  Table as TanstackTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -120,7 +119,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  className = "bg-white max-h-[58vh] md:max-h-[72vh]",
+  className = "bg-white  max-h-[67vh] md:max-h-[72vh] 2xl:max-h-[75vh] ",
   headerClassName = "bg-green_m text-white font-semibold",
   rowClassName = "bg-white hover:bg-green_xxl/20 border-b border-gray_xxl",
   cellClassName = "py-3 px-4 text-left",
@@ -148,8 +147,8 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className={cn("flex flex-col ", className)}>
-      <div className="rounded-md overflow-hidden flex flex-col">
-        <div className=" overflow-auto">
+      <div className=" rounded-md overflow-hidden flex flex-col flex-1 ">
+        <div className=" overflow-auto flex-1">
           <Table>
             <TableHeader className="sticky top-0 z-10 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -240,14 +239,14 @@ function DataTablePagination({
             value={`${itemsPerPage}`}
             onValueChange={(value) => {
               setItemsPerPage(Number(value));
-              setPage(1); // Opcional: volver a primera página
+              setPage(1);
             }}
           >
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue placeholder={itemsPerPage} />
             </SelectTrigger>
             <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
+              {[5, 10, 20, 30, 40, 50].map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                   {pageSize}
                 </SelectItem>

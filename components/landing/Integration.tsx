@@ -5,18 +5,18 @@ const Integration = () => {
     <section className="py-20 bg-green_xxl">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+          <h2 className="text-3xl font-bold text-gray_b mb-4">
             Integraciones sin esfuerzo
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray_m max-w-3xl mx-auto">
             Negobi se conecta con las herramientas que ya usas para un flujo de
             trabajo perfecto
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-            <div className="bg-green-100 w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
+            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"
@@ -34,14 +34,14 @@ const Integration = () => {
             <h3 className="text-xl font-semibold text-center mb-3">
               ERP y Contabilidad
             </h3>
-            <p className="text-gray-600 text-center">
+            <p className="text-gray_m text-center">
               Conexión con SAP, Oracle, Microsoft Dynamics y otros sistemas ERP
               principales
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-            <div className="bg-green-100 w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
+            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"
@@ -59,14 +59,14 @@ const Integration = () => {
             <h3 className="text-xl font-semibold text-center mb-3">
               Facturación Electrónica
             </h3>
-            <p className="text-gray-600 text-center">
+            <p className="text-gray_m text-center">
               Integración con sistemas de facturación electrónica según
               normativas locales
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-            <div className="bg-green-100 w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
+            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"
@@ -82,7 +82,7 @@ const Integration = () => {
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-center mb-3">CRM</h3>
-            <p className="text-gray-600 text-center">
+            <p className="text-gray_m text-center">
               Sincronización con Salesforce, HubSpot y otras plataformas CRM
               populares
             </p>

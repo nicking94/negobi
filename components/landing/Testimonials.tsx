@@ -29,10 +29,10 @@ const Testimonials = () => {
     <section className="py-20 bg-white">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+          <h2 className="text-3xl font-bold text-gray_b mb-4">
             Lo que dicen nuestros clientes
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray_m max-w-3xl mx-auto">
             Empresas líderes confían en Negobi para potenciar su fuerza de
             ventas
           </p>
@@ -42,17 +42,17 @@ const Testimonials = () => {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="bg-gray-50 p-8 rounded-xl border border-gray-200"
+              className="bg-gray_xxl p-8 rounded-xl border border-gray_xxl"
             >
               <div className="flex items-center mb-6">
                 <div>
-                  <h4 className="font-semibold text-gray-800">
+                  <h4 className="font-semibold text-gray_b">
                     {testimonial.name}
                   </h4>
-                  <p className="text-sm text-gray-600">{testimonial.title}</p>
+                  <p className="text-sm text-gray_m">{testimonial.title}</p>
                 </div>
               </div>
-              <p className="text-gray-700 italic">{testimonial.quote}</p>
+              <p className="text-gray_b italic">{testimonial.quote}</p>
             </div>
           ))}
         </div>

@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Edit, Plus, Search, Filter, Upload } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Filter,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -584,7 +592,7 @@ const ProductsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(product)}
-                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -610,29 +618,9 @@ const ProductsPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Productos
             </h1>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                onClick={() => setIsBulkUploadModalOpen(true)}
-                variant="outline"
-                className="gap-2 w-full sm:w-auto"
-              >
-                <Upload className="h-4 w-4" />
-                <span>Cargar imágenes</span>
-              </Button>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsModalOpen(true);
-                }}
-                className="gap-2 w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nuevo producto</span>
-              </Button>
-            </div>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 mb-6">

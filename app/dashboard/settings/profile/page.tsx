@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { User, Mail, Phone, Save, Key, Eye, EyeOff } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
@@ -18,29 +24,29 @@ const ProfilePage = () => {
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
-    confirm: false
+    confirm: false,
   });
-  
+
   // Datos de ejemplo del usuario
   const [userData, setUserData] = useState({
     name: "Negobi",
     email: "negobi@ejemplo.com",
     phone: "+1234567890",
-    position: "Propietario"
+    position: "Propietario",
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log("Datos actualizados:", userData);
       // Aquí iría la lógica para actualizar el perfil
       alert("Perfil actualizado correctamente");
@@ -54,26 +60,26 @@ const ProfilePage = () => {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       alert("Las contraseñas no coinciden");
       return;
     }
-    
+
     if (passwordData.newPassword.length < 6) {
       alert("La contraseña debe tener al menos 6 caracteres");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log("Contraseña actualizada");
       setPasswordData({
         currentPassword: "",
         newPassword: "",
-        confirmPassword: ""
+        confirmPassword: "",
       });
       alert("Contraseña actualizada correctamente");
     } catch (error) {
@@ -86,24 +92,24 @@ const ProfilePage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setUserData(prev => ({
+    setUserData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({
+    setPasswordData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords(prev => ({
+    setShowPasswords((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
@@ -119,19 +125,19 @@ const ProfilePage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Perfil de Usuario
             </h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray_xxl p-6">
             {/* Selector de sección con estilo de pestañas */}
-            <div className="flex border-b border-gray-200 mb-6">
+            <div className="flex border-b border-gray_xxl mb-6">
               <button
                 className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
-                  activeSection === "profile" 
-                    ? "border-green-600 text-green-700" 
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                  activeSection === "profile"
+                    ? "border-green_m text-green_b"
+                    : "border-transparent text-gray_m hover:text-gray_b"
                 }`}
                 onClick={() => setActiveSection("profile")}
               >
@@ -140,9 +146,9 @@ const ProfilePage = () => {
               </button>
               <button
                 className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
-                  activeSection === "password" 
-                    ? "border-green-600 text-green-700" 
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                  activeSection === "password"
+                    ? "border-green_m text-green_b"
+                    : "border-transparent text-gray_m hover:text-gray_b"
                 }`}
                 onClick={() => setActiveSection("password")}
               >
@@ -150,7 +156,7 @@ const ProfilePage = () => {
                 Cambiar Contraseña
               </button>
             </div>
-            
+
             {/* Sección de Información Personal */}
             {activeSection === "profile" && (
               <Card className="bg-white border-0 shadow-none">
@@ -166,9 +172,11 @@ const ProfilePage = () => {
                   <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name" className="text-gray-700">Nombre</Label>
+                        <Label htmlFor="name" className="text-gray_b">
+                          Nombre
+                        </Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                          <User className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                           <Input
                             id="name"
                             name="name"
@@ -179,9 +187,11 @@ const ProfilePage = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="position" className="text-gray-700">Cargo</Label>
+                        <Label htmlFor="position" className="text-gray_b">
+                          Cargo
+                        </Label>
                         <Input
                           id="position"
                           name="position"
@@ -190,11 +200,13 @@ const ProfilePage = () => {
                           required
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-gray-700">Correo Electrónico</Label>
+                        <Label htmlFor="email" className="text-gray_b">
+                          Correo Electrónico
+                        </Label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                           <Input
                             id="email"
                             name="email"
@@ -206,11 +218,13 @@ const ProfilePage = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-gray-700">Teléfono</Label>
+                        <Label htmlFor="phone" className="text-gray_b">
+                          Teléfono
+                        </Label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                           <Input
                             id="phone"
                             name="phone"
@@ -222,14 +236,16 @@ const ProfilePage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-end pt-4">
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         disabled={isLoading}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green_m hover:bg-green_b"
                       >
-                        {isLoading ? "Guardando..." : (
+                        {isLoading ? (
+                          "Guardando..."
+                        ) : (
                           <>
                             <Save className="w-4 h-4 mr-2" />
                             Guardar Cambios
@@ -241,7 +257,7 @@ const ProfilePage = () => {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Sección de Cambio de Contraseña */}
             {activeSection === "password" && (
               <Card className="bg-white border-0 shadow-none">
@@ -250,13 +266,16 @@ const ProfilePage = () => {
                     Cambiar Contraseña
                   </CardTitle>
                   <CardDescription>
-                    Actualiza tu contraseña aquí. Asegúrate de usar una contraseña segura.
+                    Actualiza tu contraseña aquí. Asegúrate de usar una
+                    contraseña segura.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <form onSubmit={handlePasswordUpdate} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="currentPassword" className="text-gray-700">Contraseña Actual</Label>
+                      <Label htmlFor="currentPassword" className="text-gray_b">
+                        Contraseña Actual
+                      </Label>
                       <div className="relative">
                         <Input
                           id="currentPassword"
@@ -274,16 +293,18 @@ const ProfilePage = () => {
                           onClick={() => togglePasswordVisibility("current")}
                         >
                           {showPasswords.current ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4 text-gray_m" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4 text-gray_m" />
                           )}
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="text-gray-700">Nueva Contraseña</Label>
+                      <Label htmlFor="newPassword" className="text-gray_b">
+                        Nueva Contraseña
+                      </Label>
                       <div className="relative">
                         <Input
                           id="newPassword"
@@ -301,16 +322,18 @@ const ProfilePage = () => {
                           onClick={() => togglePasswordVisibility("new")}
                         >
                           {showPasswords.new ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4 text-gray_m" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4 text-gray_m" />
                           )}
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-gray-700">Confirmar Nueva Contraseña</Label>
+                      <Label htmlFor="confirmPassword" className="text-gray_b">
+                        Confirmar Nueva Contraseña
+                      </Label>
                       <div className="relative">
                         <Input
                           id="confirmPassword"
@@ -328,21 +351,23 @@ const ProfilePage = () => {
                           onClick={() => togglePasswordVisibility("confirm")}
                         >
                           {showPasswords.confirm ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4 text-gray_m" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4 text-gray_m" />
                           )}
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-end pt-4">
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         disabled={isLoading}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green_m hover:bg-green_b"
                       >
-                        {isLoading ? "Actualizando..." : (
+                        {isLoading ? (
+                          "Actualizando..."
+                        ) : (
                           <>
                             <Key className="w-4 h-4 mr-2" />
                             Actualizar Contraseña

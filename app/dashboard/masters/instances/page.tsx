@@ -54,11 +54,8 @@ const InstancesPage = () => {
   } = useGetInstances();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 👉 Estado local de instancias
   const [instances, setInstances] = useState<InstanceType[]>([]);
 
-  // 👉 Estado para edición
   const [editingInstance, setEditingInstance] = useState<InstanceType | null>(
     null
   );
@@ -79,7 +76,6 @@ const InstancesPage = () => {
     },
   });
 
-  // Cargar datos al editar
   useEffect(() => {
     if (editingInstance) {
       reset(editingInstance);
@@ -148,7 +144,6 @@ const InstancesPage = () => {
     setEditingInstance(null);
   };
 
-  // 👉 Columnas con acciones
   const columns: ColumnDef<InstanceType>[] = [
     {
       accessorKey: "category_code",
@@ -200,9 +195,8 @@ const InstancesPage = () => {
                   <span>Editar</span>
                 </DropdownMenuItem>
 
-                {/* Eliminar */}
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                   onClick={() => {
                     setInstances((prev) =>
                       prev.filter(
@@ -235,7 +229,7 @@ const InstancesPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Instancias
             </h1>
             <Button
@@ -250,7 +244,6 @@ const InstancesPage = () => {
             </Button>
           </div>
 
-          {/* DataTable con paginación controlada */}
           <DataTable<InstanceType, InstanceType>
             columns={columns}
             data={instancesResponse}
@@ -265,7 +258,6 @@ const InstancesPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar instancia */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[425px]">
           <DialogHeader>
@@ -275,7 +267,6 @@ const InstancesPage = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
-              {/* Código */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_code" className="sm:text-right">
                   Código
@@ -285,17 +276,16 @@ const InstancesPage = () => {
                     id="category_code"
                     placeholder="Ej: INST-001"
                     {...register("category_code")}
-                    disabled={!!editingInstance} // 👈 no editable en modo edición
+                    disabled={!!editingInstance}
                   />
                   {errors.category_code && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_code.message}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Nombre */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_name" className="sm:text-right">
                   Nombre
@@ -307,14 +297,13 @@ const InstancesPage = () => {
                     {...register("category_name")}
                   />
                   {errors.category_name && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_name.message}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Descripción */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="sm:text-right">
                   Descripción
@@ -326,14 +315,13 @@ const InstancesPage = () => {
                     {...register("description")}
                   />
                   {errors.description && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.description.message}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Prefijo */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="prefix" className="sm:text-right">
                   Prefijo
@@ -345,7 +333,7 @@ const InstancesPage = () => {
                     {...register("prefix")}
                   />
                   {errors.prefix && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.prefix.message}
                     </p>
                   )}

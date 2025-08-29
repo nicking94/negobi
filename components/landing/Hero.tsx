@@ -51,7 +51,7 @@ const Hero = () => {
           </div>
           <div className="hidden lg:block w-1/2">
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2 border border-white/10 shadow-2xl">
-              <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
+              <div className="bg-gray_b rounded-lg aspect-video flex items-center justify-center">
                 <span className="text-white">Mockup de la aplicación</span>
               </div>
             </div>

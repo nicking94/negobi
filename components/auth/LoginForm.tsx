@@ -90,9 +90,9 @@ export function LoginForm() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="h-4 w-4 text-gray_m" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <Eye className="h-4 w-4 text-gray_m" />
                     )}
                   </button>
                 </div>
@@ -107,10 +107,10 @@ export function LoginForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                RIF
+                ID Empresa
               </FormLabel>
               <FormControl>
-                <Input placeholder="12345556" {...field} />
+                <Input placeholder="123456" {...field} />
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>

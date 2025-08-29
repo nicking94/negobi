@@ -162,7 +162,7 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
               {/* Indicador de fortaleza de contraseña */}
               {passwordValue && (
                 <div className="mt-2">
-                  <div className="flex h-2 overflow-hidden rounded bg-gray-200">
+                  <div className="flex h-2 overflow-hidden rounded bg-gray_xxl">
                     <div
                       className="transition-all duration-300 ease-in-out"
                       style={{

@@ -203,9 +203,9 @@ const OrganizationsPage = () => {
       header: "Estado",
       cell: ({ row }) =>
         row.getValue("is_active") ? (
-          <span className="text-green-600 font-medium">Activo</span>
+          <span className="text-green_m font-medium">Activo</span>
         ) : (
-          <span className="text-red-600 font-medium">Inactivo</span>
+          <span className="text-red_m font-medium">Inactivo</span>
         ),
     },
     {
@@ -232,7 +232,7 @@ const OrganizationsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(org)}
-                  className="cursor-pointer flex items-center gap-2 text-red-500"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -258,7 +258,7 @@ const OrganizationsPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Organizaciones
             </h1>
             <Button
@@ -306,9 +306,7 @@ const OrganizationsPage = () => {
                 <div className="col-span-1 sm:col-span-3 space-y-1">
                   <Input id="name" {...register("name")} required />
                   {errors.name && (
-                    <p className="text-xs text-red-600">
-                      {errors.name.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.name.message}</p>
                   )}
                 </div>
               </div>
@@ -320,7 +318,7 @@ const OrganizationsPage = () => {
                 <div className="col-span-1 sm:col-span-3 space-y-1">
                   <Input id="rif" {...register("rif")} required />
                   {errors.rif && (
-                    <p className="text-xs text-red-600">{errors.rif.message}</p>
+                    <p className="text-xs text-red_m">{errors.rif.message}</p>
                   )}
                 </div>
               </div>
@@ -337,9 +335,7 @@ const OrganizationsPage = () => {
                     required
                   />
                   {errors.email && (
-                    <p className="text-xs text-red-600">
-                      {errors.email.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.email.message}</p>
                   )}
                 </div>
               </div>
@@ -356,9 +352,7 @@ const OrganizationsPage = () => {
                     required
                   />
                   {errors.phone && (
-                    <p className="text-xs text-red-600">
-                      {errors.phone.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.phone.message}</p>
                   )}
                 </div>
               </div>
