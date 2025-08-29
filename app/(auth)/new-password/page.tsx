@@ -1,7 +1,14 @@
+"use client";
 import { NewPasswordForm } from "@/components/auth/NewPasswordForm";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function NewPasswordPage() {
+function NewPasswordPageContent() {
+  const params = useSearchParams();
+  const email = params.get("email");
+  const taxId = params.get("taxId");
+
   return (
     <div className="p-6 min-h-screen flex flex-col items-center justify-center bg-radial from-green_xl via-green_m to-green_b">
       <div className=" w-full max-w-lg p-8 space-y-6 bg-gray_xxl rounded-lg shadow-lg shadow-green_b border border-green_b">
@@ -12,7 +19,10 @@ export default function NewPasswordPage() {
             acceder a tu cuenta.
           </p>
         </div>
-        <NewPasswordForm />
+        {email && taxId && (
+          <NewPasswordForm email={email} legal_tax_id={taxId} />
+        )}
+
         <div className="text-center text-md">
           <Link
             href="/login"
@@ -23,5 +33,13 @@ export default function NewPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewPasswordPage() {
+  return (
+    <Suspense fallback={<p className="text-center">Cargando...</p>}>
+      <NewPasswordPageContent />
+    </Suspense>
   );
 }

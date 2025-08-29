@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Esquema de validación con Zod
 const formSchema = z
@@ -41,9 +44,16 @@ const formSchema = z
     path: ["confirmPassword"],
   });
 
-export function NewPasswordForm() {
+type newPasswordType = {
+  email: string;
+  legal_tax_id: string;
+};
+
+export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
+  const NEGOBI_API = process.env.NEXT_PUBLIC_API_BACK;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const route = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,8 +64,36 @@ export function NewPasswordForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log("Nueva contraseña establecida:", values.password);
-    // Aquí iría la lógica para guardar la nueva contraseña
+    try {
+      const { password } = values;
+      const token = localStorage.getItem("tempToken");
+
+      const response = await axios.put(
+        `${NEGOBI_API}/auth/change-password`,
+        {
+          new_password: password,
+          legal_tax_id,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.status === 200) {
+        localStorage.clear();
+        toast.success("Contraseña cambiada con éxito.");
+        setTimeout(() => {
+          route.push(`/login`);
+        }, 3000); // 3 segundos
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        toast.error(e.message);
+      } else {
+        toast.error("Error desconocido");
+      }
+    }
   };
 
   // Función para verificar la fortaleza de la contraseña

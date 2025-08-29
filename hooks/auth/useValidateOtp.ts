@@ -1,3 +1,4 @@
+"use client"
 import { useState } from "react";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ const useValidateOtp = () => {
             setLoading(true);
             const { data, status } = await AuthService.validateOtpAction(params);
             if (data) {
+                localStorage.setItem("tempToken", data.data.access_token);
                 return { data, status }
             } else {
                 toast.error(data.message);

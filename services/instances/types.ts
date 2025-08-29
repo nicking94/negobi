@@ -1,4 +1,5 @@
 export type InstanceType = {
+    id?: string;
     companyId?: number;
     category_name?: string;
     category_code?: string;

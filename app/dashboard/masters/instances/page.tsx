@@ -27,6 +27,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { InstanceType } from "@/services/instances/types";
+import { InstancesServices } from "@/services/instances/instance.service";
+import useGetInstances from "@/hooks/instances/useGetInstance";
+import { toast, Toaster } from "sonner";
 
 const instanceSchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
@@ -38,9 +41,17 @@ const instanceSchema = z.object({
 
 type InstanceFormValues = z.infer<typeof instanceSchema>;
 
-const STORAGE_KEY = "instances_list";
-
 const InstancesPage = () => {
+  const {
+    instancesResponse,
+    page,
+    setItemsPerPage,
+    itemsPerPage,
+    setPage,
+    total,
+    totalPage,
+    setModified,
+  } = useGetInstances();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -50,18 +61,6 @@ const InstancesPage = () => {
   // 👉 Estado para edición
   const [editingInstance, setEditingInstance] = useState<InstanceType | null>(
     null
-  );
-
-  // 👉 Estados para paginación
-  const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-
-  // calcular datos de paginación
-  const total = instances.length;
-  const totalPage = Math.max(1, Math.ceil(total / itemsPerPage));
-  const paginatedData = instances.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
   );
 
   const {
@@ -80,23 +79,6 @@ const InstancesPage = () => {
     },
   });
 
-  // 🔹 Cargar desde localStorage al iniciar
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setInstances(JSON.parse(stored));
-      } catch {
-        console.error("Error leyendo localStorage");
-      }
-    }
-  }, []);
-
-  // 🔹 Guardar en localStorage cada vez que cambien las instancias
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(instances));
-  }, [instances]);
-
   // Cargar datos al editar
   useEffect(() => {
     if (editingInstance) {
@@ -112,27 +94,29 @@ const InstancesPage = () => {
     }
   }, [editingInstance, reset]);
 
-  const onSubmit = (data: InstanceFormValues) => {
+  const onSubmit = async (data: InstanceFormValues) => {
+    console.log(editingInstance);
+    const newInstance: InstanceType = {
+      companyId: 4, // Valor fijo para este ejemplo
+      category_code: data.category_code,
+      category_name: data.category_name,
+      description: data.description,
+      prefix: data.prefix,
+      correlative_length: data.correlative_length || 0,
+    };
     if (editingInstance) {
       // Editar
-      setInstances((prev) =>
-        prev.map((item) =>
-          item.category_code === editingInstance.category_code
-            ? { ...item, ...data }
-            : item
-        )
+      const result = await InstancesServices.PatchInstance(
+        editingInstance.id || "",
+        newInstance
       );
-    } else {
-      // Crear
-      const newInstance: InstanceType = {
-        category_code: data.category_code,
-        category_name: data.category_name,
-        description: data.description,
-        prefix: data.prefix,
-        correlative_length: data.correlative_length || 0,
-      };
-
-      setInstances((prev) => [...prev, newInstance]);
+      if (result.status === 200) {
+        setModified(true);
+        toast.success("Instancia modificada con éxito");
+      } else {
+        toast.error("Error modificando la instancia");
+        return;
+      }
       reset({
         category_code: "",
         category_name: "",
@@ -140,13 +124,24 @@ const InstancesPage = () => {
         prefix: "",
         correlative_length: 0,
       });
+    } else {
+      // Crear
 
-      // Si estás en la última página y se llena, mover a la nueva
-      const newTotal = total + 1;
-      const newTotalPage = Math.ceil(newTotal / itemsPerPage);
-      if (newTotalPage > totalPage) {
-        setPage(newTotalPage);
+      const result = await InstancesServices.AddInstance(newInstance);
+      if (result.status === 201) {
+        setModified(true);
+        toast.success("Instancia creada con éxito");
+      } else {
+        toast.error("Error creando la instancia");
+        return;
       }
+      reset({
+        category_code: "",
+        category_name: "",
+        description: "",
+        prefix: "",
+        correlative_length: 0,
+      });
     }
 
     setIsModalOpen(false);
@@ -229,6 +224,7 @@ const InstancesPage = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
+      <Toaster richColors position="top-right" />
       <Sidebar />
 
       <div className="flex flex-col flex-1 w-full">
@@ -257,7 +253,7 @@ const InstancesPage = () => {
           {/* DataTable con paginación controlada */}
           <DataTable<InstanceType, InstanceType>
             columns={columns}
-            data={paginatedData}
+            data={instancesResponse}
             noResultsText="No hay instancias registradas"
             page={page}
             setPage={setPage}
