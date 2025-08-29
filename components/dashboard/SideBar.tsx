@@ -1,12 +1,9 @@
-"use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import {
   FaHome,
-  FaBuilding,
   FaFileAlt,
   FaFileInvoiceDollar,
   FaFileUpload,
@@ -17,7 +14,6 @@ import {
   FaUsers,
   FaMapMarkerAlt,
   FaUserCheck,
-  FaBookOpen,
   FaBoxOpen,
   FaLandmark,
   FaChartBar,
@@ -184,6 +180,30 @@ const Sidebar = () => {
     );
   };
 
+  // Efecto para controlar el scroll del body cuando el menú está abierto en móviles
+  useEffect(() => {
+    // Verificar si estamos en un dispositivo móvil
+    const isMobile = window.innerWidth < 768;
+
+    if (sidebarOpen && isMobile) {
+      // Guardar la posición actual del scroll
+      const scrollY = window.scrollY;
+
+      // Prevenir el scroll del body
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+
+      return () => {
+        // Restaurar el scroll al cerrar el menú
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [sidebarOpen]);
+
   const getInitialOpenDropdowns = () => {
     return menuItems.reduce((acc, item, index) => {
       if (
@@ -216,10 +236,8 @@ const Sidebar = () => {
 
     return pathname === path || pathname.startsWith(`${path}/`);
   };
-
   return (
     <>
-      {/* Overlay para móviles */}
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden",
@@ -230,13 +248,12 @@ const Sidebar = () => {
         onClick={toggleSidebar}
       />
 
-      {/* Sidebar */}
       <div
         className={cn(
-          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen",
+          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen  top-0",
           sidebarOpen
             ? "w-64 md:w-72 left-0 opacity-100"
-            : "w-0 md:w-20 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
+            : "w-0 md:w-0 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
         )}
       >
         <button

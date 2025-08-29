@@ -132,8 +132,6 @@ const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -301,18 +299,6 @@ const ProductsPage = () => {
     },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const onSubmit = async (values: ProductForm) => {
     try {
       if (editingProduct) {
@@ -392,15 +378,13 @@ const ProductsPage = () => {
       price_level_3: product.price_level_3,
       is_active: product.is_active,
     });
-    setImagePreview(product.image || null);
+
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
     form.reset();
     setEditingProduct(null);
-    setSelectedImage(null);
-    setImagePreview(null);
   };
 
   const handleBulkImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -434,7 +418,6 @@ const ProductsPage = () => {
       }
 
       const productSKU = match[1];
-      const imageNumber = match[2];
 
       const productIndex = products.findIndex((p) => p.sku === productSKU);
 
@@ -472,7 +455,7 @@ const ProductsPage = () => {
           {row.original.image && (
             <Image
               src={row.original.image}
-              alt={row.getValue("product_name") || "Imagen de producto"}
+              alt={row.getValue("product_name")}
               width={40}
               height={40}
               className="h-10 w-10 object-cover rounded-md"
@@ -622,69 +605,85 @@ const ProductsPage = () => {
               Productos
             </h1>
           </div>
+          <div className="flex  justify-between">
+            <div className=" w-full max-w-[30rem] flex flex-col md:flex-row gap-4 mb-6">
+              <div className=" relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nombre de producto..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar por nombre de producto..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span>Filtrar</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="flex items-center space-x-2 p-2">
-                  <Checkbox
-                    id="in-stock-only"
-                    checked={inStockOnly}
-                    onCheckedChange={(checked) =>
-                      setInStockOnly(checked === true)
-                    }
-                  />
-                  <label
-                    htmlFor="in-stock-only"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Solo con existencias
-                  </label>
-                </div>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5">
-                  <Label htmlFor="category-filter">Categoría</Label>
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={setSelectedCategory}
-                  >
-                    <SelectTrigger id="category-filter" className="mt-1">
-                      <SelectValue placeholder="Todas las categorías" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las categorías</SelectItem>
-                      {instancesResponse.map((category: Category) => (
-                        <SelectItem
-                          key={category.id}
-                          value={category.id.toString()}
-                        >
-                          {category.category_name}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center space-x-2 p-2">
+                    <Checkbox
+                      id="in-stock-only"
+                      checked={inStockOnly}
+                      onCheckedChange={(checked) =>
+                        setInStockOnly(checked === true)
+                      }
+                    />
+                    <label
+                      htmlFor="in-stock-only"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Solo con existencias
+                    </label>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5">
+                    <Label htmlFor="category-filter">Categoría</Label>
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={setSelectedCategory}
+                    >
+                      <SelectTrigger id="category-filter" className="mt-1">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          Todas las categorías
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                        {instancesResponse.map((category: Category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.category_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setIsModalOpen(true);
+                  }}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nuevo producto</span>
+                </Button>
+              </div>
+            </div>
           </div>
-
           <DataTable<Product, Product>
             columns={columns}
             data={filteredProducts || []}
@@ -710,32 +709,6 @@ const ProductsPage = () => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
               <div className="grid gap-4 py-2 sm:py-4">
-                <div className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                  <Label htmlFor="image" className="pt-2 sm:text-right">
-                    Imagen
-                  </Label>
-                  <div className="w-full col-span-1 sm:col-span-3 space-y-2">
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="cursor-pointer w-full"
-                    />
-                    {imagePreview && (
-                      <div className="mt-2 flex justify-center sm:justify-start">
-                        <Image
-                          src={imagePreview}
-                          alt="Vista previa"
-                          width={80}
-                          height={80}
-                          className="h-20 w-20 object-cover rounded-md"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 <FormField
                   control={form.control}
                   name="product_name"
