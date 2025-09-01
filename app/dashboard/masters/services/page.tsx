@@ -403,7 +403,7 @@ const ServicesPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-2 w-full">
+            <div className="flex gap-2 w-full max-w-[30rem] ">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input

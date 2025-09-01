@@ -454,12 +454,7 @@ const ClientsPage = () => {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main
-          className={cn(
-            "bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden flex flex-col transition-all duration-300",
-            sidebarOpen && "md:ml-64 lg:ml-72"
-          )}
-        >
+        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Clientes

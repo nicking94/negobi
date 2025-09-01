@@ -17,10 +17,14 @@ export type OrganizationType = {
 };
 
 export type OrganizationQueryType = {
-  search: string,
-  page: number,
-  itemsPerPage: number,
-  companyId?: number,
-}
-
-
+  search: string;
+  page: number;
+  itemsPerPage: number;
+  companyId?: number;
+};
+export type WarehouseQueryType = {
+  search: string;
+  page: number;
+  itemsPerPage: number;
+  companyId?: number;
+};

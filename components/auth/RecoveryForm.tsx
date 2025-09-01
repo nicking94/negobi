@@ -20,7 +20,10 @@ import { useRouter } from "next/navigation";
 // Validaciones con Zod
 const formSchema = z.object({
   email: z.string().email("Email inválido"),
-  taxId: z.string().min(5, "RIF inválido").max(13, "RIF inválido"),
+  taxId: z
+    .string()
+    .min(5, "ID Empresa inválido")
+    .max(13, "ID Empresa inválido"),
 });
 
 export function RecoveryForm() {
@@ -74,14 +77,13 @@ export function RecoveryForm() {
           )}
         />
 
-        {/* Campo RIF */}
         <FormField
           control={form.control}
           name="taxId"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                RIF
+                ID Empresa
               </FormLabel>
               <FormControl>
                 <Input placeholder="RIF" {...field} value={field.value ?? ""} />
