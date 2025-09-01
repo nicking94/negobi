@@ -98,7 +98,7 @@ const InstancesPage = () => {
       category_name: data.category_name,
       description: data.description,
       prefix: data.prefix,
-      correlative_length: data.correlative_length || 0,
+      correlative_length: data.correlative_length || 5,
     };
     if (editingInstance) {
       // Editar

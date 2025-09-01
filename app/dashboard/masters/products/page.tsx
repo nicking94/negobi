@@ -58,6 +58,7 @@ import { toast, Toaster } from "sonner";
 import Image from "next/image";
 import { ProductsService } from "@/services/products/products.service";
 import useGetInstances from "@/hooks/instances/useGetInstance";
+import useGetProducts from "@/hooks/products/useGetProducts";
 
 type Category = {
   id: number;
@@ -65,6 +66,7 @@ type Category = {
 };
 
 export type Product = {
+  id?: number;
   product_name: string;
   companyId: number;
   sku: string;
@@ -139,8 +141,10 @@ const ProductsPage = () => {
   const [categories, setCategories] = useState<{ id: number; name: string }[]>(
     []
   );
+  const { instancesResponse } = useGetInstances();
+
   const {
-    instancesResponse,
+    productsResponse,
     page,
     setItemsPerPage,
     itemsPerPage,
@@ -148,8 +152,8 @@ const ProductsPage = () => {
     total,
     totalPage,
     setModified,
-  } = useGetInstances();
-  console.log("instancesResponse", instancesResponse);
+  } = useGetProducts();
+  console.log("productsResponse", productsResponse);
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: number; name: string }[]>([]);
 
@@ -234,14 +238,6 @@ const ProductsPage = () => {
     },
   ]);
 
-  // Obtener categorías únicas de los productos
-  const productCategories = useMemo(() => {
-    const uniqueCategories = Array.from(
-      new Set(products.map((product) => product.categoryId))
-    );
-    return uniqueCategories;
-  }, [products]);
-
   // Simular carga de datos de categorías, marcas y unidades
   useEffect(() => {
     setCategories([
@@ -300,44 +296,49 @@ const ProductsPage = () => {
   });
 
   const onSubmit = async (values: ProductForm) => {
+    const newProduct: Product = {
+      ...values,
+      description: values.description || "",
+      companyId: 4,
+      previous_cost: 0,
+      average_cost: values.current_cost,
+      price_level_4: 0,
+      price_level_5: 0,
+      default_warehouse_id: 1,
+      manages_serials: false,
+      manages_lots: false,
+      uses_decimals_in_quantity: false,
+      uses_scale_for_weight: false,
+      is_tax_exempt: false,
+      min_stock_level: 0,
+      max_stock_level: 0,
+      weight_value: 0,
+      weight_unit: "kg",
+      volume_value: 0,
+      volume_unit: "m3",
+      length_value: 0,
+      width_value: 0,
+      height_value: 0,
+      dimension_unit: "cm",
+      show_in_ecommerce: true,
+      show_in_sales_app: true,
+      stock_quantity: 0,
+      total_quantity_reserved: 0,
+      total_quantity_on_order: 0,
+    };
+
     try {
-      if (editingProduct) {
+      if (editingProduct && typeof editingProduct.id === "number") {
+        const result = await ProductsService.updateProduct(
+          editingProduct.id,
+          newProduct
+        );
         toast.success("Producto actualizado exitosamente");
       } else {
-        const newProduct: Product = {
-          ...values,
-          description: values.description || "",
-          companyId: 4,
-          previous_cost: 0,
-          average_cost: values.current_cost,
-          price_level_4: 0,
-          price_level_5: 0,
-          default_warehouse_id: 1,
-          manages_serials: false,
-          manages_lots: false,
-          uses_decimals_in_quantity: false,
-          uses_scale_for_weight: false,
-          is_tax_exempt: false,
-          min_stock_level: 0,
-          max_stock_level: 0,
-          weight_value: 0,
-          weight_unit: "kg",
-          volume_value: 0,
-          volume_unit: "m3",
-          length_value: 0,
-          width_value: 0,
-          height_value: 0,
-          dimension_unit: "cm",
-          show_in_ecommerce: true,
-          show_in_sales_app: true,
-          stock_quantity: 0,
-          total_quantity_reserved: 0,
-          total_quantity_on_order: 0,
-        };
         const result = await ProductsService.createProduct(newProduct);
         toast.success("Producto creado exitosamente");
       }
-
+      setModified((prev) => !prev);
       resetForm();
       setIsModalOpen(false);
     } catch (error) {
@@ -351,7 +352,13 @@ const ProductsPage = () => {
       action: {
         label: "Eliminar",
         onClick: async () => {
+          if (!product.id) {
+            toast.error("Producto no encontrado");
+            return;
+          }
+          const result = await ProductsService.deleteProduct(product.id);
           toast.success("Producto eliminado exitosamente");
+          setModified((prev) => !prev);
         },
       },
       cancel: {
@@ -369,13 +376,13 @@ const ProductsPage = () => {
       product_name: product.product_name,
       sku: product.sku,
       description: product.description || "",
-      base_price: product.base_price,
+      base_price: Math.floor(product.base_price),
       categoryId: product.categoryId,
       brand_id: product.brand_id,
-      current_cost: product.current_cost,
-      price_level_1: product.price_level_1,
-      price_level_2: product.price_level_2,
-      price_level_3: product.price_level_3,
+      current_cost: Math.floor(product.current_cost),
+      price_level_1: Math.floor(product.price_level_1),
+      price_level_2: Math.floor(product.price_level_2),
+      price_level_3: Math.floor(product.price_level_3),
       is_active: product.is_active,
     });
 
@@ -686,14 +693,14 @@ const ProductsPage = () => {
           </div>
           <DataTable<Product, Product>
             columns={columns}
-            data={filteredProducts || []}
+            data={productsResponse || []}
             noResultsText="No se encontraron productos"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredProducts.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -773,7 +780,7 @@ const ProductsPage = () => {
                       <FormItem>
                         <FormLabel>Categoría</FormLabel>
                         <Select
-                          value={field.value.toString()}
+                          value={field?.value?.toString() || ""}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }
@@ -806,7 +813,7 @@ const ProductsPage = () => {
                       <FormItem>
                         <FormLabel>Marca</FormLabel>
                         <Select
-                          value={field.value.toString()}
+                          value={field?.value?.toString() || ""}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }

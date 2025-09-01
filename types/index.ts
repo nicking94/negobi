@@ -20,6 +20,7 @@ export type OrganizationQueryType = {
     search: string,
     page: number,
     itemsPerPage: number,
+    companyId?: number,
 }
 
 

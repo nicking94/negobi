@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Filter,
-  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -25,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,10 +54,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { ClientsService } from "@/services/clients/clients.service";
+import useGetClients from "@/hooks/clients/useGetClients";
 
 export type Client = {
   id?: string;
-  companyId: number;
+  companyId?: number;
   salespersonUserId?: number;
   zoneId?: number;
   client_code: string;
@@ -109,7 +107,7 @@ export type Client = {
 
 // Esquema de validación actualizado según el schema de Swagger
 const clientSchema = z.object({
-  companyId: z.number().min(1, "La compañía es requerida"),
+  companyId: z.number().min(1, "La compañía es requerida").optional(),
   salespersonUserId: z.number().optional(),
   zoneId: z.number().optional(),
   client_code: z.string().min(1, "El código de cliente es requerido"),
@@ -172,50 +170,16 @@ const ClientsPage = () => {
   const [clientTypes, setClientTypes] = useState<string[]>([]);
   const [taxDocumentTypes, setTaxDocumentTypes] = useState<string[]>([]);
 
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: "1",
-      companyId: 1,
-      salespersonUserId: 1,
-      client_code: "CLI001",
-      legal_name: "Cliente Ejemplo S.A.",
-      tax_document_type: "RIF",
-      tax_document_number: "J-123456789",
-      client_type: "Empresa",
-      email: "cliente@ejemplo.com",
-      main_phone: "+584121234567",
-      delivery_address: "Av. Principal, Edificio Ejemplo, Caracas",
-      has_credit: false,
-    },
-    {
-      id: "2",
-      companyId: 1,
-      salespersonUserId: 2,
-      client_code: "CLI002",
-      legal_name: "Otro Cliente C.A.",
-      tax_document_type: "RIF",
-      tax_document_number: "J-987654321",
-      client_type: "Empresa",
-      email: "otro@cliente.com",
-      mobile_phone: "+584128765432",
-      delivery_address: "Calle Secundaria, Local 5, Valencia",
-      has_credit: true,
-      credit_limit: 5000,
-      credit_days: 30,
-    },
-    {
-      id: "3",
-      companyId: 1,
-      client_code: "CLI003",
-      legal_name: "Cliente Inactivo",
-      tax_document_type: "Cédula",
-      tax_document_number: "12345678",
-      client_type: "Individual",
-      email: "inactivo@cliente.com",
-      main_phone: "+584129876543",
-      has_credit: false,
-    },
-  ]);
+  const {
+    clientsResponse,
+    page,
+    itemsPerPage,
+    total,
+    totalPage,
+    setPage,
+    setItemsPerPage,
+    setModified,
+  } = useGetClients();
 
   // Simular carga de datos de vendedores, tipos de cliente y tipos de documento fiscal
   useEffect(() => {
@@ -228,26 +192,6 @@ const ClientsPage = () => {
     setClientTypes(["taxpayer", "end_consumer", "Gobierno", "Extranjero"]);
     setTaxDocumentTypes(["RIF", "Cédula", "Pasaporte", "DNI"]);
   }, []);
-
-  // Filtrar clientes según los criterios
-  const filteredClients = useMemo(() => {
-    return clients.filter((client) => {
-      const matchesSearch =
-        client.legal_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.client_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.main_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.mobile_phone?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Filtrar por vendedor
-      const matchesSeller =
-        selectedSeller === "all" ||
-        (client.salespersonUserId &&
-          client.salespersonUserId.toString() === selectedSeller);
-
-      return matchesSearch && matchesSeller;
-    });
-  }, [clients, searchTerm, selectedSeller]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -288,24 +232,24 @@ const ClientsPage = () => {
   const onSubmit = async (values: ClientForm) => {
     try {
       if (editingClient) {
-        setClients((prev) =>
-          prev.map((c) =>
-            c.id === editingClient.id
-              ? {
-                  ...c,
-                  ...values,
-                  id: editingClient.id,
-                }
-              : c
-          )
+        const response = await ClientsService.updateClient(
+          editingClient.id!,
+          values
         );
-        toast.success("Cliente actualizado exitosamente");
+        console.log("Actualizar org", editingClient.id, values);
+        if (response.status === 200) {
+          toast.success("Organización actualizada exitosamente");
+          setModified((prev) => !prev);
+        } else {
+          toast.error("Error al actualizar la organización");
+        }
       } else {
         const newClient: Client = {
           ...values,
         };
         // setClients((prev) => [...prev, newClient]);
         const result = await ClientsService.addClient(newClient);
+        setModified((prev) => !prev);
         toast.success("Cliente creado exitosamente");
       }
 
@@ -322,8 +266,9 @@ const ClientsPage = () => {
       action: {
         label: "Eliminar",
         onClick: async () => {
-          setClients((prev) => prev.filter((c) => c.id !== client.id));
+          await ClientsService.deleteClient(client.id!);
           toast.success("Cliente eliminado exitosamente");
+          setModified((prev) => !prev);
         },
       },
       cancel: {
@@ -338,7 +283,6 @@ const ClientsPage = () => {
   const handleEdit = (client: Client) => {
     setEditingClient(client);
     form.reset({
-      companyId: client.companyId,
       salespersonUserId: client.salespersonUserId,
       zoneId: client.zoneId,
       client_code: client.client_code,
@@ -346,10 +290,6 @@ const ClientsPage = () => {
       tax_document_type: client.tax_document_type,
       tax_document_number: client.tax_document_number,
       client_type: client.client_type,
-      fiscal_country_id: client.fiscal_country_id,
-      fiscal_state_id: client.fiscal_state_id,
-      fiscal_city_id: client.fiscal_city_id,
-      fiscal_zone_id: client.fiscal_zone_id,
       email: client.email || "",
       main_phone: client.main_phone || "",
       mobile_phone: client.mobile_phone || "",
@@ -359,13 +299,10 @@ const ClientsPage = () => {
       commercial_name: client.commercial_name || "",
       delivery_address: client.delivery_address || "",
       zip_code: client.zip_code || "",
-      location: client.location,
       map_link: client.map_link || "",
       payment_term_id: client.payment_term_id,
-      credit_limit: client.credit_limit,
       credit_days: client.credit_days,
       has_credit: client.has_credit ?? false,
-      default_discount_percentage: client.default_discount_percentage,
       default_price_level: client.default_price_level,
       notes: client.notes || "",
     });
@@ -374,7 +311,7 @@ const ClientsPage = () => {
 
   const resetForm = () => {
     form.reset({
-      companyId: 1,
+      companyId: undefined,
       salespersonUserId: undefined,
       zoneId: undefined,
       client_code: "",
@@ -505,7 +442,7 @@ const ClientsPage = () => {
       },
     },
   ];
-
+  console.log("errors:", form.formState.errors);
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
       <Toaster richColors position="top-right" />
@@ -593,14 +530,14 @@ const ClientsPage = () => {
 
           <DataTable<Client, Client>
             columns={columns}
-            data={filteredClients || []}
+            data={clientsResponse || []}
             noResultsText="No se encontraron clientes"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredClients.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -1006,30 +943,6 @@ const ClientsPage = () => {
                       </FormItem>
                     )}
                   />
-
-                  {/* oculto porque no esta en el swagger */}
-
-                  {/* <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Cliente activo</FormLabel>
-                          <FormDescription className="text-xs sm:text-sm">
-                            Los clientes inactivos no estarán disponibles para
-                            las ventas
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  /> */}
                 </div>
               </div>
 
@@ -1045,11 +958,7 @@ const ClientsPage = () => {
                 >
                   Cerrar
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={form.formState.isSubmitting}
-                  className="w-full sm:w-auto"
-                >
+                <Button type="submit" className="w-full sm:w-auto">
                   {form.formState.isSubmitting
                     ? "Guardando..."
                     : editingClient

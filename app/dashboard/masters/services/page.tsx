@@ -56,9 +56,17 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
+import { ServiceService } from "@/services/servicios/services.service";
+import useGetInstances from "@/hooks/instances/useGetInstance";
+import useGetService from "@/hooks/services/useGetServices";
+
+type Category = {
+  id: number;
+  category_name: string;
+};
 
 export type Service = {
-  id: string;
+  id?: string;
   name: string;
   code: string;
   description?: string;
@@ -67,8 +75,8 @@ export type Service = {
   price_level_3: number;
   category_id: number;
   company_id: number;
-  synced_locations: number;
-  is_active: boolean;
+  synced_locations?: number;
+  is_active?: boolean;
 };
 
 const serviceSchema = z.object({
@@ -79,7 +87,7 @@ const serviceSchema = z.object({
   price_level_2: z.number().min(0, "El precio no puede ser negativo"),
   price_level_3: z.number().min(0, "El precio no puede ser negativo"),
   category_id: z.number().min(0, "La categoría es requerida"),
-  is_active: z.boolean(),
+  is_active: z.boolean().optional(),
 });
 
 type ServiceForm = z.infer<typeof serviceSchema>;
@@ -91,6 +99,17 @@ const ServicesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [syncFilter, setSyncFilter] = useState<string>("all");
   const [instanceFilter, setInstanceFilter] = useState<string>("all");
+  const { instancesResponse } = useGetInstances();
+  const {
+    servicesResponse,
+    page,
+    setItemsPerPage,
+    itemsPerPage,
+    setPage,
+    total,
+    totalPage,
+    setModified,
+  } = useGetService();
 
   // Datos de ejemplo
   const [services, setServices] = useState<Service[]>([
@@ -155,20 +174,12 @@ const ServicesPage = () => {
         service.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtrar por sincronización
-      let matchesSync = true;
-      if (syncFilter === "synced") {
-        matchesSync = service.synced_locations > 0;
-      } else if (syncFilter === "not-synced") {
-        matchesSync = service.synced_locations === 0;
-      }
-
       // Filtrar por instancia (si no es "todas")
       const matchesInstance =
         instanceFilter === "all" ||
         service.company_id.toString() === instanceFilter;
 
-      return matchesSearch && matchesSync && matchesInstance;
+      return matchesSearch && matchesInstance;
     });
   }, [services, searchTerm, syncFilter, instanceFilter]);
 
@@ -182,7 +193,6 @@ const ServicesPage = () => {
       price_level_2: 0,
       price_level_3: 0,
       category_id: 0,
-      is_active: true,
     },
   });
 
@@ -191,33 +201,25 @@ const ServicesPage = () => {
       // Preparar datos para el POST
       const postData = {
         ...values,
-        company_id: 1, // Esto debería venir del contexto de la empresa
+        company_id: 4, // Esto debería venir del contexto de la empresa
       };
 
-      if (editingService) {
+      if (editingService && typeof editingService.id === "number") {
         // Lógica para actualizar
-        setServices((prev) =>
-          prev.map((s) =>
-            s.id === editingService.id
-              ? {
-                  ...s,
-                  ...postData,
-                  company_id: editingService.company_id,
-                }
-              : s
-          )
+        const result = await ServiceService.patchService(
+          editingService.id,
+          postData
         );
         toast.success("Servicio actualizado exitosamente");
+        setModified((prev) => !prev);
       } else {
         // Lógica para crear
         const newService: Service = {
-          id: Date.now().toString(),
           ...postData,
-          synced_locations: 0, // Por defecto no sincronizado
-          company_id: 1,
         };
-        setServices((prev) => [...prev, newService]);
+        const result = await ServiceService.postService(newService);
         toast.success("Servicio creado exitosamente");
+        setModified((prev) => !prev);
 
         // Aquí iría la llamada a la API:
         // await fetch('/api/services', {
@@ -240,8 +242,13 @@ const ServicesPage = () => {
       action: {
         label: "Eliminar",
         onClick: async () => {
-          setServices((prev) => prev.filter((s) => s.id !== service.id));
+          if (!service.id) {
+            toast.error("ID de servicio no válido");
+            return;
+          }
+          await ServiceService.deleteService(service.id);
           toast.success("Servicio eliminado exitosamente");
+          setModified((prev) => !prev);
         },
       },
       cancel: {
@@ -263,7 +270,6 @@ const ServicesPage = () => {
       price_level_2: service.price_level_2,
       price_level_3: service.price_level_3,
       category_id: service.category_id,
-      is_active: service.is_active,
     });
     setIsModalOpen(true);
   };
@@ -482,14 +488,14 @@ const ServicesPage = () => {
 
           <DataTable<Service, Service>
             columns={columns}
-            data={filteredServices || []}
+            data={servicesResponse || []}
             noResultsText="No se encontraron servicios"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredServices.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -573,7 +579,7 @@ const ServicesPage = () => {
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <Select
-                          value={field.value.toString()}
+                          value={field.value ? field.value.toString() : ""}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }
@@ -584,12 +590,12 @@ const ServicesPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories.map((category) => (
+                            {instancesResponse.map((category: Category) => (
                               <SelectItem
                                 key={category.id}
                                 value={category.id.toString()}
                               >
-                                {category.name}
+                                {category.category_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -673,28 +679,6 @@ const ServicesPage = () => {
                           />
                         </FormControl>
                         <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Servicio activo</FormLabel>
-                        <FormDescription className="text-xs sm:text-sm">
-                          Los servicios inactivos no estarán disponibles para
-                          las ventas
-                        </FormDescription>
                       </div>
                     </FormItem>
                   )}

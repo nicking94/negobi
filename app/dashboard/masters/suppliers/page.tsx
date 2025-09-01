@@ -59,9 +59,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
+import { SupplierService } from "@/services/suppliers/suppliers.service";
 
 export type Supplier = {
-  id: string;
+  id?: string;
   companyId: number;
   supplier_code: string;
   legal_name: string;
@@ -319,20 +320,20 @@ const SuppliersPage = () => {
         commercial_name: values.commercial_name || "",
         delivery_address: values.delivery_address || "",
         paymentTermId: values.paymentTermId || 0, // Convert undefined to 0
-        credit_limit: values.credit_limit || 0, // Convert undefined to 0
+        credit_limit: 100.5, // Convert undefined to 0
         credit_days: values.credit_days || 0, // Convert undefined to 0
         notes: values.notes || "",
         companyId: 1,
         created_by: "admin",
         updated_by: "admin",
-        balance_due: 0,
-        advance_balance: 0,
+        balance_due: 0.0,
+        advance_balance: 0.0,
         last_purchase_date: new Date().toISOString(),
         last_purchase_number: "",
-        last_purchase_amount: 0,
+        last_purchase_amount: 0.0,
         last_payment_date: new Date().toISOString(),
         last_payment_number: "",
-        last_payment_amount: 0,
+        last_payment_amount: 0.0,
       };
 
       if (editingSupplier) {
@@ -352,11 +353,10 @@ const SuppliersPage = () => {
       } else {
         // Lógica para crear
         const newSupplier: Supplier = {
-          id: Date.now().toString(),
           ...postData,
           companyId: 1,
         };
-        setSuppliers((prev) => [...prev, newSupplier]);
+        const result = await SupplierService.postSuppliers(newSupplier);
         toast.success("Proveedor creado exitosamente");
       }
 
