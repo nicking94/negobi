@@ -59,9 +59,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
+import {
+  addWarehouse,
+  deleteWarehouse,
+  updateWarehouse,
+} from "@/services/warehouse/warehouse.service";
+import { de, tr } from "zod/locales";
+import useGetWarehouses from "@/hooks/warehouse/useGetWarehouses";
 
 export type Warehouse = {
-  id: string;
+  id?: string;
   companyBranchId: number;
   name: string;
   code: string;
@@ -69,10 +76,10 @@ export type Warehouse = {
   contact_phone?: string;
   location_address?: string;
   is_active: boolean;
-  created_by: string;
-  updated_by: string;
-  created_at: string;
-  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const warehouseSchema = z.object({
@@ -189,41 +196,45 @@ const WarehousesPage = () => {
     },
   });
 
+  const {
+    setModified,
+    warehousesResponse,
+    totalPage,
+    total,
+    setPage,
+    setItemsPerPage,
+    page,
+    itemsPerPage,
+  } = useGetWarehouses();
+
   const onSubmit = async (values: WarehouseForm) => {
     try {
-      if (editingWarehouse) {
+      if (editingWarehouse && typeof editingWarehouse.id === "string") {
         // Lógica para actualizar
-        setWarehouses((prev) =>
-          prev.map((w) =>
-            w.id === editingWarehouse.id
-              ? {
-                  ...w,
-                  ...values,
-                  updated_by: "admin",
-                  updated_at: new Date().toISOString(),
-                }
-              : w
-          )
-        );
+        const { id } = editingWarehouse;
+        try {
+          await updateWarehouse(id, values);
+        } catch (error) {
+          toast.error("Error al actualizar el almacén: " + error);
+        }
         toast.success("Almacén actualizado exitosamente");
       } else {
         // Lógica para crear
         const newWarehouse: Warehouse = {
-          id: Date.now().toString(),
           ...values,
-          created_by: "admin",
-          updated_by: "admin",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         };
-        setWarehouses((prev) => [...prev, newWarehouse]);
-        toast.success("Almacén creado exitosamente");
+        try {
+          await addWarehouse(newWarehouse);
+          toast.success("Almacén creado exitosamente");
+        } catch (error) {
+          toast.error("Error al crear el almacén: " + error);
+        }
       }
 
       resetForm();
       setIsModalOpen(false);
     } catch (error) {
-      toast.error("Error al guardar el almacén");
+      toast.error("Error al guardar el almacén: " + error);
     }
   };
 
@@ -233,8 +244,7 @@ const WarehousesPage = () => {
       action: {
         label: "Eliminar",
         onClick: async () => {
-          setWarehouses((prev) => prev.filter((w) => w.id !== warehouse.id));
-          toast.success("Almacén eliminado exitosamente");
+          deleteWarehouse(warehouse.id as string);
         },
       },
       cancel: {
@@ -513,14 +523,14 @@ const WarehousesPage = () => {
 
           <DataTable<Warehouse, Warehouse>
             columns={columns}
-            data={filteredWarehouses || []}
-            noResultsText="No se encontraron almacenes"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredWarehouses.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            data={warehousesResponse || []}
+            noResultsText="No hay almacenes registrados"
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -558,7 +568,7 @@ const WarehousesPage = () => {
                       <FormItem>
                         <FormLabel>Sucursal</FormLabel>
                         <Select
-                          value={field.value.toString()}
+                          value={field.value?.toString()}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }
