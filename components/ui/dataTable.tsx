@@ -119,7 +119,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  className = "bg-white  max-h-[67vh] md:max-h-[72vh] 2xl:max-h-[75vh] ",
+  className = "bg-white  max-h-[67vh] md:max-h-[64vh] 2xl:max-h-[75vh] ",
   headerClassName = "bg-green_m text-white font-semibold",
   rowClassName = "bg-white hover:bg-green_xxl/20 border-b border-gray_xxl",
   cellClassName = "py-3 px-4 text-left",

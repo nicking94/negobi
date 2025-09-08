@@ -246,18 +246,19 @@ const OrganizationsPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      <div className="flex flex-col flex-1 w-full">
+      {/* Contenedor principal sin margen lateral */}
+      <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Organizaciones
             </h1>
@@ -313,7 +314,7 @@ const OrganizationsPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
                 <Label htmlFor="rif" className="sm:text-right">
-                  RIF
+                  ID Empresa
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
                   <Input id="rif" {...register("rif")} required />

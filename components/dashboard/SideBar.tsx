@@ -238,6 +238,7 @@ const Sidebar = () => {
   };
   return (
     <>
+      {/* Overlay para móviles */}
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden",
@@ -248,17 +249,28 @@ const Sidebar = () => {
         onClick={toggleSidebar}
       />
 
+      {/* Sidebar con posición fija y transición de transformación */}
       <div
         className={cn(
-          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed md:relative z-50 h-screen  top-0",
+          "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed z-50 h-screen top-0",
           sidebarOpen
-            ? "w-64 md:w-72 left-0 opacity-100"
-            : "w-0 md:w-0 -left-full md:left-0 opacity-0 md:opacity-100 overflow-hidden"
+            ? "w-64 md:w-72 translate-x-0"
+            : "-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 md:overflow-hidden"
         )}
       >
+        {/* Botón de cerrar para desktop - solo visible cuando el sidebar está abierto */}
+        {sidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            className="hidden md:block absolute -right-10 top-4 p-2 rounded-lg bg-gray_xxl hover:bg-gray_xl text-gray_b z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         <button
           onClick={toggleSidebar}
-          className="md:hidden absolute right-4 top-4 p-2 rounded-lg bg-gray_xxl hover:bg-gray_xl text-gray_b"
+          className="md:hidden absolute right-4 top-4 p-2 rounded-lg bg-gray_xxl hover:bg-gray_xl text-gray_b z-10"
         >
           <X className="w-5 h-5" />
         </button>

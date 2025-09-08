@@ -596,25 +596,26 @@ const ProductsPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      <div className="flex flex-col flex-1 w-full">
+      {/* Contenedor principal sin margen lateral */}
+      <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Productos
             </h1>
           </div>
-          <div className="flex  justify-between">
-            <div className=" w-full max-w-[30rem] flex flex-col md:flex-row gap-4 mb-6">
-              <div className=" relative flex-1">
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            <div className="flex gap-2 w-full max-w-[30rem] ">
+              <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
