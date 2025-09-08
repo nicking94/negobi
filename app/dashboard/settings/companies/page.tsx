@@ -55,6 +55,8 @@ import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import useAddCompanies from "@/hooks/companies/useAddCompanies";
+import useGetCompanies from "@/hooks/companies/useGetCompanies";
 
 const companySchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -139,6 +141,8 @@ const CompaniesPage = () => {
     admin_last_name: "",
   });
 
+  const { newCompany } = useAddCompanies();
+
   // Datos de ejemplo
   const [companies, setCompanies] = useState<Company[]>([
     {
@@ -203,24 +207,19 @@ const CompaniesPage = () => {
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
 
-  // Filtrar empresas según los criterios
-  const filteredCompanies = useMemo(() => {
-    return companies.filter((company) => {
-      const matchesSearch =
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.legal_tax_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.contact_email.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Filtrar por estado (si no es "todos")
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && company.is_active) ||
-        (statusFilter === "inactive" && !company.is_active);
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [companies, searchTerm, statusFilter]);
+  const {
+    setModified,
+    loading,
+    companiesResponse,
+    modified,
+    totalPage,
+    total,
+    setPage,
+    setItemsPerPage,
+    setSearch,
+    page,
+    itemsPerPage,
+  } = useGetCompanies();
 
   const handleViewCompany = (company: Company) => {
     setSelectedCompany(company);
@@ -268,8 +267,7 @@ const CompaniesPage = () => {
     setIsCreateDialogOpen(true);
   };
 
-  const onSubmit = () => {
-    alert("submit");
+  const onSubmit = async (data: CompanyFormValues) => {
     if (selectedCompany) {
       // Editar empresa existente
       setCompanies(
@@ -296,30 +294,28 @@ const CompaniesPage = () => {
       );
       toast.success("Empresa actualizada exitosamente");
     } else {
-      // Crear nueva empresa
-      const newCompany: Company = {
-        organizationId: companies.length + 1,
-        name: formData.name,
-        legal_tax_id: formData.legal_tax_id,
-        api_key_duration_days: formData.api_key_duration_days,
-        code: formData.code,
-        contact_email: formData.contact_email,
-        main_phone: formData.main_phone,
-        fiscal_address: formData.fiscal_address,
-        is_active: formData.is_active,
-        admin_email: formData.admin_email,
-        admin_password: formData.admin_password,
-        admin_phone: formData.admin_phone,
-        admin_username: formData.admin_username,
-        admin_first_name: formData.admin_first_name,
-        admin_last_name: formData.admin_last_name,
-        created_at: new Date(),
-      };
-      setCompanies([...companies, newCompany]);
-      toast.success("Empresa creada exitosamente");
+      const response = await newCompany({
+        ...data,
+        admin_password: data.admin_password ?? "",
+      });
+      console.log(response);
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "status" in response &&
+        response.status === 201
+      ) {
+        toast.success("Compañía creada exitosamente");
+        setIsEditDialogOpen(false);
+        setIsCreateDialogOpen(false);
+        setModified((prev) => !prev);
+        form.reset();
+      } else {
+        toast.error("Error al crear la compañía");
+      }
     }
-    setIsEditDialogOpen(false);
-    setIsCreateDialogOpen(false);
+    // setIsEditDialogOpen(false);
+    // setIsCreateDialogOpen(false);
   };
 
   const handleDeleteCompany = (company: Company) => {
@@ -507,8 +503,7 @@ const CompaniesPage = () => {
                   type="search"
                   placeholder="Buscar por nombre, RIF, código o email..."
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
@@ -548,14 +543,14 @@ const CompaniesPage = () => {
 
           <DataTable<Company, Company>
             columns={columns}
-            data={filteredCompanies}
+            data={companiesResponse || []}
             noResultsText="No se encontraron empresas"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredCompanies.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -768,7 +763,7 @@ const CompaniesPage = () => {
           >
             {/* Nombre y código */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="name">Nombre de la Empresa *</Label>
                 <Input
                   id="name"
@@ -782,7 +777,7 @@ const CompaniesPage = () => {
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="code">Código *</Label>
                 <Input
                   id="code"
@@ -799,7 +794,7 @@ const CompaniesPage = () => {
 
             {/* RIF y API Key */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="legal_tax_id">RIF *</Label>
                 <Input
                   id="legal_tax_id"
@@ -813,7 +808,7 @@ const CompaniesPage = () => {
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="api_key_duration_days">
                   Duración API Key (días) *
                 </Label>
@@ -835,7 +830,7 @@ const CompaniesPage = () => {
 
             {/* Email y teléfono */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="contact_email">Email de Contacto *</Label>
                 <Input
                   id="contact_email"
@@ -849,7 +844,7 @@ const CompaniesPage = () => {
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="main_phone">Teléfono Principal *</Label>
                 <Input
                   id="main_phone"
@@ -865,7 +860,7 @@ const CompaniesPage = () => {
             </div>
 
             {/* Dirección */}
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="fiscal_address">Dirección Fiscal *</Label>
               <Input id="fiscal_address" {...form.register("fiscal_address")} />
               {form.formState.errors.fiscal_address && (
@@ -880,14 +875,14 @@ const CompaniesPage = () => {
               <h3 className="font-semibold mb-3">Administrador Principal</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="admin_first_name">Nombre *</Label>
                   <Input
                     id="admin_first_name"
                     {...form.register("admin_first_name")}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="admin_last_name">Apellido *</Label>
                   <Input
                     id="admin_last_name"
@@ -897,14 +892,14 @@ const CompaniesPage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="admin_username">Usuario *</Label>
                   <Input
                     id="admin_username"
                     {...form.register("admin_username")}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="admin_email">Email *</Label>
                   <Input
                     id="admin_email"
@@ -915,12 +910,12 @@ const CompaniesPage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="admin_phone">Teléfono *</Label>
                   <Input id="admin_phone" {...form.register("admin_phone")} />
                 </div>
                 {!selectedCompany && (
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="admin_password">Contraseña *</Label>
                     <Input
                       id="admin_password"

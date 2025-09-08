@@ -49,22 +49,46 @@ import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import * as z from "zod";
+import { UsersService } from "@/services/users/users.service";
+import useGetUsers from "@/hooks/users/useGetUsers";
+
+const userSchema = z.object({
+  email: z.string().email("Correo inválido"),
+  username: z.string().min(3, "El nombre de usuario es obligatorio"),
+  password: z
+    .string()
+    .min(6, "La contraseña debe tener mínimo 6 caracteres")
+    .optional(),
+  first_name: z.string().min(1, "El nombre es obligatorio"),
+  last_name: z.string().min(1, "El apellido es obligatorio"),
+  phone: z.string().optional(),
+  role: z.enum(["superAdmin", "admin", "sellers", "user"], {
+    error: "Selecciona un rol",
+  }),
+  seller_code: z.string().optional(),
+});
+
+type UserFormValues = z.infer<typeof userSchema>;
 
 export type User = {
-  id: string;
+  id?: string;
   email: string;
   username: string;
   first_name: string;
   last_name: string;
   phone: string;
-  role: "superAdmin" | "admin" | "user" | "seller";
+  role: "superAdmin" | "admin" | "user" | "sellers";
   seller_code: string;
   branch_id: number;
   company_id: number;
-  status: "active" | "inactive";
-  created_at: Date;
+  status?: "active" | "inactive";
+  created_at?: Date;
 };
-type UserRole = "superAdmin" | "admin" | "user" | "seller";
+type UserRole = "superAdmin" | "admin" | "user" | "sellers";
 
 const UsersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -76,11 +100,29 @@ const UsersPage = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: selectedUser
+      ? {
+          ...selectedUser,
+        }
+      : {
+          email: "",
+          username: "",
+          password: "",
+          first_name: "",
+          last_name: "",
+          phone: "",
+          role: "user",
+          seller_code: "",
+        },
+  });
+
   // Estado para el formulario de creación/edición
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "user" as "superAdmin" | "admin" | "user" | "seller",
+    role: "user" as "superAdmin" | "admin" | "user" | "sellers",
     phone: "",
     username: "",
     branch_id: 0,
@@ -113,7 +155,7 @@ const UsersPage = () => {
       first_name: "María",
       last_name: "González",
       phone: "+0987654321",
-      role: "seller",
+      role: "sellers",
       seller_code: "VD001",
       branch_id: 1,
       company_id: 1,
@@ -155,7 +197,7 @@ const UsersPage = () => {
     { id: "1", name: "superAdmin", label: "Super Administrador" },
     { id: "2", name: "admin", label: "Administrador" },
     { id: "3", name: "user", label: "Usuario" },
-    { id: "4", name: "seller", label: "Vendedor" },
+    { id: "4", name: "sellers", label: "Vendedor" },
   ];
 
   // Estados para los filtros
@@ -192,20 +234,22 @@ const UsersPage = () => {
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
-    setFormData({
-      email: user.email,
-      password: "", // No mostramos la contraseña por seguridad
-      role: user.role,
-      phone: user.phone,
-      username: user.username,
-      branch_id: user.branch_id,
-      company_id: user.company_id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      seller_code: user.seller_code,
-    });
+    form.reset(user);
+
     setIsEditDialogOpen(true);
   };
+
+  const {
+    usersResponse,
+    page,
+    itemsPerPage,
+    setItemsPerPage,
+    setModified,
+    setPage,
+    setSearch,
+    total,
+    totalPage,
+  } = useGetUsers();
 
   const handleCreateUser = () => {
     setFormData({
@@ -222,55 +266,65 @@ const UsersPage = () => {
     });
     setIsCreateDialogOpen(true);
   };
+  console.log(form.formState.errors);
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async (data: UserFormValues) => {
+    const newUser: User = {
+      ...data,
+      branch_id: 4,
+      company_id: 4,
+      phone: data.phone ?? "", //
+      seller_code: data.seller_code ?? "",
+    };
     if (selectedUser) {
-      // Editar usuario existente
-      setUsers(
-        users.map((user) =>
-          user.id === selectedUser.id
-            ? {
-                ...user,
-                email: formData.email,
-                role: formData.role,
-                phone: formData.phone,
-                username: formData.username,
-                branch_id: formData.branch_id,
-                company_id: formData.company_id,
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                seller_code: formData.seller_code,
-              }
-            : user
-        )
-      );
-      toast.success("Usuario actualizado exitosamente");
+      const response = await UsersService.patchUser(selectedUser.id!, newUser);
+      if (response.status === 200) {
+        toast.success("Usuario actualizado exitosamente");
+        setIsEditDialogOpen(false);
+        setIsCreateDialogOpen(false);
+        setModified((prev) => !prev);
+        form.reset();
+      } else {
+        toast.error("Error al crear el usuario");
+      }
     } else {
       // Crear nuevo usuario
-      const newUser: User = {
-        id: (users.length + 1).toString(),
-        email: formData.email,
-        username: formData.username,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        phone: formData.phone,
-        role: formData.role,
-        seller_code: formData.seller_code,
-        branch_id: formData.branch_id,
-        company_id: formData.company_id,
-        status: "active",
-        created_at: new Date(),
-      };
-      setUsers([...users, newUser]);
-      toast.success("Usuario creado exitosamente");
+
+      const response = await UsersService.postUser(newUser);
+      if (response.status === 201) {
+        toast.success("Usuario creado exitosamente");
+        setIsEditDialogOpen(false);
+        setIsCreateDialogOpen(false);
+        setModified((prev) => !prev);
+        form.reset();
+      } else {
+        toast.error("Error al crear el usuario");
+      }
     }
-    setIsEditDialogOpen(false);
-    setIsCreateDialogOpen(false);
   };
 
   const handleDeleteUser = (user: User) => {
-    setUsers(users.filter((u) => u.id !== user.id));
-    toast.success("Usuario eliminado exitosamente");
+    toast.error(`¿Eliminar el usuario"${user.first_name}"?`, {
+      description: "Esta acción no se puede deshacer.",
+      action: {
+        label: "Eliminar",
+        onClick: async () => {
+          const response = await UsersService.deleteUser(user.id as string);
+          if (response.status === 200) {
+            toast.success("Usuario eliminado exitosamente");
+            setModified((prev) => !prev);
+          } else {
+            toast.error("Error al eliminar el usuario");
+          }
+        },
+      },
+      cancel: {
+        label: "Cancelar",
+        onClick: () => {
+          toast.info("Eliminación cancelada");
+        },
+      },
+    });
   };
 
   const formatDate = (date: Date | null) => {
@@ -284,7 +338,7 @@ const UsersPage = () => {
         return "Super Admin";
       case "admin":
         return "Administrador";
-      case "seller":
+      case "sellers":
         return "Vendedor";
       default:
         return "Usuario";
@@ -335,19 +389,19 @@ const UsersPage = () => {
       ),
     },
     {
-      accessorKey: "status",
+      accessorKey: "is_active",
       header: "Estado",
       cell: ({ row }) => {
-        const status = row.getValue("status") as string;
+        const status = row.getValue("is_active") as boolean;
         return (
           <div
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              status === "active"
+              status === true
                 ? "bg-green_xxl text-green_b"
                 : "bg-red_xxl text-red_b"
             }`}
           >
-            {status === "active" ? "Activo" : "Inactivo"}
+            {status === true ? "Activo" : "Inactivo"}
           </div>
         );
       },
@@ -432,8 +486,7 @@ const UsersPage = () => {
                   type="search"
                   placeholder="Buscar por nombre, usuario, email o teléfono..."
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
@@ -499,14 +552,14 @@ const UsersPage = () => {
 
           <DataTable<User, User>
             columns={columns}
-            data={filteredUsers}
+            data={usersResponse || []}
             noResultsText="No se encontraron usuarios"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredUsers.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -635,7 +688,9 @@ const UsersPage = () => {
                 <Label htmlFor="view-created" className="text-sm font-medium">
                   Fecha de Creación
                 </Label>
-                <p className="mt-1">{formatDate(selectedUser.created_at)}</p>
+                <p className="mt-1">
+                  {formatDate(selectedUser.created_at ?? null)}
+                </p>
               </div>
             </div>
           )}
@@ -663,8 +718,8 @@ const UsersPage = () => {
         }}
       >
         <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
+          <DialogHeader>
+            <DialogTitle>
               {selectedUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
             </DialogTitle>
             <DialogDescription>
@@ -674,195 +729,159 @@ const UsersPage = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <form
+            onSubmit={form.handleSubmit(handleSaveUser)}
+            className="grid gap-4 py-4"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email *
-                </Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
                   placeholder="ejemplo@empresa.com"
+                  {...form.register("email")}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">
-                  Nombre de Usuario *
-                </Label>
+                <Label htmlFor="username">Nombre de Usuario *</Label>
                 <Input
                   id="username"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
                   placeholder="nombre.usuario"
+                  {...form.register("username")}
                 />
+                {form.formState.errors.username && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.username.message}
+                  </p>
+                )}
               </div>
             </div>
 
             {!selectedUser && (
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Contraseña *
-                </Label>
+                <Label htmlFor="password">Contraseña *</Label>
                 <Input
                   id="password"
                   type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
                   placeholder="••••••••"
+                  {...form.register("password")}
                 />
+                {form.formState.errors.password && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.password.message}
+                  </p>
+                )}
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name" className="text-sm font-medium">
-                  Nombre *
-                </Label>
+                <Label htmlFor="first_name">Nombre *</Label>
                 <Input
                   id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, first_name: e.target.value })
-                  }
                   placeholder="Juan"
+                  {...form.register("first_name")}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="last_name" className="text-sm font-medium">
-                  Apellido *
-                </Label>
+                <Label htmlFor="last_name">Apellido *</Label>
                 <Input
                   id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, last_name: e.target.value })
-                  }
                   placeholder="Pérez"
+                  {...form.register("last_name")}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">
-                  Teléfono
-                </Label>
+                <Label htmlFor="phone">Teléfono</Label>
                 <Input
                   id="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
                   placeholder="+1234567890"
+                  {...form.register("phone")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role" className="text-sm font-medium">
-                  Rol *
-                </Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: UserRole) =>
-                    setFormData({ ...formData, role: value })
-                  }
-                >
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="Seleccionar rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="superAdmin">
-                      Super Administrador
-                    </SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="seller">Vendedor</SelectItem>
-                    <SelectItem value="user">Usuario</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="role">Rol *</Label>
+                <Controller
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger id="role">
+                        <SelectValue placeholder="Seleccionar rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="superAdmin">
+                          Super Administrador
+                        </SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="sellers">Vendedor</SelectItem>
+                        <SelectItem value="user">Usuario</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
-            {formData.role === "seller" && (
+            {form.watch("role") === "sellers" && (
               <div className="space-y-2">
-                <Label htmlFor="seller_code" className="text-sm font-medium">
-                  Código de Vendedor
-                </Label>
+                <Label htmlFor="seller_code">Código de Vendedor</Label>
                 <Input
                   id="seller_code"
-                  value={formData.seller_code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, seller_code: e.target.value })
-                  }
                   placeholder="VD001"
+                  {...form.register("seller_code")}
                 />
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="branch_id" className="text-sm font-medium">
-                  ID Sucursal
-                </Label>
+                <Label htmlFor="branch_id">ID Sucursal</Label>
                 <Input
                   id="branch_id"
                   type="number"
-                  value={formData.branch_id}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      branch_id: parseInt(e.target.value) || 0,
-                    })
-                  }
                   placeholder="1"
+                  {...form.register("branch_id")}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="company_id" className="text-sm font-medium">
-                  ID Empresa
-                </Label>
+                <Label htmlFor="company_id">ID Empresa</Label>
                 <Input
                   id="company_id"
                   type="number"
-                  value={formData.company_id}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      company_id: parseInt(e.target.value) || 0,
-                    })
-                  }
                   placeholder="1"
+                  {...form.register("company_id")}
                 />
               </div>
-            </div>
-          </div>
+            </div> */}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsEditDialogOpen(false);
-                setIsCreateDialogOpen(false);
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button type="button" onClick={handleSaveUser}>
-              {selectedUser ? "Actualizar" : "Crear"} Usuario
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setIsCreateDialogOpen(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {selectedUser ? "Actualizar" : "Crear"} Usuario
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
