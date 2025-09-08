@@ -76,7 +76,6 @@ export type Supplier = {
   contact_email?: string;
   contact_phone?: string;
   commercial_name?: string;
-  delivery_address?: string;
   paymentTermId?: number;
   credit_limit?: number;
   credit_days?: number;
@@ -113,7 +112,6 @@ const supplierSchema = z.object({
     .or(z.literal("")),
   contact_phone: z.string().optional(),
   commercial_name: z.string().optional(),
-  delivery_address: z.string().optional(),
   paymentTermId: z.number().optional().nullable(),
   credit_limit: z
     .number()
@@ -154,7 +152,6 @@ const SuppliersPage = () => {
       contact_email: "carlos@tecnologiasavanzadas.com",
       contact_phone: "0412-555-5678",
       commercial_name: "TecnoAvanzada",
-      delivery_address: "Av. Principal, Edificio Centro, Piso 3, Oficina 301",
       paymentTermId: 1,
       credit_limit: 5000,
       credit_days: 30,
@@ -186,7 +183,6 @@ const SuppliersPage = () => {
       contact_email: "maria.g@suministrosindustriales.com",
       contact_phone: "0412-555-8765",
       commercial_name: "Suministros Ind.",
-      delivery_address: "Zona Industrial, Galpón 12, Local B",
       paymentTermId: 2,
       credit_limit: 10000,
       credit_days: 45,
@@ -218,7 +214,6 @@ const SuppliersPage = () => {
       contact_email: "juanperez@gmail.com",
       contact_phone: "0414-555-1111",
       commercial_name: "Servicios JP",
-      delivery_address: "Calle 5, #12-34, Urbanización Las Acacias",
       paymentTermId: 3,
       credit_limit: 2000,
       credit_days: 15,
@@ -298,7 +293,6 @@ const SuppliersPage = () => {
       contact_email: "",
       contact_phone: "",
       commercial_name: "",
-      delivery_address: "",
       paymentTermId: undefined,
       credit_limit: 0,
       credit_days: 0,
@@ -318,7 +312,6 @@ const SuppliersPage = () => {
         contact_email: values.contact_email || "",
         contact_phone: values.contact_phone || "",
         commercial_name: values.commercial_name || "",
-        delivery_address: values.delivery_address || "",
         paymentTermId: values.paymentTermId || 0, // Convert undefined to 0
         credit_limit: 100.5, // Convert undefined to 0
         credit_days: values.credit_days || 0, // Convert undefined to 0
@@ -401,7 +394,6 @@ const SuppliersPage = () => {
       contact_email: supplier.contact_email,
       contact_phone: supplier.contact_phone,
       commercial_name: supplier.commercial_name || "",
-      delivery_address: supplier.delivery_address || "",
       paymentTermId: supplier.paymentTermId,
       credit_limit: supplier.credit_limit,
       credit_days: supplier.credit_days,
@@ -909,7 +901,7 @@ const SuppliersPage = () => {
                   />
                 </div>
 
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="delivery_address"
                   render={({ field }) => (
@@ -925,7 +917,7 @@ const SuppliersPage = () => {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField

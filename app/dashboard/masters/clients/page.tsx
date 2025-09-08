@@ -168,7 +168,9 @@ const ClientsPage = () => {
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [sellers, setSellers] = useState<{ id: number; name: string }[]>([]);
   const [clientTypes, setClientTypes] = useState<string[]>([]);
-  const [taxDocumentTypes, setTaxDocumentTypes] = useState<string[]>([]);
+  const [taxDocumentTypes, setTaxDocumentTypes] = useState<
+    { value: string; name: string }[]
+  >([]);
 
   const {
     clientsResponse,
@@ -190,7 +192,12 @@ const ClientsPage = () => {
     ]);
 
     setClientTypes(["taxpayer", "end_consumer", "Gobierno", "Extranjero"]);
-    setTaxDocumentTypes(["RIF", "Cédula", "Pasaporte", "DNI"]);
+    setTaxDocumentTypes([
+      { value: "rif", name: "RIF" },
+      { value: "cedula", name: "Cédula" },
+      { value: "pasaporte", name: "Pasaporte" },
+      { value: "dni", name: "DNI" },
+    ]);
   }, []);
 
   const form = useForm<ClientForm>({
@@ -658,8 +665,8 @@ const ClientsPage = () => {
                             </FormControl>
                             <SelectContent>
                               {taxDocumentTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
+                                <SelectItem key={type.name} value={type.value}>
+                                  {type.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
