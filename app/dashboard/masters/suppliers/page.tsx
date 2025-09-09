@@ -76,7 +76,6 @@ export type Supplier = {
   contact_email?: string;
   contact_phone?: string;
   commercial_name?: string;
-  paymentTermId?: number;
   credit_limit?: number;
   credit_days?: number;
   notes?: string;
@@ -152,7 +151,6 @@ const SuppliersPage = () => {
       contact_email: "carlos@tecnologiasavanzadas.com",
       contact_phone: "0412-555-5678",
       commercial_name: "TecnoAvanzada",
-      paymentTermId: 1,
       credit_limit: 5000,
       credit_days: 30,
       notes: "Proveedor preferencial para equipos tecnológicos",
@@ -183,7 +181,6 @@ const SuppliersPage = () => {
       contact_email: "maria.g@suministrosindustriales.com",
       contact_phone: "0412-555-8765",
       commercial_name: "Suministros Ind.",
-      paymentTermId: 2,
       credit_limit: 10000,
       credit_days: 45,
       notes: "Proveedor de materiales de oficina y limpieza",
@@ -214,7 +211,7 @@ const SuppliersPage = () => {
       contact_email: "juanperez@gmail.com",
       contact_phone: "0414-555-1111",
       commercial_name: "Servicios JP",
-      paymentTermId: 3,
+
       credit_limit: 2000,
       credit_days: 15,
       notes: "Proveedor de servicios de mantenimiento",
@@ -312,11 +309,10 @@ const SuppliersPage = () => {
         contact_email: values.contact_email || "",
         contact_phone: values.contact_phone || "",
         commercial_name: values.commercial_name || "",
-        paymentTermId: values.paymentTermId || 0, // Convert undefined to 0
         credit_limit: 100.5, // Convert undefined to 0
         credit_days: values.credit_days || 0, // Convert undefined to 0
         notes: values.notes || "",
-        companyId: 1,
+        companyId: 4,
         created_by: "admin",
         updated_by: "admin",
         balance_due: 0.0,
@@ -331,23 +327,12 @@ const SuppliersPage = () => {
 
       if (editingSupplier) {
         // Lógica para actualizar
-        setSuppliers((prev) =>
-          prev.map((s) =>
-            s.id === editingSupplier.id
-              ? {
-                  ...s,
-                  ...postData,
-                  companyId: editingSupplier.companyId,
-                }
-              : s
-          )
-        );
         toast.success("Proveedor actualizado exitosamente");
       } else {
         // Lógica para crear
         const newSupplier: Supplier = {
           ...postData,
-          companyId: 1,
+          companyId: 4,
         };
         const result = await SupplierService.postSuppliers(newSupplier);
         toast.success("Proveedor creado exitosamente");
@@ -394,7 +379,6 @@ const SuppliersPage = () => {
       contact_email: supplier.contact_email,
       contact_phone: supplier.contact_phone,
       commercial_name: supplier.commercial_name || "",
-      paymentTermId: supplier.paymentTermId,
       credit_limit: supplier.credit_limit,
       credit_days: supplier.credit_days,
       notes: supplier.notes || "",
