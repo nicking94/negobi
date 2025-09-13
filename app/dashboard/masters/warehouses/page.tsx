@@ -459,7 +459,7 @@ const WarehousesPage = () => {
                       <span>Filtrar</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-[18rem]">
                     <div className="px-2 py-1.5">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select

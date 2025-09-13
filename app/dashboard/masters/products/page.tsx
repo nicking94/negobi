@@ -633,7 +633,7 @@ const ProductsPage = () => {
                     <span>Filtrar</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-[18rem]">
                   <div className="flex items-center space-x-2 p-2">
                     <Checkbox
                       id="in-stock-only"

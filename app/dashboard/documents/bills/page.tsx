@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -8,9 +8,6 @@ import {
   Send,
   Search,
   Filter,
-  Calendar,
-  User,
-  Building,
   FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,15 +40,9 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export type Bill = {
   id: string;
@@ -102,39 +93,6 @@ const BillsPage = () => {
       total: 1250.5,
       seller: "María González",
       status: "pending",
-    },
-    {
-      id: "3",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "NE053046",
-      operation_type: "DÓLARES",
-      location: "Sucursal Sur",
-      issued_date: new Date("2025-08-30T15:45:00"),
-      total: 2300.0,
-      seller: "Carlos Rodríguez",
-      status: "paid",
-    },
-    {
-      id: "4",
-      client: "FARMACIAS SALUD Y VIDA, C.A.",
-      correlative: "NE053047",
-      operation_type: "TRANSFERENCIA",
-      location: "Sucursal Este",
-      issued_date: new Date("2025-08-28T09:30:00"),
-      total: 450.75,
-      seller: "Ana Martínez",
-      status: "cancelled",
-    },
-    {
-      id: "5",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "NE053048",
-      operation_type: "DÓLARES",
-      location: "Sucursal Oeste",
-      issued_date: new Date("2025-08-25T14:20:00"),
-      total: 1890.25,
-      seller: "Luis Hernández",
-      status: "paid",
     },
   ]);
 
@@ -193,10 +151,6 @@ const BillsPage = () => {
   const handleViewOrder = (bill: Bill) => {
     setSelectedBill(bill);
     setIsViewDialogOpen(true);
-  };
-
-  const handleResendBill = (bill: Bill) => {
-    toast.success(`Factura ${bill.correlative} reenviada exitosamente`);
   };
 
   const handleViewClientBills = (client: string) => {
@@ -339,7 +293,7 @@ const BillsPage = () => {
                       <span>Filtrar</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="min-w-[18rem]">
                     <div className="px-2 py-1.5">
                       <Label htmlFor="seller-filter">Vendedor</Label>
                       <Select
@@ -390,43 +344,25 @@ const BillsPage = () => {
 
                     <div className="px-2 py-1.5">
                       <Label htmlFor="date-range">Período</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="date-range"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal mt-1",
-                              !dateRange && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                              dateRange.to ? (
-                                <>
-                                  {format(dateRange.from, "dd/MM/yyyy")} -{" "}
-                                  {format(dateRange.to, "dd/MM/yyyy")}
-                                </>
-                              ) : (
-                                format(dateRange.from, "dd/MM/yyyy")
-                              )
-                            ) : (
-                              <span>Seleccionar rango de fechas</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                            locale={es}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="mt-1">
+                        <DatePicker
+                          selected={dateRange?.from}
+                          onChange={(dates: [Date | null, Date | null]) => {
+                            const [start, end] = dates;
+                            setDateRange({
+                              from: start || undefined,
+                              to: end || undefined,
+                            });
+                          }}
+                          startDate={dateRange?.from}
+                          endDate={dateRange?.to}
+                          selectsRange
+                          isClearable
+                          placeholderText="Seleccionar rango"
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          dateFormat="dd/MM/yyyy"
+                        />
+                      </div>
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>

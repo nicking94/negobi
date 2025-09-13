@@ -97,7 +97,7 @@ const DashboardHeader = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 md:w-64 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
+              className="w-[18rem] md:w-64 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
             >
               {/* Nuevo item de Perfil */}
               <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">

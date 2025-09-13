@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
   Eye,
-  Send,
   Search,
   Filter,
-  Calendar,
-  User,
-  Building,
   FileText,
   Package,
   Truck,
@@ -48,15 +44,9 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { Badge } from "@/components/ui/badge";
 
 export type Order = {
@@ -268,16 +258,6 @@ const OrdersPage = () => {
     return uniqueClients.map((client, index) => ({
       id: (index + 1).toString(),
       name: client,
-    }));
-  }, [orders]);
-
-  const operationTypes = useMemo(() => {
-    const uniqueTypes = Array.from(
-      new Set(orders.map((order) => order.operation_type))
-    );
-    return uniqueTypes.map((type, index) => ({
-      id: (index + 1).toString(),
-      name: type,
     }));
   }, [orders]);
 
@@ -590,7 +570,7 @@ const OrdersPage = () => {
                       <span>Filtrar</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="min-w-[18rem]">
                     <div className="px-2 py-1.5">
                       <Label htmlFor="seller-filter">Vendedor</Label>
                       <Select
@@ -640,92 +620,26 @@ const OrdersPage = () => {
                     <DropdownMenuSeparator />
 
                     <div className="px-2 py-1.5">
-                      <Label htmlFor="operation-type-filter">
-                        Tipo de Operación
-                      </Label>
-                      <Select
-                        value={operationTypeFilter}
-                        onValueChange={setOperationTypeFilter}
-                      >
-                        <SelectTrigger
-                          id="operation-type-filter"
-                          className="mt-1"
-                        >
-                          <SelectValue placeholder="Todos los tipos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los tipos</SelectItem>
-                          {operationTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
                       <Label htmlFor="date-range">Período</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="date-range"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal mt-1",
-                              !dateRange && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                              dateRange.to ? (
-                                <>
-                                  {format(dateRange.from, "dd/MM/yyyy")} -{" "}
-                                  {format(dateRange.to, "dd/MM/yyyy")}
-                                </>
-                              ) : (
-                                format(dateRange.from, "dd/MM/yyyy")
-                              )
-                            ) : (
-                              <span>Seleccionar rango de fechas</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                            locale={es}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="mt-1">
+                        <DatePicker
+                          selected={dateRange?.from}
+                          onChange={(dates: [Date | null, Date | null]) => {
+                            const [start, end] = dates;
+                            setDateRange({
+                              from: start || undefined,
+                              to: end || undefined,
+                            });
+                          }}
+                          startDate={dateRange?.from}
+                          endDate={dateRange?.to}
+                          selectsRange
+                          isClearable
+                          placeholderText="Seleccionar rango"
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          dateFormat="dd/MM/yyyy"
+                        />
+                      </div>
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>

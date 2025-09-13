@@ -44,17 +44,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { DateRange } from "react-day-picker";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/dataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Importar React Date Picker
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export type Goal = {
   id: string;
@@ -80,7 +75,8 @@ const GoalsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
+  const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -114,121 +110,9 @@ const GoalsPage = () => {
         current_quantity: 18,
         progress: 70,
       },
-      {
-        id: "3",
-        goal_type: "zone",
-        period_type: "monthly",
-        target_amount: 50000,
-        target_quantity: 250,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "exceeded",
-        assigned_to: "Zona Norte",
-        current_amount: 55000,
-        current_quantity: 280,
-        progress: 110,
-      },
-      {
-        id: "4",
-        goal_type: "supervisor",
-        period_type: "monthly",
-        target_amount: 75000,
-        target_quantity: 375,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "not_reached",
-        assigned_to: "María González",
-        current_amount: 45000,
-        current_quantity: 200,
-        progress: 60,
-      },
-      {
-        id: "5",
-        goal_type: "sales_person",
-        period_type: "monthly",
-        target_amount: 8000,
-        target_quantity: 40,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "reached",
-        assigned_to: "Carlos Rodríguez",
-        current_amount: 8200,
-        current_quantity: 42,
-        progress: 102,
-      },
-      {
-        id: "6",
-        goal_type: "zone",
-        period_type: "weekly",
-        target_amount: 15000,
-        target_quantity: 75,
-        start_date: new Date("2024-09-08"),
-        end_date: new Date("2024-09-14"),
-        status: "not_reached",
-        assigned_to: "Zona Sur",
-        current_amount: 10000,
-        current_quantity: 50,
-        progress: 67,
-      },
-      {
-        id: "7",
-        goal_type: "supervisor",
-        period_type: "monthly",
-        target_amount: 60000,
-        target_quantity: 300,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "exceeded",
-        assigned_to: "Ana Martínez",
-        current_amount: 65000,
-        current_quantity: 320,
-        progress: 108,
-      },
-      {
-        id: "8",
-        goal_type: "company",
-        period_type: "weekly",
-        target_amount: 25000,
-        target_quantity: 125,
-        start_date: new Date("2024-09-08"),
-        end_date: new Date("2024-09-14"),
-        status: "not_reached",
-        current_amount: 18000,
-        current_quantity: 90,
-        progress: 72,
-      },
-      {
-        id: "9",
-        goal_type: "sales_person",
-        period_type: "monthly",
-        target_amount: 12000,
-        target_quantity: 60,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "reached",
-        assigned_to: "Luis Hernández",
-        current_amount: 12500,
-        current_quantity: 63,
-        progress: 104,
-      },
-      {
-        id: "10",
-        goal_type: "zone",
-        period_type: "monthly",
-        target_amount: 40000,
-        target_quantity: 200,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-30"),
-        status: "exceeded",
-        assigned_to: "Zona Este",
-        current_amount: 45000,
-        current_quantity: 225,
-        progress: 112,
-      },
     ]);
   }, []);
 
-  // Formulario para crear/editar metas
   const [formData, setFormData] = useState({
     goal_type: "company" as Goal["goal_type"],
     period_type: "monthly" as Goal["period_type"],
@@ -279,7 +163,6 @@ const GoalsPage = () => {
     { id: "2", name: "Luis Hernández" },
   ];
 
-  // Filtrar metas según los criterios
   const filteredGoals = useMemo(() => {
     return goals.filter((goal) => {
       const matchesSearch =
@@ -292,13 +175,19 @@ const GoalsPage = () => {
         statusFilter === "all" || goal.status === statusFilter;
 
       const matchesDateRange =
-        !dateRange?.from ||
-        !dateRange?.to ||
-        (goal.start_date >= dateRange.from && goal.end_date <= dateRange.to);
+        (!startDateFilter || goal.start_date >= startDateFilter) &&
+        (!endDateFilter || goal.end_date <= endDateFilter);
 
       return matchesSearch && matchesType && matchesStatus && matchesDateRange;
     });
-  }, [goals, searchTerm, typeFilter, statusFilter, dateRange]);
+  }, [
+    goals,
+    searchTerm,
+    typeFilter,
+    statusFilter,
+    startDateFilter,
+    endDateFilter,
+  ]);
 
   // Calcular paginación
   const totalPage = Math.ceil(filteredGoals.length / itemsPerPage);
@@ -592,7 +481,7 @@ const GoalsPage = () => {
                       <span>Filtrar</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-[18rem]">
                     <div className="px-2 py-1.5">
                       <Label htmlFor="type-filter">Tipo de Meta</Label>
                       <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -634,43 +523,36 @@ const GoalsPage = () => {
 
                     <div className="px-2 py-1.5">
                       <Label htmlFor="date-range">Período</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="date-range"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal mt-1",
-                              !dateRange && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                              dateRange.to ? (
-                                <>
-                                  {format(dateRange.from, "dd/MM/yyyy")} -{" "}
-                                  {format(dateRange.to, "dd/MM/yyyy")}
-                                </>
-                              ) : (
-                                format(dateRange.from, "dd/MM/yyyy")
-                              )
-                            ) : (
-                              <span>Seleccionar rango de fechas</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                            locale={es}
+                      <div className="space-y-2 mt-1">
+                        <div className="flex items-center">
+                          <Label className="w-16 text-xs">Desde:</Label>
+                          <DatePicker
+                            selected={startDateFilter}
+                            onChange={(date) => setStartDateFilter(date)}
+                            selectsStart
+                            startDate={startDateFilter}
+                            endDate={endDateFilter}
+                            minDate={new Date()}
+                            dateFormat="dd/MM/yyyy"
+                            className="w-full p-2 border rounded-md text-sm"
+                            placeholderText="Seleccionar fecha"
                           />
-                        </PopoverContent>
-                      </Popover>
+                        </div>
+                        <div className="flex items-center">
+                          <Label className="w-16 text-xs">Hasta:</Label>
+                          <DatePicker
+                            selected={endDateFilter}
+                            onChange={(date) => setEndDateFilter(date)}
+                            selectsEnd
+                            startDate={startDateFilter}
+                            endDate={endDateFilter}
+                            minDate={formData.start_date}
+                            dateFormat="dd/MM/yyyy"
+                            className="w-full p-2 border rounded-md text-sm"
+                            placeholderText="Seleccionar fecha"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -856,70 +738,29 @@ const GoalsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm">Fecha de Inicio</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal mt-1",
-                                !formData.start_date && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {formData.start_date ? (
-                                format(formData.start_date, "dd/MM/yyyy")
-                              ) : (
-                                <span>Seleccionar fecha</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={formData.start_date}
-                              onSelect={(date) =>
-                                date &&
-                                setFormData({ ...formData, start_date: date })
-                              }
-                              initialFocus
-                              locale={es}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <DatePicker
+                          selected={formData.start_date}
+                          onChange={(date) =>
+                            date &&
+                            setFormData({ ...formData, start_date: date })
+                          }
+                          minDate={new Date()}
+                          dateFormat="dd/MM/yyyy"
+                          className="w-full p-2 border rounded-md text-sm mt-1"
+                        />
                       </div>
 
                       <div>
                         <Label className="text-sm">Fecha de Fin</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal mt-1",
-                                !formData.end_date && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {formData.end_date ? (
-                                format(formData.end_date, "dd/MM/yyyy")
-                              ) : (
-                                <span>Seleccionar fecha</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={formData.end_date}
-                              onSelect={(date) =>
-                                date &&
-                                setFormData({ ...formData, end_date: date })
-                              }
-                              initialFocus
-                              locale={es}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <DatePicker
+                          selected={formData.end_date}
+                          onChange={(date) =>
+                            date && setFormData({ ...formData, end_date: date })
+                          }
+                          dateFormat="dd/MM/yyyy"
+                          className="w-full p-2 border rounded-md text-sm mt-1"
+                          minDate={formData.start_date}
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -1130,72 +971,31 @@ const GoalsPage = () => {
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit_start_date">Fecha de Inicio</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !formData.start_date && "text-muted-foreground"
-                      )}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formData.start_date ? (
-                        format(formData.start_date, "dd/MM/yyyy")
-                      ) : (
-                        <span>Seleccionar fecha</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.start_date}
-                      onSelect={(date) =>
-                        date && setFormData({ ...formData, start_date: date })
-                      }
-                      initialFocus
-                      locale={es}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  selected={formData.start_date}
+                  onChange={(date) =>
+                    date && setFormData({ ...formData, start_date: date })
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  className="w-full p-2 border rounded-md text-sm"
+                  minDate={new Date()}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="edit_end_date">Fecha de Fin</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !formData.end_date && "text-muted-foreground"
-                      )}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formData.end_date ? (
-                        format(formData.end_date, "dd/MM/yyyy")
-                      ) : (
-                        <span>Seleccionar fecha</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.end_date}
-                      onSelect={(date) =>
-                        date && setFormData({ ...formData, end_date: date })
-                      }
-                      initialFocus
-                      locale={es}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  selected={formData.end_date}
+                  onChange={(date) =>
+                    date && setFormData({ ...formData, end_date: date })
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  className="w-full p-2 border rounded-md text-sm"
+                  minDate={formData.start_date}
+                />
               </div>
             </div>
           </div>
