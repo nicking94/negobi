@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Filter,
-  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +55,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 import Image from "next/image";
-import { ProductsService } from "@/services/products/products.service";
 import useGetInstances from "@/hooks/instances/useGetInstance";
 import useGetProducts from "@/hooks/products/useGetProducts";
 
@@ -126,8 +124,6 @@ const productSchema = z.object({
     .min(0, "El precio nivel 3 debe ser mayor o igual a 0"),
   is_active: z.boolean(),
 });
-
-type ProductForm = z.infer<typeof productSchema>;
 
 const ProductsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -259,25 +255,6 @@ const ProductsPage = () => {
     ]);
   }, []);
 
-  // Filtrar productos según los criterios
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch = product.product_name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-      // Filtrar por existencia
-      const matchesStock = !inStockOnly || product.stock_quantity > 0;
-
-      // Filtrar por categoría
-      const matchesCategory =
-        selectedCategory === "all" ||
-        product.categoryId.toString() === selectedCategory;
-
-      return matchesSearch && matchesStock && matchesCategory;
-    });
-  }, [products, searchTerm, inStockOnly, selectedCategory]);
-
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -295,47 +272,11 @@ const ProductsPage = () => {
     },
   });
 
-  const onSubmit = async (values: ProductForm) => {
-    const newProduct: Product = {
-      ...values,
-      description: values.description || "",
-      companyId: 4,
-      previous_cost: 0,
-      average_cost: values.current_cost,
-      price_level_4: 0,
-      price_level_5: 0,
-      default_warehouse_id: 1,
-      manages_serials: false,
-      manages_lots: false,
-      uses_decimals_in_quantity: false,
-      uses_scale_for_weight: false,
-      is_tax_exempt: false,
-      min_stock_level: 0,
-      max_stock_level: 0,
-      weight_value: 0,
-      weight_unit: "kg",
-      volume_value: 0,
-      volume_unit: "m3",
-      length_value: 0,
-      width_value: 0,
-      height_value: 0,
-      dimension_unit: "cm",
-      show_in_ecommerce: true,
-      show_in_sales_app: true,
-      stock_quantity: 0,
-      total_quantity_reserved: 0,
-      total_quantity_on_order: 0,
-    };
-
+  const onSubmit = async () => {
     try {
       if (editingProduct && typeof editingProduct.id === "number") {
-        const result = await ProductsService.updateProduct(
-          editingProduct.id,
-          newProduct
-        );
         toast.success("Producto actualizado exitosamente");
       } else {
-        const result = await ProductsService.createProduct(newProduct);
         toast.success("Producto creado exitosamente");
       }
       setModified((prev) => !prev);
@@ -356,7 +297,7 @@ const ProductsPage = () => {
             toast.error("Producto no encontrado");
             return;
           }
-          const result = await ProductsService.deleteProduct(product.id);
+
           toast.success("Producto eliminado exitosamente");
           setModified((prev) => !prev);
         },

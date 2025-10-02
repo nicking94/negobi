@@ -1,3 +1,4 @@
+// components/auth/RegisterForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,11 +14,29 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useAddCompanies from "@/hooks/companies/useAddCompanies";
+import useRegister from "@/hooks/auth/useRegister";
+import { useRouter } from "next/navigation";
+import { toast, Toaster } from "sonner";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Phone,
+  MapPin,
+  User,
+  Building,
+  Key,
+  Calendar,
+} from "lucide-react";
+import { useState } from "react";
 
 const formSchema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  contact_email: z.string().email("Email inválido"),
+  name: z
+    .string()
+    .min(2, "El nombre de la empresa debe tener al menos 2 caracteres"),
+  contact_email: z
+    .string()
+    .email("Por favor ingresa un email corporativo válido"),
   main_phone: z
     .string()
     .min(10, "El teléfono debe tener al menos 10 dígitos")
@@ -25,16 +44,20 @@ const formSchema = z.object({
     .regex(/^[0-9+]+$/, "El teléfono solo puede contener números y el signo +"),
   fiscal_address: z
     .string()
-    .min(5, "La dirección debe tener al menos 5 caracteres"),
+    .min(5, "La dirección fiscal debe tener al menos 5 caracteres"),
   legal_tax_id: z
     .string()
-    .min(5, "El Tax ID debe tener al menos 5 caracteres")
-    .max(20, "El Tax ID no puede exceder 20 caracteres"),
+    .min(5, "El ID de la empresa  debe tener al menos 5 caracteres")
+    .max(20, "El ID de la empresa  no puede exceder 20 caracteres"),
   code: z
     .string()
     .min(3, "El código debe tener al menos 3 caracteres")
     .max(10, "El código no puede exceder 10 caracteres")
     .regex(/^[a-zA-Z0-9]+$/, "El código solo puede contener letras y números"),
+  api_key_duration_days: z
+    .number()
+    .min(1, "La duración mínima es 1 día")
+    .max(365, "La duración máxima es 365 días"),
 
   admin_first_name: z
     .string()
@@ -42,7 +65,7 @@ const formSchema = z.object({
   admin_last_name: z
     .string()
     .min(2, "El apellido debe tener al menos 2 caracteres"),
-  admin_email: z.string().email("Email inválido"),
+  admin_email: z.string().email("Por favor ingresa un email personal válido"),
   admin_phone: z
     .string()
     .min(10, "El teléfono debe tener al menos 10 dígitos")
@@ -54,9 +77,14 @@ const formSchema = z.object({
   admin_username: z
     .string()
     .min(2, "El nombre de usuario debe tener al menos 2 caracteres"),
+  is_active: z.boolean().optional(),
 });
 
 export function RegisterForm() {
+  const router = useRouter();
+  const { onRegister, loading } = useRegister();
+  const [showPassword, setShowPassword] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,32 +94,43 @@ export function RegisterForm() {
       fiscal_address: "",
       legal_tax_id: "",
       code: "",
+      api_key_duration_days: 30, // Valor por defecto de 30 días
       admin_first_name: "",
       admin_last_name: "",
       admin_email: "",
       admin_phone: "",
       admin_password: "",
       admin_username: "",
+      is_active: true,
     },
   });
 
-  const { newCompany } = useAddCompanies();
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const result = await newCompany(values);
-    console.log(result);
+    const result = await onRegister(values);
+    console.log("Resultado del registro:", result);
+
+    if (result.success) {
+      toast.success(
+        "¡Empresa registrada exitosamente! Redirigiendo al login..."
+      );
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+    }
   };
 
   return (
     <Form {...form}>
+      <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Sección Empresa */}
           <div className="bg-gray_xxl p-4 border-b lg:border-b-0 lg:border-r border-green_b">
-            <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l">
+            <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l pb-2">
+              <Building className="w-5 h-5 inline mr-2" />
               Datos de la Empresa
             </h3>
 
-            {/* Nombre y Email en una fila */}
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
                 control={form.control}
@@ -99,10 +138,17 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Nombre de la empresa
+                      Nombre legal de la empresa *
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Nombre de la empresa" {...field} />
+                      <div className="relative">
+                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                        <Input
+                          placeholder="Mi Empresa S.A."
+                          {...field}
+                          className="pl-10"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage className="text-[var(--color-red_l)]" />
                   </FormItem>
@@ -115,10 +161,17 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Email corporativo
+                      Email corporativo *
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="empresa@email.com" {...field} />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                        <Input
+                          placeholder="empresa@email.com"
+                          {...field}
+                          className="pl-10"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage className="text-[var(--color-red_l)]" />
                   </FormItem>
@@ -126,41 +179,53 @@ export function RegisterForm() {
               />
             </div>
 
-            {/* Teléfono en una fila independiente */}
             <FormField
               control={form.control}
               name="main_phone"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
-                    Teléfono
+                    Teléfono principal *
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="+1234567890" {...field} type="tel" />
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <Input
+                        placeholder="+1234567890"
+                        {...field}
+                        type="tel"
+                        className="pl-10"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage className="text-[var(--color-red_l)]" />
                 </FormItem>
               )}
             />
 
-            {/* Dirección en una fila independiente */}
             <FormField
               control={form.control}
               name="fiscal_address"
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
-                    Dirección fiscal
+                    Dirección fiscal *
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Dirección completa" {...field} />
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <Input
+                        placeholder="Dirección completa"
+                        {...field}
+                        className="pl-10"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage className="text-[var(--color-red_l)]" />
                 </FormItem>
               )}
             />
 
-            {/* Tax ID y Code en una fila */}
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
                 control={form.control}
@@ -168,10 +233,10 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Legal Tax ID
+                      ID de la empresa *
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Identificación fiscal" {...field} />
+                      <Input placeholder="ID de empresa" {...field} />
                     </FormControl>
                     <FormMessage className="text-[var(--color-red_l)]" />
                   </FormItem>
@@ -184,7 +249,7 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Código de identificación
+                      Código interno
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Código único" {...field} />
@@ -194,12 +259,43 @@ export function RegisterForm() {
                 )}
               />
             </div>
+
+            {/* Nuevo campo para duración de API Key */}
+            <FormField
+              control={form.control}
+              name="api_key_duration_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--color-gray_b)]">
+                    Duración de API Key (días) *
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <Input
+                        placeholder="30"
+                        type="number"
+                        min="1"
+                        max="365"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 0)
+                        }
+                        className="pl-10"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-[var(--color-red_l)]" />
+                </FormItem>
+              )}
+            />
           </div>
 
-          {/* Sección de Datos del Usuario (sin cambios) */}
-          <div className="bg-[var(--color-gray_xxl)] p-4 rounded-lg -ml-4">
-            <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l">
-              Datos del Usuario
+          {/* Sección Administrador (sin cambios) */}
+          <div className="bg-[var(--color-gray_xxl)] p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l pb-2">
+              <User className="w-5 h-5 inline mr-2" />
+              Datos del Administrador
             </h3>
 
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
@@ -209,10 +305,17 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Nombre
+                      Nombres *
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Nombre" {...field} />
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                        <Input
+                          placeholder="Juan"
+                          {...field}
+                          className="pl-10"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage className="text-[var(--color-red_l)]" />
                   </FormItem>
@@ -225,10 +328,10 @@ export function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[var(--color-gray_b)]">
-                      Apellido
+                      Apellidos *
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Apellido" {...field} />
+                      <Input placeholder="Pérez" {...field} />
                     </FormControl>
                     <FormMessage className="text-[var(--color-red_l)]" />
                   </FormItem>
@@ -242,10 +345,17 @@ export function RegisterForm() {
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
-                    Email
+                    Email personal *
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="tu@email.com" {...field} />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <Input
+                        placeholder="tu@email.com"
+                        {...field}
+                        className="pl-10"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage className="text-[var(--color-red_l)]" />
                 </FormItem>
@@ -258,10 +368,18 @@ export function RegisterForm() {
               render={({ field }) => (
                 <FormItem className="mb-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
-                    Teléfono
+                    Teléfono *
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="+1234567890" {...field} type="tel" />
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <Input
+                        placeholder="+1234567890"
+                        {...field}
+                        type="tel"
+                        className="pl-10"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage className="text-[var(--color-red_l)]" />
                 </FormItem>
@@ -276,10 +394,10 @@ export function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[var(--color-gray_b)]">
-                        Username
+                        Username *
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Nombre de usuario" {...field} />
+                        <Input placeholder="juan.perez" {...field} />
                       </FormControl>
                       <FormMessage className="text-[var(--color-red_l)]" />
                     </FormItem>
@@ -294,14 +412,29 @@ export function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[var(--color-gray_b)]">
-                        Contraseña
+                        Contraseña *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="••••••"
-                          {...field}
-                          type="password"
-                        />
+                        <div className="relative">
+                          <Key className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                          <Input
+                            placeholder="••••••"
+                            {...field}
+                            type={showPassword ? "text" : "password"}
+                            className="pl-10 pr-10"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray_m hover:text-gray_b transition-colors"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage className="text-[var(--color-red_l)] text-sm" />
                     </FormItem>
@@ -315,9 +448,17 @@ export function RegisterForm() {
         <div className="flex justify-center">
           <Button
             type="submit"
-            className="w-full md:w-1/2 bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
+            disabled={loading}
+            className="w-full md:w-1/2 bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors"
           >
-            Registrarse
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Registrando...
+              </>
+            ) : (
+              "Crear cuenta empresarial"
+            )}
           </Button>
         </div>
       </form>

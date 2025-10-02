@@ -8,11 +8,6 @@ import { useSidebar } from "@/context/SidebarContext";
 import Sidebar from "@/components/dashboard/SideBar";
 import Image from "next/image";
 
-interface MetricData {
-  total: number;
-  comparison: number;
-}
-
 interface ProductRanking {
   id: string;
   name: string;

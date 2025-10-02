@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Filter,
-  RefreshCw,
   Building,
   Phone,
   User,
@@ -29,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +62,6 @@ import {
   deleteWarehouse,
   updateWarehouse,
 } from "@/services/warehouse/warehouse.service";
-import { de, tr } from "zod/locales";
 import useGetWarehouses from "@/hooks/warehouse/useGetWarehouses";
 
 export type Warehouse = {
@@ -104,84 +101,11 @@ const WarehousesPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
 
-  // Datos de ejemplo
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([
-    {
-      id: "1",
-      companyBranchId: 1,
-      name: "Almacén Principal",
-      code: "ALM001",
-      contact_person: "Carlos Rodríguez",
-      contact_phone: "0212-555-1234",
-      location_address: "Av. Principal, Edificio Centro, Piso 1",
-      is_active: true,
-      created_by: "admin",
-      updated_by: "admin",
-      created_at: "2024-01-01T10:30:00Z",
-      updated_at: "2024-01-15T10:30:00Z",
-    },
-    {
-      id: "2",
-      companyBranchId: 2,
-      name: "Bodega Norte",
-      code: "ALM002",
-      contact_person: "María González",
-      contact_phone: "0212-555-4321",
-      location_address: "Zona Industrial, Galpón 12",
-      is_active: true,
-      created_by: "admin",
-      updated_by: "admin",
-      created_at: "2024-01-05T09:15:00Z",
-      updated_at: "2024-01-10T09:15:00Z",
-    },
-    {
-      id: "3",
-      companyBranchId: 3,
-      name: "Depósito Sur",
-      code: "ALM003",
-      contact_person: "Juan Pérez",
-      contact_phone: "0212-555-1111",
-      location_address: "Calle 5, #12-34, Urbanización Las Acacias",
-      is_active: false,
-      created_by: "admin",
-      updated_by: "admin",
-      created_at: "2024-01-10T16:20:00Z",
-      updated_at: "2024-01-12T16:20:00Z",
-    },
-  ]);
-
   const [branches, setBranches] = useState([
     { id: 1, name: "Sucursal Principal" },
     { id: 2, name: "Sucursal Norte" },
     { id: 3, name: "Sucursal Sur" },
   ]);
-
-  // Filtrar almacenes según los criterios
-  const filteredWarehouses = useMemo(() => {
-    return warehouses.filter((warehouse) => {
-      const matchesSearch =
-        warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warehouse.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warehouse.location_address
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      // Filtrar por estado
-      let matchesStatus = true;
-      if (statusFilter === "active") {
-        matchesStatus = warehouse.is_active;
-      } else if (statusFilter === "inactive") {
-        matchesStatus = !warehouse.is_active;
-      }
-
-      // Filtrar por sucursal (si no es "todas")
-      const matchesBranch =
-        branchFilter === "all" ||
-        warehouse.companyBranchId.toString() === branchFilter;
-
-      return matchesSearch && matchesStatus && matchesBranch;
-    });
-  }, [warehouses, searchTerm, statusFilter, branchFilter]);
 
   const form = useForm<z.infer<typeof warehouseSchema>>({
     resolver: zodResolver(warehouseSchema),
@@ -197,7 +121,6 @@ const WarehousesPage = () => {
   });
 
   const {
-    setModified,
     warehousesResponse,
     totalPage,
     total,

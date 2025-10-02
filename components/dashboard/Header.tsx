@@ -1,3 +1,4 @@
+// components/dashboard/Header.tsx
 "use client";
 import {
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   Target,
   Calendar,
   User,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +27,10 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import useLogout from "@/hooks/auth/useLogout";
+import { Toaster } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -37,14 +41,12 @@ const DashboardHeader = ({
   onToggleSidebar,
   isSidebarOpen,
 }: DashboardHeaderProps) => {
-  const router = useRouter();
-
-  const handleLogout = () => {
-    router.push("http://localhost:3000/");
-  };
+  const { logout } = useAuth();
+  const { loading } = useLogout();
 
   return (
     <header className="bg-white/95 backdrop-blur-sm border-b border-gray_xxl px-4 md:px-6 lg:px-8 py-3 md:py-4 shadow-sm">
+      <Toaster richColors position="top-right" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
           <Button
@@ -194,11 +196,15 @@ const DashboardHeader = ({
                 </DropdownMenuPortal>
               </DropdownMenuSub>
 
+              <DropdownMenuSeparator className="bg-gray_xxl" />
+
               <DropdownMenuItem
-                className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm"
-                onClick={handleLogout}
+                className="cursor-pointer bg-white hover:bg-red-50 text-red_b rounded-md m-1 text-xs md:text-sm"
+                onClick={logout}
+                disabled={loading}
               >
-                Cerrar sesión
+                <LogOut className="w-4 h-4 mr-2" />
+                {loading ? "Cerrando sesión..." : "Cerrar sesión"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -207,4 +213,5 @@ const DashboardHeader = ({
     </header>
   );
 };
+
 export default DashboardHeader;

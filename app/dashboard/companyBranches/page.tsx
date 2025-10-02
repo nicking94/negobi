@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -49,7 +49,6 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Switch } from "@/components/ui/switch";
 
 export type Branch = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Filter,
-  RefreshCw,
   Building,
   Phone,
   Mail,
@@ -29,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +57,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import { SupplierService } from "@/services/suppliers/suppliers.service";
 
 export type Supplier = {
   id?: string;
@@ -123,8 +120,6 @@ const supplierSchema = z.object({
   notes: z.string().optional(),
   is_active: z.boolean(),
 });
-
-type SupplierForm = z.infer<typeof supplierSchema>;
 
 const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -211,7 +206,6 @@ const SuppliersPage = () => {
       contact_email: "juanperez@gmail.com",
       contact_phone: "0414-555-1111",
       commercial_name: "Servicios JP",
-
       credit_limit: 2000,
       credit_days: 15,
       notes: "Proveedor de servicios de mantenimiento",
@@ -298,43 +292,12 @@ const SuppliersPage = () => {
     },
   });
 
-  const onSubmit = async (values: SupplierForm) => {
+  const onSubmit = async () => {
     try {
-      const postData = {
-        ...values,
-        email: values.email || "",
-        main_phone: values.main_phone || "",
-        mobile_phone: values.mobile_phone || "",
-        contact_person: values.contact_person || "",
-        contact_email: values.contact_email || "",
-        contact_phone: values.contact_phone || "",
-        commercial_name: values.commercial_name || "",
-        credit_limit: 100.5, // Convert undefined to 0
-        credit_days: values.credit_days || 0, // Convert undefined to 0
-        notes: values.notes || "",
-        companyId: 4,
-        created_by: "admin",
-        updated_by: "admin",
-        balance_due: 0.0,
-        advance_balance: 0.0,
-        last_purchase_date: new Date().toISOString(),
-        last_purchase_number: "",
-        last_purchase_amount: 0.0,
-        last_payment_date: new Date().toISOString(),
-        last_payment_number: "",
-        last_payment_amount: 0.0,
-      };
-
       if (editingSupplier) {
         // Lógica para actualizar
         toast.success("Proveedor actualizado exitosamente");
       } else {
-        // Lógica para crear
-        const newSupplier: Supplier = {
-          ...postData,
-          companyId: 4,
-        };
-        const result = await SupplierService.postSuppliers(newSupplier);
         toast.success("Proveedor creado exitosamente");
       }
 

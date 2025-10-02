@@ -1,3 +1,4 @@
+// components/auth/NewPasswordForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,10 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import axios from "axios";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Lock, CheckCircle, XCircle } from "lucide-react";
 
-// Esquema de validación con Zod
 const formSchema = z
   .object({
     password: z
@@ -49,10 +50,11 @@ type newPasswordType = {
   legal_tax_id: string;
 };
 
-export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
+export function NewPasswordForm({ legal_tax_id }: newPasswordType) {
   const NEGOBI_API = process.env.NEXT_PUBLIC_API_BACK;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const route = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -65,6 +67,7 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      setLoading(true);
       const { password } = values;
       const token = localStorage.getItem("tempToken");
 
@@ -80,50 +83,51 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
           },
         }
       );
+
       if (response.status === 200) {
         localStorage.clear();
-        toast.success("Contraseña cambiada con éxito.");
+        toast.success("🎉 ¡Contraseña actualizada! Redirigiendo al login...");
         setTimeout(() => {
           route.push(`/login`);
-        }, 3000); // 3 segundos
+        }, 2000);
       }
     } catch (e: unknown) {
-      if (e instanceof Error) {
+      if (axios.isAxiosError(e)) {
+        toast.error(
+          e.response?.data?.message || "Error al cambiar la contraseña"
+        );
+      } else if (e instanceof Error) {
         toast.error(e.message);
       } else {
-        toast.error("Error desconocido");
+        toast.error("Error al cambiar la contraseña");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   // Función para verificar la fortaleza de la contraseña
   const checkPasswordStrength = (password: string) => {
-    if (password.length === 0) return { score: 0, feedback: [] };
+    const requirements = [
+      { test: (p: string) => p.length >= 6, text: "Mínimo 6 caracteres" },
+      { test: (p: string) => /[a-z]/.test(p), text: "Una letra minúscula" },
+      { test: (p: string) => /[A-Z]/.test(p), text: "Una letra mayúscula" },
+      { test: (p: string) => /\d/.test(p), text: "Un número" },
+      {
+        test: (p: string) => /[^a-zA-Z0-9]/.test(p),
+        text: "Un carácter especial",
+      },
+    ];
 
-    const feedback = [];
-    let score = 0;
+    const results = requirements.map((req) => ({
+      met: req.test(password),
+      text: req.text,
+    }));
 
-    // Longitud mínima
-    if (password.length >= 6) score += 1;
-    else feedback.push("Mínimo 6 caracteres");
+    const score = results.filter((r) => r.met).length;
+    const allMet = score === requirements.length;
 
-    // Contiene letra minúscula
-    if (/[a-z]/.test(password)) score += 1;
-    else feedback.push("Una letra minúscula");
-
-    // Contiene letra mayúscula
-    if (/[A-Z]/.test(password)) score += 1;
-    else feedback.push("Una letra mayúscula");
-
-    // Contiene número
-    if (/\d/.test(password)) score += 1;
-    else feedback.push("Un número");
-
-    // Contiene carácter especial
-    if (/[^a-zA-Z0-9]/.test(password)) score += 1;
-    else feedback.push("Un carácter especial");
-
-    return { score, feedback };
+    return { results, score, allMet };
   };
 
   const passwordValue = form.watch("password");
@@ -131,6 +135,7 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
 
   return (
     <Form {...form}>
+      <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* Campo Nueva Contraseña */}
         <FormField
@@ -139,30 +144,55 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                Nueva Contraseña
+                Nueva contraseña
               </FormLabel>
               <FormControl>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Ingresa tu nueva contraseña"
+                    placeholder="Crea una contraseña segura"
                     {...field}
                     value={field.value ?? ""}
+                    className="pl-10 pr-10"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-[var(--color-gray_b)]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray_m hover:text-gray_b transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? "Ocultar" : "Mostrar"}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </FormControl>
 
               {/* Indicador de fortaleza de contraseña */}
               {passwordValue && (
-                <div className="mt-2">
-                  <div className="flex h-2 overflow-hidden rounded bg-gray_xxl">
+                <div className="mt-3 p-3 bg-gray_xxl rounded-lg">
+                  <div className="space-y-2">
+                    {passwordStrength.results.map((req, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 text-sm"
+                      >
+                        {req.met ? (
+                          <CheckCircle className="h-4 w-4 text-green_b" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red_l" />
+                        )}
+                        <span
+                          className={req.met ? "text-green_b" : "text-gray_m"}
+                        >
+                          {req.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex h-2 overflow-hidden rounded bg-gray_xxl">
                     <div
                       className="transition-all duration-300 ease-in-out"
                       style={{
@@ -176,13 +206,6 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
                       }}
                     />
                   </div>
-                  <p className="text-xs mt-1 text-[var(--color-gray_b)]">
-                    {passwordStrength.score < 5
-                      ? `Requisitos faltantes: ${passwordStrength.feedback.join(
-                          ", "
-                        )}`
-                      : "Contraseña segura"}
-                  </p>
                 </div>
               )}
 
@@ -198,22 +221,28 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                Confirmar Contraseña
+                Confirmar contraseña
               </FormLabel>
               <FormControl>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                   <Input
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirma tu nueva contraseña"
+                    placeholder="Repite tu nueva contraseña"
                     {...field}
                     value={field.value ?? ""}
+                    className="pl-10 pr-10"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-[var(--color-gray_b)]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray_m hover:text-gray_b transition-colors"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? "Ocultar" : "Mostrar"}
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </FormControl>
@@ -226,10 +255,17 @@ export function NewPasswordForm({ email, legal_tax_id }: newPasswordType) {
         <div className="flex justify-center pt-2">
           <Button
             type="submit"
-            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
-            disabled={passwordStrength.score < 5}
+            disabled={loading || !passwordStrength.allMet}
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors"
           >
-            Establecer Nueva Contraseña
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Actualizando...
+              </>
+            ) : (
+              "Establecer nueva contraseña"
+            )}
           </Button>
         </div>
       </form>

@@ -1,5 +1,7 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -20,8 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} antialiased text-black  `}>
-        {children}
+      <body className={`${roboto.variable} antialiased text-black`}>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

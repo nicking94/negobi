@@ -1,3 +1,4 @@
+// components/auth/LoginForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,21 +16,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import useLogin from "@/hooks/auth/useLogin";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 const formSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.string().email("Por favor ingresa un email válido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  taxId: z.string().min(1, "El RIF debe tener al menos 10 caracteres"),
+  taxId: z.string().min(1, "El ID de la empresa es requerido"),
   rememberMe: z.boolean().optional(),
 });
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const { onLogin } = useLogin();
+  const { onLogin, loading } = useLogin();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -45,30 +46,47 @@ export function LoginForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const { email, password, taxId } = values;
     const result = await onLogin({ email, password, legal_tax_id: taxId });
-    if (result === 200) {
-      router.push("/dashboard");
+    if (result.success) {
+      toast.success("Sesión iniciada correctamente");
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1000);
     }
   };
 
   return (
     <Form {...form}>
-      <Toaster />
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <Toaster richColors position="top-right" />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          form.handleSubmit(onSubmit)(e);
+        }}
+        className="space-y-4"
+      >
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                Email
+                Correo electrónico
               </FormLabel>
               <FormControl>
-                <Input placeholder="tu@email.com" {...field} />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                  <Input
+                    placeholder="tu@empresa.com"
+                    {...field}
+                    className="pl-10"
+                  />
+                </div>
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="password"
@@ -79,20 +97,22 @@ export function LoginForm() {
               </FormLabel>
               <FormControl>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••"
                     {...field}
+                    className="pl-10 pr-10"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray_m hover:text-gray_b transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray_m" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray_m" />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
@@ -101,6 +121,7 @@ export function LoginForm() {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="taxId"
@@ -110,12 +131,20 @@ export function LoginForm() {
                 ID Empresa
               </FormLabel>
               <FormControl>
-                <Input placeholder="123456" {...field} />
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                  <Input
+                    placeholder="ID de tu empresa"
+                    {...field}
+                    className="pl-10"
+                  />
+                </div>
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="rememberMe"
@@ -125,27 +154,30 @@ export function LoginForm() {
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  className="border-2 border-[var(--color-green_l)]"
+                  className="border-2 border-[var(--color-green_l)] data-[state=checked]:bg-[var(--color-green_b)]"
                 />
               </FormControl>
               <FormLabel className="text-sm font-normal text-[var(--color-gray_b)]">
-                Recuérdame
+                Mantener sesión iniciada
               </FormLabel>
             </FormItem>
           )}
         />
+
         <div className="w-full flex justify-center pt-2">
           <Button
             type="submit"
-            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
+            disabled={loading}
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors"
           >
-            Iniciar sesión
+            {loading ? "Iniciando sesión..." : "Iniciar sesión"}
           </Button>
         </div>
+
         <div className="mt-4 text-center text-sm">
           <a
             href="/recovery"
-            className="text-[var(--color-green_b)] hover:underline"
+            className="text-[var(--color-green_b)] hover:underline font-medium transition-colors"
           >
             ¿Olvidaste tu contraseña?
           </a>

@@ -52,7 +52,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import { cn } from "@/lib/utils";
 import { ClientsService } from "@/services/clients/clients.service";
 import useGetClients from "@/hooks/clients/useGetClients";
 
@@ -251,11 +250,6 @@ const ClientsPage = () => {
           toast.error("Error al actualizar la organización");
         }
       } else {
-        const newClient: Client = {
-          ...values,
-        };
-        // setClients((prev) => [...prev, newClient]);
-        const result = await ClientsService.addClient(newClient);
         setModified((prev) => !prev);
         toast.success("Cliente creado exitosamente");
       }

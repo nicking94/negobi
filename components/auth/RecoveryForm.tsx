@@ -1,3 +1,4 @@
+// components/auth/RecoveryForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,14 +17,14 @@ import { Input } from "@/components/ui/input";
 import useRecoveryPassword from "@/hooks/auth/useRecoveryPassword";
 import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
+import { Mail, Building2 } from "lucide-react";
 
-// Validaciones con Zod
 const formSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.string().email("Por favor ingresa un email válido"),
   taxId: z
     .string()
-    .min(5, "ID Empresa inválido")
-    .max(13, "ID Empresa inválido"),
+    .min(5, "El ID de la empresa debe tener al menos 5 caracteres")
+    .max(20, "El ID de la empresa  no puede exceder 20 caracteres"),
 });
 
 export function RecoveryForm() {
@@ -36,19 +37,19 @@ export function RecoveryForm() {
     },
   });
 
-  const { onRecoveryPassword } = useRecoveryPassword();
+  const { onRecoveryPassword, loading } = useRecoveryPassword();
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const { email, taxId } = values;
     const result = await onRecoveryPassword({ email, legal_tax_id: taxId });
 
-    if (result?.status === 201) {
+    if (result?.status === 200 || result?.status === 201) {
       toast.success(
-        "Correo de recuperación enviado, revisa tu bandeja de entrada."
+        "📧 Código de recuperación enviado. Revisa tu bandeja de entrada."
       );
       setTimeout(() => {
         route.push(`/validateOTP?email=${email}&taxId=${taxId}`);
-      }, 3000); // 3 segundos
+      }, 2000);
     }
   };
 
@@ -56,21 +57,24 @@ export function RecoveryForm() {
     <Form {...form}>
       <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Campo Email */}
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                Email
+                Correo electrónico registrado
               </FormLabel>
               <FormControl>
-                <Input
-                  placeholder="tu@email.com"
-                  {...field}
-                  value={field.value ?? ""} // <-- evita undefined
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                  <Input
+                    placeholder="tu@email.com"
+                    {...field}
+                    className="pl-10"
+                    value={field.value ?? ""}
+                  />
+                </div>
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
@@ -83,23 +87,31 @@ export function RecoveryForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm text-[var(--color-gray_b)]">
-                ID Empresa
+                ID de la empresa
               </FormLabel>
               <FormControl>
-                <Input placeholder="RIF" {...field} value={field.value ?? ""} />
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                  <Input
+                    placeholder="ID de empresa"
+                    {...field}
+                    className="pl-10"
+                    value={field.value ?? ""}
+                  />
+                </div>
               </FormControl>
               <FormMessage className="text-xs text-[var(--color-red_l)]" />
             </FormItem>
           )}
         />
 
-        {/* Botón */}
         <div className="flex justify-center pt-2">
           <Button
             type="submit"
-            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)]"
+            disabled={loading}
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors"
           >
-            Enviar
+            {loading ? "Enviando código..." : "Enviar código de recuperación"}
           </Button>
         </div>
       </form>

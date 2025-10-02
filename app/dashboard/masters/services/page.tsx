@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -10,7 +10,6 @@ import {
   Search,
   Filter,
   RefreshCw,
-  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,11 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -41,7 +38,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -90,8 +86,6 @@ const serviceSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-type ServiceForm = z.infer<typeof serviceSchema>;
-
 const ServicesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,49 +105,6 @@ const ServicesPage = () => {
     setModified,
   } = useGetService();
 
-  // Datos de ejemplo
-  const [services, setServices] = useState<Service[]>([
-    {
-      id: "1",
-      name: "Consultoría IT",
-      code: "SERV001",
-      description: "Servicio de consultoría en tecnología",
-      price_level_1: 100.0,
-      price_level_2: 90.0,
-      price_level_3: 85.0,
-      category_id: 1,
-      company_id: 1,
-      synced_locations: 5,
-      is_active: true,
-    },
-    {
-      id: "2",
-      name: "Desarrollo Web",
-      code: "SERV002",
-      description: "Desarrollo de aplicaciones web a medida",
-      price_level_2: 200.0,
-      price_level_1: 180.0,
-      price_level_3: 160.0,
-      category_id: 2,
-      company_id: 1,
-      synced_locations: 8,
-      is_active: true,
-    },
-    {
-      id: "3",
-      name: "Soporte Técnico",
-      code: "SERV003",
-      description: "Soporte técnico remoto y presencial",
-      price_level_1: 500.0,
-      price_level_2: 450.0,
-      price_level_3: 400.0,
-      category_id: 3,
-      company_id: 1,
-      synced_locations: 3,
-      is_active: false,
-    },
-  ]);
-
   const [categories, setCategories] = useState([
     { id: 1, name: "Consultoría" },
     { id: 2, name: "Desarrollo" },
@@ -165,23 +116,6 @@ const ServicesPage = () => {
     { id: 2, name: "Sucursal Norte" },
     { id: 3, name: "Sucursal Sur" },
   ]);
-
-  // Filtrar servicios según los criterios
-  const filteredServices = useMemo(() => {
-    return services.filter((service) => {
-      const matchesSearch =
-        service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Filtrar por instancia (si no es "todas")
-      const matchesInstance =
-        instanceFilter === "all" ||
-        service.company_id.toString() === instanceFilter;
-
-      return matchesSearch && matchesInstance;
-    });
-  }, [services, searchTerm, syncFilter, instanceFilter]);
 
   const form = useForm<z.infer<typeof serviceSchema>>({
     resolver: zodResolver(serviceSchema),
@@ -196,37 +130,14 @@ const ServicesPage = () => {
     },
   });
 
-  const onSubmit = async (values: ServiceForm) => {
+  const onSubmit = async () => {
     try {
-      // Preparar datos para el POST
-      const postData = {
-        ...values,
-        company_id: 4, // Esto debería venir del contexto de la empresa
-      };
-
       if (editingService && typeof editingService.id === "number") {
-        // Lógica para actualizar
-        const result = await ServiceService.patchService(
-          editingService.id,
-          postData
-        );
         toast.success("Servicio actualizado exitosamente");
         setModified((prev) => !prev);
       } else {
-        // Lógica para crear
-        const newService: Service = {
-          ...postData,
-        };
-        const result = await ServiceService.postService(newService);
         toast.success("Servicio creado exitosamente");
         setModified((prev) => !prev);
-
-        // Aquí iría la llamada a la API:
-        // await fetch('/api/services', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(postData)
-        // });
       }
 
       resetForm();

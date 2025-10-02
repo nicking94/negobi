@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,83 +11,100 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { User, Mail, Phone, Save, Key, Eye, EyeOff } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Save,
+  Key,
+  Eye,
+  EyeOff,
+  Building,
+} from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import useProfile from "@/hooks/users/useProfile";
 
 const ProfilePage = () => {
-  const router = useRouter();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [activeSection, setActiveSection] = useState("profile");
-  const [isLoading, setIsLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false,
   });
 
-  // Datos de ejemplo del usuario
+  const { profile, loading, loadingProfile, updateProfile, changePassword } =
+    useProfile();
+
+  // Datos del usuario desde el hook
   const [userData, setUserData] = useState({
-    name: "Negobi",
-    email: "negobi@ejemplo.com",
-    phone: "+1234567890",
-    position: "Propietario",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    username: "",
   });
 
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
+  const [taxIdInput, setTaxIdInput] = useState("");
+
+  // Actualizar userData cuando el perfil se carga
+  useEffect(() => {
+    if (profile) {
+      setUserData({
+        first_name: profile.first_name || "",
+        last_name: profile.last_name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        username: profile.username || "",
+      });
+    }
+  }, [profile]);
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Datos actualizados:", userData);
-      // Aquí iría la lógica para actualizar el perfil
-      alert("Perfil actualizado correctamente");
-    } catch (error) {
-      console.error("Error al actualizar el perfil:", error);
-      alert("Error al actualizar el perfil");
-    } finally {
-      setIsLoading(false);
+    const result = await updateProfile(userData);
+
+    if (result.success) {
+      console.log("Perfil actualizado:", result.data);
     }
   };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Las contraseñas no coinciden");
+    // Validaciones del lado del cliente
+    if (!taxIdInput) {
+      toast.error("Por favor ingresa el ID de tu empresa");
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres");
+      toast.error("La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
-    setIsLoading(true);
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Contraseña actualizada");
+    const result = await changePassword(passwordData.newPassword, taxIdInput);
+
+    if (result.success) {
       setPasswordData({
-        currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-      alert("Contraseña actualizada correctamente");
-    } catch (error) {
-      console.error("Error al actualizar la contraseña:", error);
-      alert("Error al actualizar la contraseña");
-    } finally {
-      setIsLoading(false);
+      setTaxIdInput("");
     }
   };
 
@@ -114,12 +131,32 @@ const ProfilePage = () => {
     }));
   };
 
+  // Mostrar loading mientras se carga el perfil
+  if (loadingProfile) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green_b mx-auto"></div>
+              <p className="mt-4 text-gray_b">Cargando perfil...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -131,10 +168,17 @@ const ProfilePage = () => {
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Perfil de Usuario
             </h1>
+            {profile && (
+              <div className="text-sm text-gray_m">
+                Rol:{" "}
+                <span className="font-medium text-green_b capitalize">
+                  {profile.role || "Usuario"}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray_xxl p-6">
-            {/* Selector de sección con estilo de pestañas */}
             <div className="flex border-b border-gray_xxl mb-6">
               <button
                 className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
@@ -175,15 +219,15 @@ const ProfilePage = () => {
                   <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name" className="text-gray_b">
+                        <Label htmlFor="first_name" className="text-gray_b">
                           Nombre
                         </Label>
                         <div className="relative">
                           <User className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                           <Input
-                            id="name"
-                            name="name"
-                            value={userData.name}
+                            id="first_name"
+                            name="first_name"
+                            value={userData.first_name}
                             onChange={handleInputChange}
                             className="pl-10"
                             required
@@ -192,13 +236,13 @@ const ProfilePage = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="position" className="text-gray_b">
-                          Cargo
+                        <Label htmlFor="last_name" className="text-gray_b">
+                          Apellido
                         </Label>
                         <Input
-                          id="position"
-                          name="position"
-                          value={userData.position}
+                          id="last_name"
+                          name="last_name"
+                          value={userData.last_name}
                           onChange={handleInputChange}
                           required
                         />
@@ -238,15 +282,28 @@ const ProfilePage = () => {
                           />
                         </div>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="username" className="text-gray_b">
+                          Nombre de Usuario
+                        </Label>
+                        <Input
+                          id="username"
+                          name="username"
+                          value={userData.username}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div className="flex justify-end pt-4">
                       <Button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={loading}
                         className="bg-green_m hover:bg-green_b"
                       >
-                        {isLoading ? (
+                        {loading ? (
                           "Guardando..."
                         ) : (
                           <>
@@ -269,44 +326,34 @@ const ProfilePage = () => {
                     Cambiar Contraseña
                   </CardTitle>
                   <CardDescription>
-                    Actualiza tu contraseña aquí. Asegúrate de usar una
-                    contraseña segura.
+                    Para cambiar tu contraseña, ingresa el ID de tu empresa y tu
+                    nueva contraseña.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                    {/* Campo de Legal Tax ID - SIEMPRE visible */}
                     <div className="space-y-2">
-                      <Label htmlFor="currentPassword" className="text-gray_b">
-                        Contraseña Actual
+                      <Label htmlFor="taxId" className="text-gray_b">
+                        ID la Empresa *
                       </Label>
                       <div className="relative">
+                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                         <Input
-                          id="currentPassword"
-                          name="currentPassword"
-                          type={showPasswords.current ? "text" : "password"}
-                          value={passwordData.currentPassword}
-                          onChange={handlePasswordChange}
+                          id="taxId"
+                          name="taxId"
+                          value={taxIdInput}
+                          onChange={(e) => setTaxIdInput(e.target.value)}
+                          className="pl-10"
+                          placeholder="Ingresa el ID de tu empresa"
                           required
                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => togglePasswordVisibility("current")}
-                        >
-                          {showPasswords.current ? (
-                            <EyeOff className="h-4 w-4 text-gray_m" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray_m" />
-                          )}
-                        </Button>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="newPassword" className="text-gray_b">
-                        Nueva Contraseña
+                        Nueva Contraseña *
                       </Label>
                       <div className="relative">
                         <Input
@@ -315,6 +362,7 @@ const ProfilePage = () => {
                           type={showPasswords.new ? "text" : "password"}
                           value={passwordData.newPassword}
                           onChange={handlePasswordChange}
+                          placeholder="Mínimo 6 caracteres"
                           required
                         />
                         <Button
@@ -335,7 +383,7 @@ const ProfilePage = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword" className="text-gray_b">
-                        Confirmar Nueva Contraseña
+                        Confirmar Nueva Contraseña *
                       </Label>
                       <div className="relative">
                         <Input
@@ -344,6 +392,7 @@ const ProfilePage = () => {
                           type={showPasswords.confirm ? "text" : "password"}
                           value={passwordData.confirmPassword}
                           onChange={handlePasswordChange}
+                          placeholder="Repite tu nueva contraseña"
                           required
                         />
                         <Button
@@ -365,10 +414,10 @@ const ProfilePage = () => {
                     <div className="flex justify-end pt-4">
                       <Button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={loading}
                         className="bg-green_m hover:bg-green_b"
                       >
-                        {isLoading ? (
+                        {loading ? (
                           "Actualizando..."
                         ) : (
                           <>

@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
-  Plus,
   Calendar,
   MapPin,
   Search,

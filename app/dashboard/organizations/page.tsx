@@ -27,23 +27,13 @@ import { DataTable } from "@/components/ui/dataTable";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import usePostOrganizations from "@/hooks/organizations/useAddOrganization";
 import useGetOrganizations from "@/hooks/organizations/useGetOrganizations";
 import { toast, Toaster } from "sonner";
 import { OrganizationsService } from "@/services/organizations/organizations.service";
+import usePostOrganizations from "@/hooks/organizations/useAddOrganizations";
+import { OrganizationType, ApiError } from "@/types";
 
-export type Organization = {
-  id: string;
-  name: string;
-  companies: string[];
-  roles: string[];
-  logo?: string;
-  contact_email?: string;
-  legal_tax_id?: string;
-  main_phone?: string;
-  is_active?: boolean;
-};
-
+// ✅ Schema de validación
 const organizationSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   rif: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
@@ -53,11 +43,32 @@ const organizationSchema = z.object({
 
 type OrganizationForm = z.infer<typeof organizationSchema>;
 
+// ✅ Tipo para el error del servidor
+interface ServerError {
+  statusCode?: number;
+  message?: string;
+  error?: string;
+}
+
 const OrganizationsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [editingOrg, setEditingOrg] = useState<OrganizationType | null>(null);
 
+  // ✅ Hooks
+  const { newOrganizations, loading: creating } = usePostOrganizations();
+  const {
+    setModified,
+    organizationsResponse,
+    totalPage,
+    total,
+    setPage,
+    setItemsPerPage,
+    page,
+    itemsPerPage,
+  } = useGetOrganizations();
+
+  // ✅ Form
   const {
     register,
     handleSubmit,
@@ -73,74 +84,149 @@ const OrganizationsPage = () => {
     },
   });
 
-  const { newOrganizations } = usePostOrganizations();
-  const {
-    setModified,
-    organizationsResponse,
-    totalPage,
-    total,
-    setPage,
-    setItemsPerPage,
-    page,
-    itemsPerPage,
-  } = useGetOrganizations();
-
-  // ✅ Crear o actualizar
   const onSubmit = async (values: OrganizationForm) => {
     const { name, rif, email, phone } = values;
-    const payload = {
-      name,
-      contact_email: email,
-      legal_tax_id: rif,
-      main_phone: phone,
-    };
 
-    if (editingOrg) {
-      // 🔥 Aquí llamas a tu hook de actualización (ej: useUpdateOrganization)
-      const response = await OrganizationsService.UpdateOrganization(
-        editingOrg.id,
-        payload
-      );
-      console.log("Actualizar org", editingOrg.id, payload);
-      if (response.status === 200) {
+    try {
+      if (editingOrg && editingOrg.id) {
+        console.log("🔄 Actualizando organización:", {
+          id: editingOrg.id,
+          payload: values,
+        });
+
+        // Para edición, enviar todos los campos como strings requeridos según el Swagger
+        const updatePayload = {
+          name: name.trim(),
+          legal_tax_id: rif.trim().toUpperCase(),
+          contact_email: email.trim().toLowerCase(),
+          main_phone: phone.trim().replace(/\s/g, ""),
+        };
+
+        const response = await OrganizationsService.UpdateOrganization(
+          Number(editingOrg.id),
+          updatePayload
+        );
+
+        console.log("✅ Organización actualizada:", response.data);
         toast.success("Organización actualizada exitosamente");
         setModified((prev) => !prev);
+        reset();
+        setEditingOrg(null);
+        setIsModalOpen(false);
       } else {
-        toast.error("Error al actualizar la organización");
+        // Para creación, enviar todos los campos como strings requeridos según el Swagger
+        const createPayload = {
+          name: name.trim(),
+          legal_tax_id: rif.trim().toUpperCase(),
+          contact_email: email.trim().toLowerCase(),
+          main_phone: phone.trim().replace(/\s/g, ""),
+        };
+
+        console.log("📤 Creando organización:", createPayload);
+
+        const response = await newOrganizations(createPayload);
+
+        if (response && "error" in response) {
+          // Manejar errores específicos
+          if (response.status === 409) {
+            toast.error("Ya existe una organización con ese RIF o email");
+          } else {
+            toast.error(response.message || "Error al crear la organización");
+          }
+        } else if (
+          response &&
+          (response.status === 201 || response.status === 200)
+        ) {
+          toast.success("Organización creada exitosamente");
+          setModified((prev) => !prev);
+          reset();
+          setEditingOrg(null);
+          setIsModalOpen(false);
+        } else {
+          toast.error("Error inesperado al crear la organización");
+        }
       }
-    } else {
-      const response = await newOrganizations(payload);
-      if (
-        typeof response === "object" &&
-        response !== null &&
-        "status" in response &&
-        response.status === 201
-      ) {
-        setModified((prev) => !prev);
-        toast.success("Organización creada exitosamente");
+    } catch (error: unknown) {
+      console.error("❌ Error en onSubmit:", error);
+
+      // Usamos type assertion con tu interfaz ApiError
+      const apiError = error as ApiError;
+
+      if (apiError.response?.data) {
+        const serverError = apiError.response.data as ServerError;
+        console.error("📋 Error del servidor:", serverError);
+
+        // Manejo específico de errores
+        if (serverError.statusCode === 409) {
+          toast.error("Ya existe una organización con ese RIF o email");
+        } else if (serverError.message?.includes("duplicate")) {
+          toast.error("Ya existe una organización con esos datos");
+        } else if (serverError.message) {
+          toast.error(`Error: ${serverError.message}`);
+        } else if (serverError.error) {
+          toast.error(`Error: ${serverError.error}`);
+        } else if (Array.isArray(serverError)) {
+          serverError.forEach((err: { message?: string }) =>
+            toast.error(err.message || "Error del servidor")
+          );
+        } else {
+          toast.error("Error del servidor al procesar la solicitud");
+        }
+      } else {
+        toast.error("Error de conexión con el servidor");
       }
     }
-
-    reset();
-    setEditingOrg(null);
-    setIsModalOpen(false);
   };
 
-  // ✅ Eliminar
-  const handleDelete = (org: Organization) => {
+  const handleDelete = async (org: OrganizationType) => {
+    if (!org.id) {
+      toast.error("Error: La organización no tiene ID válido");
+      return;
+    }
+
     toast.error(`¿Eliminar la organización "${org.name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          const response = await OrganizationsService.DeleteOrganization(
-            org.id
-          );
-          if (response.status === 200) {
-            toast.success("Organización eliminada exitosamente");
-            setModified((prev) => !prev);
-          } else {
-            toast.error("Error al eliminar la organización");
+          try {
+            const response = await OrganizationsService.DeleteOrganization(
+              org.id!
+            );
+
+            if (response.status === 200 || response.status === 204) {
+              toast.success("Organización eliminada exitosamente");
+              setModified((prev) => !prev);
+            } else {
+              console.error("Error response:", response);
+              toast.error(
+                `Error ${response.status}: No se pudo eliminar la organización`
+              );
+            }
+          } catch (error: unknown) {
+            console.error("Error deleting organization:", error);
+
+            // Usamos type assertion con tu interfaz ApiError
+            const apiError = error as ApiError;
+
+            if (apiError.response) {
+              console.error("Error response data:", apiError.response.data);
+              console.error("Error status:", apiError.response.status);
+
+              if (apiError.response.status === 409) {
+                toast.error(
+                  "No se puede eliminar: La organización tiene datos relacionados"
+                );
+              } else if (apiError.response.status === 404) {
+                toast.error("Organización no encontrada");
+              } else {
+                toast.error(
+                  `Error ${apiError.response.status}: No se pudo eliminar`
+                );
+              }
+            } else {
+              toast.error("Error de conexión al eliminar la organización");
+            }
           }
         },
       },
@@ -153,8 +239,13 @@ const OrganizationsPage = () => {
     });
   };
 
-  // ✅ Editar
-  const handleEdit = (org: Organization) => {
+  // ✅ Editar organización
+  const handleEdit = (org: OrganizationType) => {
+    if (!org.id) {
+      toast.error("Error: La organización no tiene ID válido");
+      return;
+    }
+
     setEditingOrg(org);
     reset({
       name: org.name || "",
@@ -165,8 +256,8 @@ const OrganizationsPage = () => {
     setIsModalOpen(true);
   };
 
-  // ✅ Columnas con handlers
-  const columns: ColumnDef<Organization>[] = [
+  // ✅ Columnas de la tabla (SIN la columna "Estado")
+  const columns: ColumnDef<OrganizationType>[] = [
     {
       accessorKey: "name",
       header: "Organización",
@@ -179,7 +270,7 @@ const OrganizationsPage = () => {
       header: "RIF",
       cell: ({ row }) =>
         row.getValue("legal_tax_id") || (
-          <span className="text-gray_l text-sm">Sin RIF</span>
+          <span className="text-gray-400 text-sm">Sin RIF</span>
         ),
     },
     {
@@ -187,7 +278,7 @@ const OrganizationsPage = () => {
       header: "Correo",
       cell: ({ row }) =>
         row.getValue("contact_email") || (
-          <span className="text-gray_l text-sm">Sin correo</span>
+          <span className="text-gray-400 text-sm">Sin correo</span>
         ),
     },
     {
@@ -195,17 +286,7 @@ const OrganizationsPage = () => {
       header: "Teléfono",
       cell: ({ row }) =>
         row.getValue("main_phone") || (
-          <span className="text-gray_l text-sm">Sin teléfono</span>
-        ),
-    },
-    {
-      accessorKey: "is_active",
-      header: "Estado",
-      cell: ({ row }) =>
-        row.getValue("is_active") ? (
-          <span className="text-green_m font-medium">Activo</span>
-        ) : (
-          <span className="text-red_m font-medium">Inactivo</span>
+          <span className="text-gray-400 text-sm">Sin teléfono</span>
         ),
     },
     {
@@ -232,7 +313,7 @@ const OrganizationsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(org)}
-                  className="cursor-pointer flex items-center gap-2 text-red_m"
+                  className="cursor-pointer flex items-center gap-2 text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -246,20 +327,19 @@ const OrganizationsPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+    <div className="flex min-h-screen bg-gray-50 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
               Organizaciones
             </h1>
             <Button
@@ -269,13 +349,14 @@ const OrganizationsPage = () => {
                 setIsModalOpen(true);
               }}
               className="gap-2 w-full sm:w-auto"
+              disabled={creating}
             >
               <Plus className="h-4 w-4" />
               <span>Nueva organización</span>
             </Button>
           </div>
 
-          <DataTable<Organization, Organization>
+          <DataTable<OrganizationType, OrganizationType>
             columns={columns}
             data={organizationsResponse || []}
             noResultsText="No hay organizaciones registradas"
@@ -305,21 +386,33 @@ const OrganizationsPage = () => {
                   Nombre
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
-                  <Input id="name" {...register("name")} required />
+                  <Input
+                    id="name"
+                    {...register("name")}
+                    required
+                    disabled={isSubmitting}
+                  />
                   {errors.name && (
-                    <p className="text-xs text-red_m">{errors.name.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.name.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
                 <Label htmlFor="rif" className="sm:text-right">
-                  ID Empresa
+                  RIF
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
-                  <Input id="rif" {...register("rif")} required />
+                  <Input
+                    id="rif"
+                    {...register("rif")}
+                    required
+                    disabled={isSubmitting}
+                  />
                   {errors.rif && (
-                    <p className="text-xs text-red_m">{errors.rif.message}</p>
+                    <p className="text-xs text-red-600">{errors.rif.message}</p>
                   )}
                 </div>
               </div>
@@ -334,9 +427,12 @@ const OrganizationsPage = () => {
                     type="email"
                     {...register("email")}
                     required
+                    disabled={isSubmitting}
                   />
                   {errors.email && (
-                    <p className="text-xs text-red_m">{errors.email.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -351,9 +447,12 @@ const OrganizationsPage = () => {
                     inputMode="tel"
                     {...register("phone")}
                     required
+                    disabled={isSubmitting}
                   />
                   {errors.phone && (
-                    <p className="text-xs text-red_m">{errors.phone.message}</p>
+                    <p className="text-xs text-red-600">
+                      {errors.phone.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -365,6 +464,7 @@ const OrganizationsPage = () => {
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
                 className="mt-2 sm:mt-0"
+                disabled={isSubmitting}
               >
                 Cerrar
               </Button>

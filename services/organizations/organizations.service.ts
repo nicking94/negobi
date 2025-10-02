@@ -1,15 +1,29 @@
 import api from "@/utils/api";
 import * as OrganizationsRoute from "./organizations.route";
-import { OrganizationQueryType, OrganizationType } from "@/types";
+import {
+  OrganizationPayload,
+  OrganizationQueryType,
+  OrganizationType,
+} from "@/types";
 
-
-
+// services/organizations/organizations.service.ts
 export class OrganizationsService {
-    static AddOrganizations = async (data: OrganizationType) => await api.post(OrganizationsRoute.addOrganization, data);
+  static AddOrganizations = async (data: OrganizationType) =>
+    await api.post(OrganizationsRoute.addOrganization, data);
 
-    static GetOrganizations = async (data: OrganizationQueryType) => await api.get(OrganizationsRoute.getOrganizations, { params: data });
+  static GetOrganizations = async (data: OrganizationQueryType) =>
+    await api.get(OrganizationsRoute.getOrganizations, { params: data });
 
-    static DeleteOrganization = async (id: string) => await api.delete(`${OrganizationsRoute.deleteOrganization}/${id}`);
+  static DeleteOrganization = async (id: string) =>
+    await api.delete(`${OrganizationsRoute.deleteOrganization}/${id}`);
+  static async UpdateOrganization(id: number, data: OrganizationPayload) {
+    const payload = {
+      name: data.name,
+      contact_email: data.contact_email,
+      legal_tax_id: data.legal_tax_id,
+      main_phone: data.main_phone,
+    };
 
-    static UpdateOrganization = async (id: string, data: OrganizationType) => await api.patch(`${OrganizationsRoute.updateOrganization}/${id}`, data);
+    return await api.patch(`/organizations/${id}`, payload);
+  }
 }

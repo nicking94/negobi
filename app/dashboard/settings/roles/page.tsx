@@ -46,7 +46,6 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";

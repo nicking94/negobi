@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -14,7 +14,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Key,
   User,
   BadgeCheck,
   XCircle,
@@ -50,8 +49,6 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -660,7 +657,7 @@ const CompaniesPage = () => {
                 </p>
               </div>
 
-              <div className="border-t pt-4">
+              <div className="pt-4">
                 <h3 className="font-semibold mb-3">Administrador Principal</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -876,7 +873,7 @@ const CompaniesPage = () => {
             </div>
 
             {/* Admin principal */}
-            <div className="border-t pt-4">
+            <div className=" pt-4">
               <h3 className="font-semibold mb-3">Administrador Principal</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

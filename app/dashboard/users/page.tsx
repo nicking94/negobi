@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -11,10 +11,8 @@ import {
   Filter,
   Plus,
   User,
-  Building,
   Mail,
   Phone,
-  Key,
   BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,7 +46,6 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -88,7 +85,6 @@ export type User = {
   status?: "active" | "inactive";
   created_at?: Date;
 };
-type UserRole = "superAdmin" | "admin" | "user" | "sellers";
 
 const UsersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -96,7 +92,6 @@ const UsersPage = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -132,66 +127,6 @@ const UsersPage = () => {
     seller_code: "",
   });
 
-  // Datos de ejemplo
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      email: "admin@empresa.com",
-      username: "admin",
-      first_name: "Juan",
-      last_name: "Pérez",
-      phone: "+1234567890",
-      role: "admin",
-      seller_code: "AD001",
-      branch_id: 1,
-      company_id: 1,
-      status: "active",
-      created_at: new Date("2024-01-15T10:30:00"),
-    },
-    {
-      id: "2",
-      email: "vendedor1@empresa.com",
-      username: "vendedor1",
-      first_name: "María",
-      last_name: "González",
-      phone: "+0987654321",
-      role: "sellers",
-      seller_code: "VD001",
-      branch_id: 1,
-      company_id: 1,
-      status: "active",
-      created_at: new Date("2024-02-20T14:45:00"),
-    },
-    {
-      id: "3",
-      email: "usuario@empresa.com",
-      username: "usuario",
-      first_name: "Carlos",
-      last_name: "Rodríguez",
-      phone: "+1122334455",
-      role: "user",
-      seller_code: "",
-      branch_id: 2,
-      company_id: 1,
-      status: "inactive",
-      created_at: new Date("2024-03-10T09:15:00"),
-    },
-    {
-      id: "4",
-      email: "super@empresa.com",
-      username: "superadmin",
-      first_name: "Ana",
-      last_name: "Martínez",
-      phone: "+5566778899",
-      role: "superAdmin",
-      seller_code: "",
-      branch_id: 1,
-      company_id: 1,
-      status: "active",
-      created_at: new Date("2024-01-05T08:00:00"),
-    },
-  ]);
-
   // Roles para los filtros
   const roles = [
     { id: "1", name: "superAdmin", label: "Super Administrador" },
@@ -205,27 +140,6 @@ const UsersPage = () => {
     { id: "1", name: "active", label: "Activo" },
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
-
-  // Filtrar usuarios según los criterios
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchesSearch =
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Filtrar por rol (si no es "todos")
-      const matchesRole = roleFilter === "all" || user.role === roleFilter;
-
-      // Filtrar por estado (si no es "todos")
-      const matchesStatus =
-        statusFilter === "all" || user.status === statusFilter;
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [users, searchTerm, roleFilter, statusFilter]);
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
