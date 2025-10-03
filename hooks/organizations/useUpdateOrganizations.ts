@@ -1,25 +1,28 @@
-// hooks/organizations/useAddOrganizations.ts
+// hooks/organizations/useUpdateOrganizations.ts
 import { useState } from "react";
 import { OrganizationsService } from "@/services/organizations/organizations.service";
 import { OrganizationPayload, ApiError } from "@/types";
 
-const useAddOrganizations = () => {
+const useUpdateOrganizations = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const newOrganization = async (data: OrganizationPayload) => {
+  const updateOrganization = async (
+    id: string,
+    data: Partial<OrganizationPayload>
+  ) => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Creando nueva organización:", data);
+      console.log("🟡 Actualizando organización ID:", id, "Data:", data);
 
-      const response = await OrganizationsService.createOrganization(data);
+      const response = await OrganizationsService.patchOrganization(id, data);
 
-      console.log("🟢 Respuesta de creación:", response);
+      console.log("🟢 Respuesta de actualización:", response);
       return response;
     } catch (err) {
       const apiError = err as ApiError;
-      console.error("🔴 Error creando organización:", apiError);
+      console.error("🔴 Error actualizando organización:", apiError);
       setError(apiError);
       throw apiError;
     } finally {
@@ -28,10 +31,10 @@ const useAddOrganizations = () => {
   };
 
   return {
-    newOrganization,
+    updateOrganization,
     loading,
     error,
   };
 };
 
-export default useAddOrganizations;
+export default useUpdateOrganizations;

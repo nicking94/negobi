@@ -104,7 +104,7 @@ export type Client = {
   last_payment_amount?: number;
 };
 
-// Esquema de validación actualizado según el schema de Swagger
+// Actualiza el clientSchema para que coincida con el Swagger:
 const clientSchema = z.object({
   companyId: z.number().min(1, "La compañía es requerida").optional(),
   salespersonUserId: z.number().optional(),
@@ -141,12 +141,6 @@ const clientSchema = z.object({
   commercial_name: z.string().optional(),
   delivery_address: z.string().optional(),
   zip_code: z.string().optional(),
-  location: z
-    .object({
-      type: z.string(),
-      coordinates: z.tuple([z.number(), z.number()]),
-    })
-    .optional(),
   map_link: z.string().optional(),
   payment_term_id: z.number().optional(),
   credit_limit: z.number().optional(),
@@ -180,9 +174,11 @@ const ClientsPage = () => {
     setPage,
     setItemsPerPage,
     setModified,
-  } = useGetClients();
+  } = useGetClients({
+    search: searchTerm,
+    salespersonUserId: selectedSeller,
+  });
 
-  // Simular carga de datos de vendedores, tipos de cliente y tipos de documento fiscal
   useEffect(() => {
     setSellers([
       { id: 1, name: "Juan Pérez" },
@@ -202,7 +198,6 @@ const ClientsPage = () => {
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
-      companyId: 1,
       salespersonUserId: undefined,
       zoneId: undefined,
       client_code: "",
@@ -223,7 +218,6 @@ const ClientsPage = () => {
       commercial_name: "",
       delivery_address: "",
       zip_code: "",
-      location: undefined,
       map_link: "",
       payment_term_id: undefined,
       credit_limit: undefined,
@@ -242,21 +236,29 @@ const ClientsPage = () => {
           editingClient.id!,
           values
         );
-        console.log("Actualizar org", editingClient.id, values);
+
         if (response.status === 200) {
-          toast.success("Organización actualizada exitosamente");
+          toast.success("Cliente actualizado exitosamente");
           setModified((prev) => !prev);
         } else {
-          toast.error("Error al actualizar la organización");
+          toast.error("Error al actualizar el cliente");
         }
       } else {
-        setModified((prev) => !prev);
-        toast.success("Cliente creado exitosamente");
+        // Para crear nuevo cliente
+        const response = await ClientsService.addClient(values as Client);
+
+        if (response.status === 201) {
+          toast.success("Cliente creado exitosamente");
+          setModified((prev) => !prev);
+        } else {
+          toast.error("Error al crear el cliente");
+        }
       }
 
       resetForm();
       setIsModalOpen(false);
     } catch (error) {
+      console.error("Error saving client:", error);
       toast.error("Error al guardar el cliente");
     }
   };
@@ -333,7 +335,6 @@ const ClientsPage = () => {
       commercial_name: "",
       delivery_address: "",
       zip_code: "",
-      location: undefined,
       map_link: "",
       payment_term_id: undefined,
       credit_limit: undefined,
@@ -443,7 +444,7 @@ const ClientsPage = () => {
       },
     },
   ];
-  console.log("errors:", form.formState.errors);
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />

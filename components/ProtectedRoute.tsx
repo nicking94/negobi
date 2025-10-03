@@ -1,4 +1,4 @@
-// components/ProtectedRoute.tsx
+// components/ProtectedRoute.tsx (actualizado)
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -11,25 +11,27 @@ export default function ProtectedRoute({
   children: React.ReactNode;
   requiredRole?: string;
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      // Redirigir al login si no está autenticado
-      router.push("/login");
+    if (!isLoading && !isAuthenticated) {
+      // Usar replace para evitar que el usuario vuelva atrás
+      router.replace("/login");
     } else if (
       !isLoading &&
+      isAuthenticated &&
       user &&
       requiredRole &&
       user.role !== requiredRole
     ) {
       // Redirigir si no tiene el rol requerido
-      router.push("/unauthorized");
+      router.replace("/unauthorized");
     }
-  }, [user, isLoading, router, pathname, requiredRole]);
+  }, [user, isAuthenticated, isLoading, router, pathname, requiredRole]);
 
+  // Mostrar loading mientras verifica
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -41,11 +43,13 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user) {
+  // No renderizar nada si no está autenticado (será redirigido)
+  if (!isAuthenticated) {
     return null;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  // Verificar rol si es requerido
+  if (requiredRole && user && user.role !== requiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

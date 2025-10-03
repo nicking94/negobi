@@ -53,7 +53,6 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
       otp: values.otp,
     });
     if (result?.status === 201) {
-      console.log("OTP validado con éxito:", result.data);
       toast.success("Código OTP validado con éxito.");
       setTimeout(() => {
         route.push(`/new-password?email=${email}&taxId=${legal_tax_id}`);

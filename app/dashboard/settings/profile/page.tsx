@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,12 +19,16 @@ import {
   Eye,
   EyeOff,
   Building,
+  Copy,
+  CheckCheck,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { Toaster, toast } from "sonner";
-import useProfile from "@/hooks/users/useProfile";
+import { useProfile } from "@/hooks/users/useProfile";
 
 const ProfilePage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -35,9 +38,17 @@ const ProfilePage = () => {
     new: false,
     confirm: false,
   });
+  const [copiedApiKey, setCopiedApiKey] = useState(false);
 
   const { profile, loading, loadingProfile, updateProfile, changePassword } =
     useProfile();
+
+  const canViewApiKey = [
+    "superAdmin",
+    "directive",
+    "management",
+    "administration",
+  ].includes(profile?.role || "");
 
   // Datos del usuario desde el hook
   const [userData, setUserData] = useState({
@@ -55,7 +66,6 @@ const ProfilePage = () => {
 
   const [taxIdInput, setTaxIdInput] = useState("");
 
-  // Actualizar userData cuando el perfil se carga
   useEffect(() => {
     if (profile) {
       setUserData({
@@ -71,17 +81,23 @@ const ProfilePage = () => {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!profile?.id) {
+      toast.error("No se puede actualizar: ID de usuario no disponible");
+      return;
+    }
+
     const result = await updateProfile(userData);
 
     if (result.success) {
-      console.log("Perfil actualizado:", result.data);
+      toast.success("Perfil actualizado exitosamente");
+    } else {
+      toast.error(result.error || "Error al actualizar el perfil");
     }
   };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones del lado del cliente
     if (!taxIdInput) {
       toast.error("Por favor ingresa el ID de tu empresa");
       return;
@@ -131,6 +147,27 @@ const ProfilePage = () => {
     }));
   };
 
+  const copyApiKeyToClipboard = () => {
+    if (profile?.api_key?.key) {
+      navigator.clipboard.writeText(profile.api_key.key);
+      setCopiedApiKey(true);
+      toast.success("API Key copiada al portapapeles");
+      setTimeout(() => setCopiedApiKey(false), 2000);
+    }
+  };
+
+  // Función para calcular días restantes
+  const calculateRemainingDays = (expiresAt: string): number => {
+    const expirationDate = new Date(expiresAt);
+    const today = new Date();
+    const differenceMs = expirationDate.getTime() - today.getTime();
+    const remainingDays = Math.ceil(differenceMs / (1000 * 60 * 60 * 24));
+    return Math.max(0, remainingDays);
+  };
+
+  // Verificar si el usuario es superadmin
+  const isSuperAdmin = profile?.role === "superAdmin";
+
   // Mostrar loading mientras se carga el perfil
   if (loadingProfile) {
     return (
@@ -179,9 +216,9 @@ const ProfilePage = () => {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray_xxl p-6">
-            <div className="flex border-b border-gray_xxl mb-6">
+            <div className="flex border-b border-gray_xxl mb-6 overflow-x-auto">
               <button
-                className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
                   activeSection === "profile"
                     ? "border-green_m text-green_b"
                     : "border-transparent text-gray_m hover:text-gray_b"
@@ -192,7 +229,7 @@ const ProfilePage = () => {
                 Información Personal
               </button>
               <button
-                className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
                   activeSection === "password"
                     ? "border-green_m text-green_b"
                     : "border-transparent text-gray_m hover:text-gray_b"
@@ -202,6 +239,20 @@ const ProfilePage = () => {
                 <Key className="w-4 h-4" />
                 Cambiar Contraseña
               </button>
+
+              {canViewApiKey && (
+                <button
+                  className={`py-3 px-6 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+                    activeSection === "apiKey"
+                      ? "border-green_m text-green_b"
+                      : "border-transparent text-gray_m hover:text-gray_b"
+                  }`}
+                  onClick={() => setActiveSection("apiKey")}
+                >
+                  <Key className="w-4 h-4" />
+                  Ver API Key
+                </button>
+              )}
             </div>
 
             {/* Sección de Información Personal */}
@@ -428,6 +479,168 @@ const ProfilePage = () => {
                       </Button>
                     </div>
                   </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Sección de API Key para usuarios autorizados */}
+            {activeSection === "apiKey" && canViewApiKey && (
+              <Card className="bg-white border-0 shadow-none">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle className="text-lg font-medium">API Key</CardTitle>
+                  <CardDescription>
+                    Tu API Key para acceder a los servicios del sistema. Mantén
+                    esta clave segura y no la compartas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-0 pb-0">
+                  <div className="space-y-6">
+                    {profile?.api_key?.key ? (
+                      <>
+                        {/* API Key Principal */}
+                        <div className="space-y-2">
+                          <Label htmlFor="apiKey" className="text-gray_b">
+                            Tu API Key
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="apiKey"
+                              name="apiKey"
+                              value={profile.api_key.key}
+                              readOnly
+                              className="pr-20 font-mono text-sm bg-gray-50"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              onClick={copyApiKeyToClipboard}
+                            >
+                              {copiedApiKey ? (
+                                <CheckCheck className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4 text-gray_m" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Información detallada de la API Key */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray_xxl">
+                          {/* Estado */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full ${
+                                  profile.api_key.is_active
+                                    ? "bg-green-500"
+                                    : "bg-red-500"
+                                }`}
+                              />
+                              Estado
+                            </Label>
+                            <div className="text-sm font-medium">
+                              {profile.api_key.is_active
+                                ? "Activa"
+                                : "Inactiva"}
+                            </div>
+                          </div>
+
+                          {/* Duración */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              Duración
+                            </Label>
+                            <div className="text-sm font-medium">
+                              {profile.api_key.duration_days} días
+                            </div>
+                          </div>
+
+                          {/* Expiración */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              Expiración
+                            </Label>
+                            <div className="text-sm font-medium">
+                              {new Date(
+                                profile.api_key.expires_at
+                              ).toLocaleDateString("es-ES", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Días Restantes */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm">
+                              Días Restantes
+                            </Label>
+                            <div
+                              className={`text-sm font-medium ${
+                                calculateRemainingDays(
+                                  profile.api_key.expires_at
+                                ) <= 5
+                                  ? "text-red-500"
+                                  : calculateRemainingDays(
+                                      profile.api_key.expires_at
+                                    ) <= 15
+                                  ? "text-yellow-500"
+                                  : "text-green-500"
+                              }`}
+                            >
+                              {calculateRemainingDays(
+                                profile.api_key.expires_at
+                              )}{" "}
+                              días
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Información adicional */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray_xxl">
+                          {/* Fecha de Creación */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm">
+                              Fecha de Creación
+                            </Label>
+                            <div className="text-sm">
+                              {new Date(
+                                profile.api_key.created_at
+                              ).toLocaleDateString("es-ES", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+
+                          {/* ID de la API Key */}
+                          <div className="space-y-2">
+                            <Label className="text-gray_b text-sm">
+                              ID de la API Key
+                            </Label>
+                            <div className="text-sm font-mono bg-gray-50 p-2 rounded">
+                              {profile.api_key.id}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Key className="w-12 h-12 text-gray_m mx-auto mb-4" />
+                        <p className="text-gray_m mb-2">
+                          No hay una API Key disponible para tu cuenta.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}

@@ -1,29 +1,35 @@
-import api from "@/utils/api";
-import * as OrganizationsRoute from "./organizations.route";
-import {
-  OrganizationPayload,
-  OrganizationQueryType,
-  OrganizationType,
-} from "@/types";
-
 // services/organizations/organizations.service.ts
+import * as OrganizationsRoutes from "./organizations.route";
+import api from "@/utils/api";
+import { OrganizationPayload } from "@/types";
+
+export interface OrganizationFilters {
+  page?: number;
+  itemsPerPage?: number;
+  order?: "ASC" | "DESC";
+  search?: string;
+  name?: string;
+}
+
 export class OrganizationsService {
-  static AddOrganizations = async (data: OrganizationType) =>
-    await api.post(OrganizationsRoute.addOrganization, data);
+  // Crear una nueva organización
+  static createOrganization = async (data: OrganizationPayload) =>
+    await api.post(OrganizationsRoutes.PostOrganizations, data);
 
-  static GetOrganizations = async (data: OrganizationQueryType) =>
-    await api.get(OrganizationsRoute.getOrganizations, { params: data });
+  static getOrganizations = async (querys: OrganizationFilters) =>
+    await api.get(OrganizationsRoutes.GetOrganizations, { params: querys });
 
-  static DeleteOrganization = async (id: string) =>
-    await api.delete(`${OrganizationsRoute.deleteOrganization}/${id}`);
-  static async UpdateOrganization(id: number, data: OrganizationPayload) {
-    const payload = {
-      name: data.name,
-      contact_email: data.contact_email,
-      legal_tax_id: data.legal_tax_id,
-      main_phone: data.main_phone,
-    };
+  // Obtener una organización específica por ID
+  static getOrganization = async (id: string) =>
+    await api.get(`${OrganizationsRoutes.GetOrganization}/${id}`);
 
-    return await api.patch(`/organizations/${id}`, payload);
-  }
+  // Actualizar una organización existente
+  static patchOrganization = async (
+    id: string,
+    data: Partial<OrganizationPayload>
+  ) => await api.patch(`${OrganizationsRoutes.PatchOrganization}/${id}`, data);
+
+  // Eliminar una organización
+  static deleteOrganization = async (id: string) =>
+    await api.delete(`${OrganizationsRoutes.DeleteOrganization}/${id}`);
 }

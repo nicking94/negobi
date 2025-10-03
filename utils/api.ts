@@ -9,7 +9,6 @@ const api = axios.create({
   baseURL: NEGOBI_API,
 });
 
-// utils/api.ts - Interceptor actualizado con verificación de expiración
 api.interceptors.request.use(async (config) => {
   const accessToken = localStorage.getItem("NEGOBI_JWT_TOKEN");
   const userApiKey = localStorage.getItem("NEGOBI_USER_API_KEY");
@@ -21,14 +20,12 @@ api.interceptors.request.use(async (config) => {
   if (accessToken) {
     config.headers["Authorization"] = `Bearer ${accessToken}`;
 
-    // Verificar si la API Key ha expirado
     if (apiKeyExpiration && new Date() > new Date(apiKeyExpiration)) {
       console.warn("⚠️ API Key ha expirado");
       localStorage.removeItem("NEGOBI_USER_API_KEY");
       localStorage.removeItem("NEGOBI_API_KEY_EXPIRATION");
     }
 
-    // Usar API Key del usuario si está disponible y no ha expirado
     if (
       userApiKey &&
       (!apiKeyExpiration || new Date() <= new Date(apiKeyExpiration))
@@ -42,24 +39,51 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Interceptor de respuesta: maneja token expirado
+// utils/api.ts (actualizado)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const url = error.config?.url || "";
+  async (error) => {
+    const originalRequest = error.config;
+    const url = originalRequest?.url || "";
 
-    // Excluir el endpoint de login del manejo automático de 401
-    const isLoginEndpoint =
-      url.includes("/auth/login") || url.includes("/login");
+    if (error.response?.status === 401 && !url.includes("/auth/login")) {
+      // Intentar refresh token antes de redirigir
+      const refreshToken = localStorage.getItem("NEGOBI_JWT_REFRESH_TOKEN");
 
-    if (error.response?.status === 401 && !isLoginEndpoint) {
-      console.log("🔄 Redirigiendo al login por 401 (sesión expirada)");
-      toast.error("Tu sesión ha expirada. Redirigiendo al login...");
+      if (refreshToken && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        try {
+          const refreshResponse = await axios.post(
+            `${NEGOBI_API}/auth/refresh`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${refreshToken}`,
+                "x-api-key": "apikey123superadmin",
+              },
+            }
+          );
+
+          const newAccessToken = refreshResponse.data.data.access_token;
+          localStorage.setItem("NEGOBI_JWT_TOKEN", newAccessToken);
+
+          // Reintentar la request original con el nuevo token
+          originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
+        } catch (refreshError) {}
+      }
+
+      toast.error("Tu sesión ha expirado. Redirigiendo al login...");
+
+      localStorage.removeItem("NEGOBI_JWT_TOKEN");
+      localStorage.removeItem("NEGOBI_JWT_REFRESH_TOKEN");
+      localStorage.removeItem("NEGOBI_USER_API_KEY");
+
       setTimeout(() => {
         window.location.href = "/login";
-        localStorage.removeItem("NEGOBI_JWT_TOKEN");
-        localStorage.removeItem("NEGOBI_USER_API_KEY");
       }, 1500);
+
       return Promise.reject(error);
     }
 

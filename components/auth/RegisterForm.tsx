@@ -94,7 +94,7 @@ export function RegisterForm() {
       fiscal_address: "",
       legal_tax_id: "",
       code: "",
-      api_key_duration_days: 30, // Valor por defecto de 30 días
+      api_key_duration_days: 180,
       admin_first_name: "",
       admin_last_name: "",
       admin_email: "",
@@ -108,15 +108,6 @@ export function RegisterForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const result = await onRegister(values);
     console.log("Resultado del registro:", result);
-
-    if (result.success) {
-      toast.success(
-        "¡Empresa registrada exitosamente! Redirigiendo al login..."
-      );
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
-    }
   };
 
   return (
@@ -178,53 +169,60 @@ export function RegisterForm() {
                 )}
               />
             </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              <FormField
+                control={form.control}
+                name="main_phone"
+                render={({ field }) => (
+                  <FormItem className="mb-4">
+                    <FormLabel className="text-[var(--color-gray_b)]">
+                      Teléfono principal *
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                        <Input
+                          placeholder="+1234567890"
+                          {...field}
+                          type="tel"
+                          className="pl-10"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[var(--color-red_l)]" />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="main_phone"
-              render={({ field }) => (
-                <FormItem className="mb-4">
-                  <FormLabel className="text-[var(--color-gray_b)]">
-                    Teléfono principal *
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
-                      <Input
-                        placeholder="+1234567890"
-                        {...field}
-                        type="tel"
-                        className="pl-10"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[var(--color-red_l)]" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="fiscal_address"
-              render={({ field }) => (
-                <FormItem className="mb-4">
-                  <FormLabel className="text-[var(--color-gray_b)]">
-                    Dirección fiscal *
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
-                      <Input
-                        placeholder="Dirección completa"
-                        {...field}
-                        className="pl-10"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[var(--color-red_l)]" />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="api_key_duration_days"
+                render={({ field }) => (
+                  <FormItem className="mb-4">
+                    <FormLabel className="text-[var(--color-gray_b)]">
+                      Duración de API Key (días) *
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                        <Input
+                          placeholder="30"
+                          type="number"
+                          min="1"
+                          max="365"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value) || 0)
+                          }
+                          className="pl-10"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[var(--color-red_l)]" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid lg:grid-cols-2 gap-2 mb-2">
               <FormField
@@ -260,27 +258,20 @@ export function RegisterForm() {
               />
             </div>
 
-            {/* Nuevo campo para duración de API Key */}
             <FormField
               control={form.control}
-              name="api_key_duration_days"
+              name="fiscal_address"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="mb-4 mt-4">
                   <FormLabel className="text-[var(--color-gray_b)]">
-                    Duración de API Key (días) *
+                    Dirección fiscal *
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray_m" />
                       <Input
-                        placeholder="30"
-                        type="number"
-                        min="1"
-                        max="365"
+                        placeholder="Dirección completa"
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
                         className="pl-10"
                       />
                     </div>

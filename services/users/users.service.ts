@@ -2,7 +2,7 @@
 import { User } from "@/app/dashboard/users/page";
 import * as UserRoutes from "./user.routes";
 import api from "@/utils/api";
-import { OrganizationQueryType } from "@/types";
+import { ApiKeyType, OrganizationQueryType } from "@/types";
 
 export interface UserProfile {
   id: number;
@@ -18,13 +18,30 @@ export interface UserProfile {
   erp_cod_sucu?: string;
   company_id?: number;
   branch_id?: number;
+  location?: string;
+  remember_password?: string;
+  rm_password_expired?: string;
+  sync_with_erp?: boolean;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
+  company?: any;
+  api_key?: ApiKeyType;
 }
 
 export interface ChangePasswordData {
-  new_password: string; // ✅ Según el endpoint
-  legal_tax_id: string; // ✅ Según el endpoint
+  new_password: string;
+  legal_tax_id: string;
+}
+
+// Interface para actualizar perfil según Swagger
+export interface UpdateProfileData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  username?: string;
+  // Otros campos que acepte el endpoint según Swagger
 }
 
 export class UsersService {
@@ -44,18 +61,16 @@ export class UsersService {
     return api.delete(`${UserRoutes.deleteUser}/${id}`);
   }
 
-  // ✅ Método para obtener el usuario autenticado
   static getProfile() {
     return api.get(UserRoutes.getProfile);
   }
 
-  // ✅ Método para actualizar el perfil del usuario autenticado
-  static updateProfile(data: Partial<UserProfile>) {
-    return api.patch(`${UserRoutes.updateProfile}/${data.id}`, data);
+  // CORREGIDO: Usar la interfaz específica y asegurar el ID
+  static updateProfile(id: number, data: UpdateProfileData) {
+    return api.patch(`${UserRoutes.updateProfile}/${id}`, data);
   }
 
-  // ✅ Método para cambiar contraseña - CORREGIDO según el endpoint
   static changePassword(data: ChangePasswordData) {
-    return api.put(UserRoutes.changePassword, data); // ✅ PUT según el swagger
+    return api.put(UserRoutes.changePassword, data);
   }
 }

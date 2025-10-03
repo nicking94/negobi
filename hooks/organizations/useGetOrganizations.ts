@@ -12,53 +12,116 @@ const useGetOrganizations = () => {
   const [totalPage, setTotalPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const getOrganizations = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await OrganizationsService.GetOrganizations({
-        search,
+      setError(null);
+
+      console.log("🔍 Fetching organizations with params:", {
+        search: searchTerm,
         page,
         itemsPerPage,
       });
 
-      if (response.data) {
-        if (response.data.data && response.data.data.data) {
-          setOrganizationsResponse(response.data.data.data);
-          setTotalPage(response.data.data.totalPages || 1);
-          setTotal(response.data.data.total || 0);
-        } else if (response.data.data) {
-          setOrganizationsResponse(response.data.data);
-          setTotalPage(response.data.totalPages || 1);
-          setTotal(response.data.total || 0);
-        } else if (Array.isArray(response.data)) {
-          setOrganizationsResponse(response.data);
-          setTotalPage(1);
-          setTotal(response.data.length);
-        }
-        // Estructura común
-        else {
-          setOrganizationsResponse(
-            response.data.data || response.data.items || []
-          );
-          setTotalPage(response.data.totalPages || response.data.lastPage || 1);
-          setTotal(response.data.total || response.data.count || 0);
-        }
+      const response = await OrganizationsService.getOrganizations({
+        search: searchTerm,
+        page,
+        itemsPerPage,
+        order: "ASC" as const,
+      });
+
+      console.log("📦 Raw API Response:", response);
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "Error en la respuesta del servidor"
+        );
       }
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
+
+      const responseData = response.data;
+
+      console.log("📊 Response data structure:", responseData);
+
+      // ✅ CORREGIDO: Extraer datos de la estructura correcta
+      let organizationsArray: any[] = [];
+      let totalPages = 1;
+      let totalCount = 0;
+
+      // La estructura es: response.data.data.data (array) y response.data.data.total, etc.
+      if (
+        responseData.data &&
+        responseData.data.data &&
+        Array.isArray(responseData.data.data)
+      ) {
+        organizationsArray = responseData.data.data;
+        totalCount = responseData.data.total || organizationsArray.length;
+        totalPages =
+          responseData.data.totalPages || Math.ceil(totalCount / itemsPerPage);
+
+        console.log("✅ Datos extraídos correctamente:", {
+          organizationsCount: organizationsArray.length,
+          total: totalCount,
+          totalPages: totalPages,
+          currentPage: page,
+          itemsPerPage: itemsPerPage,
+        });
+      } else {
+        console.warn("⚠️ Estructura de respuesta inesperada");
+        organizationsArray = [];
+        totalPages = 0;
+        totalCount = 0;
+      }
+
+      // Transformar los datos a OrganizationType
+      const transformedOrganizations = organizationsArray.map(
+        (organization: any) => ({
+          id: organization.id?.toString() || "",
+          name: organization.name || "",
+          contact_email: organization.contact_email || "",
+          legal_tax_id: organization.legal_tax_id || "",
+          main_phone: organization.main_phone || "",
+          is_active: organization.is_active ?? true,
+          companies: organization.companies || [],
+          roles: organization.roles || [],
+          logo: organization.logo || "",
+          external_code: organization.external_code,
+          sync_with_erp: organization.sync_with_erp,
+          created_at: organization.created_at,
+          updated_at: organization.updated_at,
+          deleted_at: organization.deleted_at,
+        })
+      );
+
+      console.log("🎯 Organizaciones transformadas:", transformedOrganizations);
+
+      setOrganizationsResponse(transformedOrganizations);
+      setTotalPage(totalPages);
+      setTotal(totalCount);
+    } catch (e: any) {
+      console.error("❌ Error fetching organizations:", e);
+      const errorMessage =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Error al cargar las organizaciones";
+      setError(errorMessage);
       setOrganizationsResponse([]);
       setTotalPage(0);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [search, page, itemsPerPage]);
+  }, [searchTerm, page, itemsPerPage]);
 
   useEffect(() => {
     getOrganizations();
-  }, [modified, getOrganizations]);
+  }, [modified, searchTerm, page, itemsPerPage, getOrganizations]);
+
+  const refetch = useCallback(() => {
+    setModified((prev) => !prev);
+  }, []);
 
   return {
     setModified,
@@ -69,9 +132,12 @@ const useGetOrganizations = () => {
     total,
     setPage,
     setItemsPerPage,
-    setSearch,
+    setSearchTerm,
     page,
     itemsPerPage,
+    searchTerm,
+    error,
+    refetch,
   };
 };
 

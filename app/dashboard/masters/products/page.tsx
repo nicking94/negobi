@@ -149,7 +149,7 @@ const ProductsPage = () => {
     totalPage,
     setModified,
   } = useGetProducts();
-  console.log("productsResponse", productsResponse);
+
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: number; name: string }[]>([]);
 

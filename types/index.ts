@@ -19,6 +19,7 @@ export type OrganizationPayload = {
   companies?: string[];
   roles?: string[];
 };
+
 export type RegisterType = {
   name: string;
   legal_tax_id: string;
@@ -36,6 +37,7 @@ export type RegisterType = {
   organizationId?: number;
   api_key_duration_days?: number;
 };
+
 export type ApiKeyType = {
   id: string;
   key: string;
@@ -45,6 +47,7 @@ export type ApiKeyType = {
   created_at: string;
   duration_days: number;
 };
+
 export type RegisterResponseData = {
   id: string;
   name: string;
@@ -69,11 +72,13 @@ export type RegisterResponseData = {
   created_at: string;
   updated_at: string;
 };
+
 export type RegisterResponse = {
   success: boolean;
   message?: string;
   data: RegisterResponseData;
 };
+
 export type LoginType = {
   email: string;
   password: string;
@@ -83,6 +88,76 @@ export type LoginType = {
 export type RecoveryPasswordType = {
   email: string;
   legal_tax_id: string;
+};
+export interface OrganizationResponse {
+  success: boolean;
+  data: {
+    external_code: string;
+    sync_with_erp: boolean;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+    id: number;
+    name: string;
+    legal_tax_id: string;
+    contact_email: string;
+    main_phone: string;
+    is_active: boolean;
+  };
+}
+
+export interface OrganizationsListResponse {
+  success: boolean;
+  data: {
+    data: OrganizationType[];
+    totalPages: number;
+    total: number;
+  };
+}
+
+// Tipo para empresas existentes (con todos los campos requeridos)
+export type CompanyType = {
+  id: number;
+  organizationId: number;
+  name: string;
+  legal_tax_id: string;
+  api_key_duration_days: number;
+  code: string;
+  contact_email: string;
+  main_phone: string;
+  fiscal_address: string;
+  is_active: boolean;
+  admin_email: string;
+  admin_password: string;
+  admin_phone: string;
+  admin_username: string;
+  admin_first_name: string;
+  admin_last_name: string;
+  created_at: Date;
+  external_code?: string;
+  sync_with_erp?: boolean;
+  updated_at?: Date;
+  deleted_at?: Date;
+  api_key?: string;
+  api_key_expiration_date?: Date;
+};
+
+// Tipo para crear nuevas empresas (sin id, organizationId, created_at)
+export type NewCompanyType = {
+  name: string;
+  legal_tax_id: string;
+  api_key_duration_days: number;
+  code: string;
+  contact_email: string;
+  main_phone: string;
+  fiscal_address: string;
+  is_active: boolean;
+  admin_email: string;
+  admin_password: string;
+  admin_phone: string;
+  admin_username: string;
+  admin_first_name: string;
+  admin_last_name: string;
 };
 
 export type OrganizationType = {

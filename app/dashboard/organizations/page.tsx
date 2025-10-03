@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Edit, Plus } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Plus, Search } from "lucide-react"; // Agregar Search
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,12 +32,13 @@ import useGetOrganizations from "@/hooks/organizations/useGetOrganizations";
 import { toast, Toaster } from "sonner";
 import { OrganizationsService } from "@/services/organizations/organizations.service";
 import usePostOrganizations from "@/hooks/organizations/useAddOrganizations";
+import useDeleteOrganizations from "@/hooks/organizations/useDeleteOrganizations";
 import { OrganizationType, ApiError } from "@/types";
 
 // ✅ Schema de validación
 const organizationSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  rif: z.string().min(6, "RIF inválido").max(13, "RIF inválido"),
+  rif: z.string().min(6, "RIF inválido").max(13, "ID Empresa inválido"),
   email: z.string().email("Email inválido"),
   phone: z.string().min(7, "Teléfono inválido").max(15, "Teléfono inválido"),
 });
@@ -54,9 +56,14 @@ const OrganizationsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<OrganizationType | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [organizationToDelete, setOrganizationToDelete] =
+    useState<OrganizationType | null>(null);
 
-  // ✅ Hooks
-  const { newOrganizations, loading: creating } = usePostOrganizations();
+  // ✅ Hooks - ahora con searchTerm
+  const { newOrganization, loading: creating } = usePostOrganizations();
+  const { deleteOrganization, loading: deleteLoading } =
+    useDeleteOrganizations();
   const {
     setModified,
     organizationsResponse,
@@ -64,8 +71,10 @@ const OrganizationsPage = () => {
     total,
     setPage,
     setItemsPerPage,
+    setSearchTerm, // Nuevo
     page,
     itemsPerPage,
+    searchTerm, // Nuevo
   } = useGetOrganizations();
 
   // ✅ Form
@@ -89,12 +98,7 @@ const OrganizationsPage = () => {
 
     try {
       if (editingOrg && editingOrg.id) {
-        console.log("🔄 Actualizando organización:", {
-          id: editingOrg.id,
-          payload: values,
-        });
-
-        // Para edición, enviar todos los campos como strings requeridos según el Swagger
+        // Para edición
         const updatePayload = {
           name: name.trim(),
           legal_tax_id: rif.trim().toUpperCase(),
@@ -102,19 +106,19 @@ const OrganizationsPage = () => {
           main_phone: phone.trim().replace(/\s/g, ""),
         };
 
-        const response = await OrganizationsService.UpdateOrganization(
-          Number(editingOrg.id),
+        const response = await OrganizationsService.patchOrganization(
+          editingOrg.id,
           updatePayload
         );
 
-        console.log("✅ Organización actualizada:", response.data);
+        console.log("Organización actualizada:", response.data);
         toast.success("Organización actualizada exitosamente");
         setModified((prev) => !prev);
         reset();
         setEditingOrg(null);
         setIsModalOpen(false);
       } else {
-        // Para creación, enviar todos los campos como strings requeridos según el Swagger
+        // Para creación
         const createPayload = {
           name: name.trim(),
           legal_tax_id: rif.trim().toUpperCase(),
@@ -122,21 +126,10 @@ const OrganizationsPage = () => {
           main_phone: phone.trim().replace(/\s/g, ""),
         };
 
-        console.log("📤 Creando organización:", createPayload);
+        const response = await newOrganization(createPayload);
 
-        const response = await newOrganizations(createPayload);
-
-        if (response && "error" in response) {
-          // Manejar errores específicos
-          if (response.status === 409) {
-            toast.error("Ya existe una organización con ese RIF o email");
-          } else {
-            toast.error(response.message || "Error al crear la organización");
-          }
-        } else if (
-          response &&
-          (response.status === 201 || response.status === 200)
-        ) {
+        // Verificar si la respuesta es exitosa por el status code
+        if (response.status === 201 || response.status === 200) {
           toast.success("Organización creada exitosamente");
           setModified((prev) => !prev);
           reset();
@@ -149,7 +142,6 @@ const OrganizationsPage = () => {
     } catch (error: unknown) {
       console.error("❌ Error en onSubmit:", error);
 
-      // Usamos type assertion con tu interfaz ApiError
       const apiError = error as ApiError;
 
       if (apiError.response?.data) {
@@ -157,7 +149,9 @@ const OrganizationsPage = () => {
         console.error("📋 Error del servidor:", serverError);
 
         // Manejo específico de errores
-        if (serverError.statusCode === 409) {
+        if (apiError.response.status === 409) {
+          toast.error("Ya existe una organización con ese RIF o email");
+        } else if (serverError.statusCode === 409) {
           toast.error("Ya existe una organización con ese RIF o email");
         } else if (serverError.message?.includes("duplicate")) {
           toast.error("Ya existe una organización con esos datos");
@@ -172,71 +166,51 @@ const OrganizationsPage = () => {
         } else {
           toast.error("Error del servidor al procesar la solicitud");
         }
+      } else if (apiError.message) {
+        toast.error(`Error: ${apiError.message}`);
       } else {
         toast.error("Error de conexión con el servidor");
       }
     }
   };
 
-  const handleDelete = async (org: OrganizationType) => {
+  // ✅ Función para manejar el clic en eliminar
+  const handleDeleteClick = (org: OrganizationType) => {
+    console.log("🟡 handleDeleteClick ejecutado", org.name);
     if (!org.id) {
-      toast.error("Error: La organización no tiene ID válido");
+      toast.error("No se puede eliminar: ID no disponible");
+      return;
+    }
+    setOrganizationToDelete(org);
+    setDeleteConfirmOpen(true);
+  };
+
+  // ✅ Función para eliminar organización
+  const handleDeleteOrganization = async (orgId?: string) => {
+    console.log("🔴 handleDeleteOrganization ejecutado");
+
+    const idToDelete = orgId || organizationToDelete?.id;
+
+    if (!idToDelete) {
+      console.log("❌ No hay ID para eliminar");
+      toast.error("No se pudo identificar la organización a eliminar");
       return;
     }
 
-    toast.error(`¿Eliminar la organización "${org.name}"?`, {
-      description: "Esta acción no se puede deshacer.",
-      action: {
-        label: "Eliminar",
-        onClick: async () => {
-          try {
-            const response = await OrganizationsService.DeleteOrganization(
-              org.id!
-            );
+    console.log("🔴 Eliminando organización con ID:", idToDelete);
 
-            if (response.status === 200 || response.status === 204) {
-              toast.success("Organización eliminada exitosamente");
-              setModified((prev) => !prev);
-            } else {
-              console.error("Error response:", response);
-              toast.error(
-                `Error ${response.status}: No se pudo eliminar la organización`
-              );
-            }
-          } catch (error: unknown) {
-            console.error("Error deleting organization:", error);
+    const result = await deleteOrganization(idToDelete);
 
-            // Usamos type assertion con tu interfaz ApiError
-            const apiError = error as ApiError;
+    console.log("🔴 Resultado:", result);
 
-            if (apiError.response) {
-              console.error("Error response data:", apiError.response.data);
-              console.error("Error status:", apiError.response.status);
-
-              if (apiError.response.status === 409) {
-                toast.error(
-                  "No se puede eliminar: La organización tiene datos relacionados"
-                );
-              } else if (apiError.response.status === 404) {
-                toast.error("Organización no encontrada");
-              } else {
-                toast.error(
-                  `Error ${apiError.response.status}: No se pudo eliminar`
-                );
-              }
-            } else {
-              toast.error("Error de conexión al eliminar la organización");
-            }
-          }
-        },
-      },
-      cancel: {
-        label: "Cancelar",
-        onClick: () => {
-          toast.info("Eliminación cancelada");
-        },
-      },
-    });
+    if (result.success) {
+      toast.success("Organización eliminada exitosamente");
+      setModified((prev) => !prev);
+      setDeleteConfirmOpen(false);
+      setOrganizationToDelete(null);
+    } else {
+      toast.error(result.error || "Error al eliminar la organización");
+    }
   };
 
   // ✅ Editar organización
@@ -256,7 +230,7 @@ const OrganizationsPage = () => {
     setIsModalOpen(true);
   };
 
-  // ✅ Columnas de la tabla (SIN la columna "Estado")
+  // ✅ Columnas de la tabla
   const columns: ColumnDef<OrganizationType>[] = [
     {
       accessorKey: "name",
@@ -294,6 +268,8 @@ const OrganizationsPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const org = row.original;
+        const hasValidId = !!org.id;
+
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -306,14 +282,20 @@ const OrganizationsPage = () => {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => handleEdit(org)}
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => handleDelete(org)}
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  onClick={() => handleDeleteClick(org)}
+                  className={`cursor-pointer flex items-center gap-2 text-red-600 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -342,13 +324,29 @@ const OrganizationsPage = () => {
             <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
               Organizaciones
             </h1>
+          </div>
+
+          {/* 🔍 AGREGAR BARRA DE BÚSQUEDA - Similar a Companies */}
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+              <div className="w-full max-w-[30rem] relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nombre, RIF, email o teléfono..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
             <Button
               onClick={() => {
                 reset();
                 setEditingOrg(null);
                 setIsModalOpen(true);
               }}
-              className="gap-2 w-full sm:w-auto"
+              className="flex items-center gap-2"
               disabled={creating}
             >
               <Plus className="h-4 w-4" />
@@ -369,6 +367,54 @@ const OrganizationsPage = () => {
           />
         </main>
       </div>
+
+      {/* Modal de confirmación para eliminar organización */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar la organización{" "}
+              <strong>{organizationToDelete?.name}</strong>? <br /> Esta acción
+              no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setOrganizationToDelete(null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleDeleteOrganization(organizationToDelete?.id)}
+              disabled={deleteLoading || !organizationToDelete?.id}
+              className="w-full sm:w-auto"
+            >
+              {deleteLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar Organización
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de creación/edición */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

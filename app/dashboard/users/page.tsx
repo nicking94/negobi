@@ -172,15 +172,14 @@ const UsersPage = () => {
       role: "user",
       phone: "",
       username: "",
-      branch_id: 1, // Valor por defecto
-      company_id: 1, // Valor por defecto
+      branch_id: 1,
+      company_id: 1,
       first_name: "",
       last_name: "",
       seller_code: "",
     });
     setIsCreateDialogOpen(true);
   };
-  console.log(form.formState.errors);
 
   const handleSaveUser = async (data: UserFormValues) => {
     const newUser: User = {

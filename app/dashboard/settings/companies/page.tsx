@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -54,6 +54,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useAddCompanies from "@/hooks/companies/useAddCompanies";
 import useGetCompanies from "@/hooks/companies/useGetCompanies";
+import useDeleteCompanies from "@/hooks/companies/useDeleteCompanies";
+import useUpdateCompanies from "@/hooks/companies/useUpdateCompanies";
 
 const companySchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -62,18 +64,18 @@ const companySchema = z.object({
   contact_email: z.string().email("Correo inválido"),
   main_phone: z.string().min(1, "El teléfono es requerido"),
   fiscal_address: z.string().min(1, "La dirección es requerida"),
-
   admin_first_name: z.string().min(1, "El nombre es requerido"),
   admin_last_name: z.string().min(1, "El apellido es requerido"),
   admin_username: z.string().min(1, "El usuario es requerido"),
   admin_email: z.string().email("Correo inválido"),
   admin_phone: z.string().min(1, "El teléfono es requerido"),
   admin_password: z.string().min(6, "Mínimo 6 caracteres").optional(),
-  api_key_duration_days: z.number({ error: "Debe ser un número válido" }),
+  api_key_duration_days: z.number().min(1, "La duración es requerida"),
 });
 type CompanyFormValues = z.infer<typeof companySchema>;
 
 export type Company = {
+  id: number;
   organizationId: number;
   name: string;
   legal_tax_id: string;
@@ -93,13 +95,17 @@ export type Company = {
 };
 
 const CompaniesPage = () => {
+  const { deleteCompany, loading: deleteLoading } = useDeleteCompanies();
+  const { updateCompany, loading: updateLoading } = useUpdateCompanies();
+  const { newCompany, loading: createLoading } = useAddCompanies();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
@@ -116,93 +122,9 @@ const CompaniesPage = () => {
       admin_email: "",
       admin_phone: "",
       admin_password: "",
-      api_key_duration_days: 30,
+      api_key_duration_days: 180,
     },
   });
-
-  // Estado para el formulario de creación/edición
-  const [formData, setFormData] = useState({
-    name: "",
-    legal_tax_id: "",
-    api_key_duration_days: 30,
-    code: "",
-    contact_email: "",
-    main_phone: "",
-    fiscal_address: "",
-    is_active: true,
-    admin_email: "",
-    admin_password: "",
-    admin_phone: "",
-    admin_username: "",
-    admin_first_name: "",
-    admin_last_name: "",
-  });
-
-  const { newCompany } = useAddCompanies();
-
-  // Datos de ejemplo
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      organizationId: 1,
-      name: "Empresa ABC, C.A.",
-      legal_tax_id: "J-123456789",
-      api_key_duration_days: 30,
-      code: "ABC001",
-      contact_email: "contacto@empresaabc.com",
-      main_phone: "+1234567890",
-      fiscal_address: "Av. Principal #123, Caracas",
-      is_active: true,
-      admin_email: "admin@empresaabc.com",
-      admin_password: "password123",
-      admin_phone: "+1234567890",
-      admin_username: "admin_abc",
-      admin_first_name: "Juan",
-      admin_last_name: "Pérez",
-      created_at: new Date("2024-01-15T10:30:00"),
-    },
-    {
-      organizationId: 2,
-      name: "Comercial XYZ, S.A.",
-      legal_tax_id: "J-987654321",
-      api_key_duration_days: 60,
-      code: "XYZ002",
-      contact_email: "info@comercialxyz.com",
-      main_phone: "+0987654321",
-      fiscal_address: "Calle Comercio #456, Valencia",
-      is_active: true,
-      admin_email: "admin@comercialxyz.com",
-      admin_password: "password123",
-      admin_phone: "+0987654321",
-      admin_username: "admin_xyz",
-      admin_first_name: "María",
-      admin_last_name: "González",
-      created_at: new Date("2024-02-20T14:45:00"),
-    },
-    {
-      organizationId: 3,
-      name: "Distribuidora Norte, C.A.",
-      legal_tax_id: "J-456789123",
-      api_key_duration_days: 90,
-      code: "DNO003",
-      contact_email: "ventas@distribuidoranorte.com",
-      main_phone: "+1122334455",
-      fiscal_address: "Zona Industrial Norte, Maracaibo",
-      is_active: false,
-      admin_email: "admin@distribuidoranorte.com",
-      admin_password: "password123",
-      admin_phone: "+1122334455",
-      admin_username: "admin_dno",
-      admin_first_name: "Carlos",
-      admin_last_name: "Rodríguez",
-      created_at: new Date("2024-03-10T09:15:00"),
-    },
-  ]);
-
-  // Estados para los filtros
-  const statusOptions = [
-    { id: "1", name: "active", label: "Activo" },
-    { id: "2", name: "inactive", label: "Inactivo" },
-  ];
 
   const {
     setModified,
@@ -211,135 +133,230 @@ const CompaniesPage = () => {
     total,
     setPage,
     setItemsPerPage,
-    setSearch,
     page,
     itemsPerPage,
   } = useGetCompanies();
 
-  const handleViewCompany = (company: Company) => {
-    setSelectedCompany(company);
-    setIsViewDialogOpen(true);
-  };
+  const statusOptions = [
+    { id: "1", name: "active", label: "Activo" },
+    { id: "2", name: "inactive", label: "Inactivo" },
+  ];
 
   const handleEditCompany = (company: Company) => {
+    if (!company.id) {
+      toast.error("No se puede editar la empresa: ID no disponible");
+      return;
+    }
+
     setSelectedCompany(company);
-    setFormData({
+    form.reset({
       name: company.name,
-      legal_tax_id: company.legal_tax_id,
-      api_key_duration_days: company.api_key_duration_days,
       code: company.code,
+      legal_tax_id: company.legal_tax_id,
       contact_email: company.contact_email,
       main_phone: company.main_phone,
       fiscal_address: company.fiscal_address,
-      is_active: company.is_active,
-      admin_email: company.admin_email,
-      admin_password: "", // No mostramos la contraseña por seguridad
-      admin_phone: company.admin_phone,
-      admin_username: company.admin_username,
       admin_first_name: company.admin_first_name,
       admin_last_name: company.admin_last_name,
+      admin_username: company.admin_username,
+      admin_email: company.admin_email,
+      admin_phone: company.admin_phone,
+      admin_password: "", // No mostramos la contraseña por seguridad
+      api_key_duration_days: company.api_key_duration_days,
     });
     setIsEditDialogOpen(true);
   };
 
   const handleCreateCompany = () => {
-    setFormData({
+    setSelectedCompany(null);
+    form.reset({
       name: "",
-      legal_tax_id: "",
-      api_key_duration_days: 30,
       code: "",
+      legal_tax_id: "",
       contact_email: "",
       main_phone: "",
       fiscal_address: "",
-      is_active: true,
-      admin_email: "",
-      admin_password: "",
-      admin_phone: "",
-      admin_username: "",
       admin_first_name: "",
       admin_last_name: "",
+      admin_username: "",
+      admin_email: "",
+      admin_phone: "",
+      admin_password: "",
+      api_key_duration_days: 180,
     });
     setIsCreateDialogOpen(true);
   };
 
   const onSubmit = async (data: CompanyFormValues) => {
-    if (selectedCompany) {
-      // Editar empresa existente
-      setCompanies(
-        companies.map((company) =>
-          company.organizationId === selectedCompany.organizationId
-            ? {
-                ...company,
-                name: formData.name,
-                legal_tax_id: formData.legal_tax_id,
-                api_key_duration_days: formData.api_key_duration_days,
-                code: formData.code,
-                contact_email: formData.contact_email,
-                main_phone: formData.main_phone,
-                fiscal_address: formData.fiscal_address,
-                is_active: formData.is_active,
-                admin_email: formData.admin_email,
-                admin_phone: formData.admin_phone,
-                admin_username: formData.admin_username,
-                admin_first_name: formData.admin_first_name,
-                admin_last_name: formData.admin_last_name,
-              }
-            : company
-        )
-      );
-      toast.success("Empresa actualizada exitosamente");
-    } else {
-      // Crear nueva empresa - incluir organizationId e is_active con valores por defecto
-      const companyData = {
-        ...data,
-        admin_password: data.admin_password ?? "",
-        organizationId: 0, // Valor por defecto o puedes obtenerlo del contexto
-        is_active: true, // Valor por defecto para nuevas empresas
-      };
+    console.log("🟢 onSubmit ejecutado", { selectedCompany, data });
 
-      const response = await newCompany(companyData);
-      console.log(response);
-      if (
-        typeof response === "object" &&
-        response !== null &&
-        "status" in response &&
-        response.status === 201
-      ) {
-        toast.success("Compañía creada exitosamente");
-        setIsEditDialogOpen(false);
-        setIsCreateDialogOpen(false);
-        setModified((prev) => !prev);
-        form.reset();
+    try {
+      if (selectedCompany) {
+        // Actualizar empresa existente
+        if (!selectedCompany.id) {
+          toast.error("No se puede actualizar: ID no disponible");
+          return;
+        }
+
+        console.log("🟡 Actualizando empresa ID:", selectedCompany.id);
+
+        const response = await updateCompany(
+          selectedCompany.id.toString(),
+          data
+        );
+
+        console.log("🟢 Respuesta de actualización:", response);
+
+        if (response && response.status === 200) {
+          toast.success("Empresa actualizada exitosamente");
+          setIsEditDialogOpen(false);
+          setModified((prev) => !prev);
+          setSelectedCompany(null);
+          form.reset();
+        } else {
+          toast.error("Error al actualizar la empresa");
+        }
       } else {
-        toast.error("Error al crear la compañía");
+        // Crear nueva empresa
+        const companyData = {
+          ...data,
+          admin_password: data.admin_password ?? "",
+          organizationId: 0,
+          is_active: true,
+        };
+
+        const response = await newCompany(companyData);
+
+        // CORRECIÓN: Verificar la respuesta correctamente
+        if (
+          response &&
+          typeof response === "object" &&
+          "status" in response &&
+          response.status === 201
+        ) {
+          toast.success("Compañía creada exitosamente");
+          setIsCreateDialogOpen(false);
+          setModified((prev) => !prev);
+          form.reset();
+        } else {
+          toast.error("Error al crear la compañía");
+        }
       }
+    } catch (error) {
+      console.error("🔴 Error en onSubmit:", error);
+      toast.error("Error al procesar la solicitud");
     }
   };
 
-  const handleDeleteCompany = (company: Company) => {
-    setCompanies(
-      companies.filter((c) => c.organizationId !== company.organizationId)
-    );
-    toast.success("Empresa eliminada exitosamente");
+  const handleDeleteClick = (company: Company) => {
+    console.log("🟡 handleDeleteClick ejecutado", company.name);
+    if (!company.id) {
+      toast.error("No se puede eliminar: ID no disponible");
+      return;
+    }
+    setCompanyToDelete(company);
+    setDeleteConfirmOpen(true);
   };
 
-  const handleToggleStatus = (company: Company) => {
-    setCompanies(
-      companies.map((c) =>
-        c.organizationId === company.organizationId
-          ? { ...c, is_active: !c.is_active }
-          : c
-      )
-    );
-    toast.success(
-      `Empresa ${!company.is_active ? "activada" : "desactivada"} exitosamente`
-    );
+  const handleDeleteCompany = async (companyId?: number) => {
+    console.log("🔴 handleDeleteCompany ejecutado");
+
+    const idToDelete = companyId || companyToDelete?.id;
+
+    if (!idToDelete) {
+      console.log("❌ No hay ID para eliminar");
+      toast.error("No se pudo identificar la empresa a eliminar");
+      return;
+    }
+
+    console.log("🔴 Eliminando empresa con ID:", idToDelete);
+
+    const result = await deleteCompany(idToDelete.toString());
+
+    console.log("🔴 Resultado:", result);
+
+    if (result.success) {
+      toast.success("Empresa eliminada exitosamente");
+      setModified((prev) => !prev);
+      setDeleteConfirmOpen(false);
+      setCompanyToDelete(null);
+    } else {
+      toast.error(result.error || "Error al eliminar la empresa");
+    }
+  };
+
+  const handleToggleStatus = async (company: Company) => {
+    if (!company.id) {
+      toast.error("No se puede cambiar el estado: ID no disponible");
+      return;
+    }
+
+    try {
+      // Enviar todos los datos necesarios junto con el cambio de estado
+      const updateData = {
+        name: company.name,
+        code: company.code,
+        legal_tax_id: company.legal_tax_id,
+        contact_email: company.contact_email,
+        main_phone: company.main_phone,
+        fiscal_address: company.fiscal_address,
+        admin_first_name: company.admin_first_name,
+        admin_last_name: company.admin_last_name,
+        admin_username: company.admin_username,
+        admin_email: company.admin_email,
+        admin_phone: company.admin_phone,
+        api_key_duration_days: company.api_key_duration_days,
+        is_active: !company.is_active, // Cambiar el estado
+      };
+
+      console.log("🟡 Cambiando estado de empresa:", {
+        id: company.id,
+        nuevoEstado: !company.is_active,
+        data: updateData,
+      });
+
+      const response = await updateCompany(company.id.toString(), updateData);
+
+      console.log("🟢 Respuesta de cambio de estado:", response);
+
+      if (response && response.status === 200) {
+        toast.success(
+          `Empresa ${
+            !company.is_active ? "activada" : "desactivada"
+          } exitosamente`
+        );
+        setModified((prev) => !prev);
+      } else {
+        toast.error("Error al cambiar el estado de la empresa");
+      }
+    } catch (error) {
+      console.error("🔴 Error cambiando estado de empresa:", error);
+      toast.error("Error al cambiar el estado de la empresa");
+    }
   };
 
   const formatDate = (date: Date | null) => {
     if (!date) return "No especificada";
-    return format(date, "dd/MM/yyyy hh:mm a");
+    return format(new Date(date), "dd/MM/yyyy hh:mm a");
   };
+
+  // Filtrar empresas por búsqueda y estado
+  const filteredCompanies =
+    companiesResponse?.filter((company: Company) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.legal_tax_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.contact_email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && company.is_active) ||
+        (statusFilter === "inactive" && !company.is_active);
+
+      return matchesSearch && matchesStatus;
+    }) || [];
 
   const columns: ColumnDef<Company>[] = [
     {
@@ -374,15 +391,6 @@ const CompaniesPage = () => {
       ),
     },
     {
-      accessorKey: "api_key_duration_days",
-      header: "Duración API Key",
-      cell: ({ row }) => (
-        <div className="font-medium">
-          {row.getValue("api_key_duration_days")} días
-        </div>
-      ),
-    },
-    {
       accessorKey: "is_active",
       header: "Estado",
       cell: ({ row }) => {
@@ -411,6 +419,8 @@ const CompaniesPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const company = row.original;
+        const hasValidId = !!company.id;
+
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -422,22 +432,21 @@ const CompaniesPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => handleViewCompany(company)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>Ver Detalles</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onClick={() => handleEditCompany(company)}
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleToggleStatus(company)}
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   {company.is_active ? (
                     <>
@@ -453,8 +462,11 @@ const CompaniesPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => handleDeleteCompany(company)}
-                  className="cursor-pointer flex items-center gap-2 text-red_b"
+                  onClick={() => handleDeleteClick(company)}
+                  className={`cursor-pointer flex items-center gap-2 text-red_b ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -467,12 +479,15 @@ const CompaniesPage = () => {
     },
   ];
 
+  useEffect(() => {
+    console.log("Companies data:", companiesResponse);
+  }, [companiesResponse]);
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -482,15 +497,8 @@ const CompaniesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Gestión de Empresas
+              Empresas
             </h1>
-            <Button
-              onClick={handleCreateCompany}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Crear Empresa</span>
-            </Button>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
@@ -501,7 +509,8 @@ const CompaniesPage = () => {
                   type="search"
                   placeholder="Buscar por nombre, RIF, código o email..."
                   className="pl-8"
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
@@ -537,11 +546,18 @@ const CompaniesPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+            <Button
+              onClick={handleCreateCompany}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Crear Empresa</span>
+            </Button>
           </div>
 
           <DataTable<Company, Company>
             columns={columns}
-            data={companiesResponse || []}
+            data={filteredCompanies}
             noResultsText="No se encontraron empresas"
             page={page}
             setPage={setPage}
@@ -553,183 +569,51 @@ const CompaniesPage = () => {
         </main>
       </div>
 
-      {/* Modal para ver detalles de empresa */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
+      {/* Modal de confirmación para eliminar empresa */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
+          <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              Detalles de Empresa
+              Confirmar Eliminación
             </DialogTitle>
             <DialogDescription>
-              Información completa de la empresa seleccionada
+              ¿Estás seguro de que deseas eliminar a{" "}
+              <strong>{companyToDelete?.name}</strong>? <br /> Esta acción no se
+              puede deshacer.
             </DialogDescription>
           </DialogHeader>
 
-          {selectedCompany && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="view-name" className="text-sm font-medium">
-                    Nombre de la Empresa
-                  </Label>
-                  <div className="flex items-center mt-1 gap-2">
-                    <Building className="h-4 w-4 text-gray_m" />
-                    <p>{selectedCompany.name}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="view-code" className="text-sm font-medium">
-                    Código
-                  </Label>
-                  <p className="mt-1">{selectedCompany.code}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="view-rif" className="text-sm font-medium">
-                    RIF
-                  </Label>
-                  <p className="mt-1">{selectedCompany.legal_tax_id}</p>
-                </div>
-
-                <div>
-                  <Label htmlFor="view-status" className="text-sm font-medium">
-                    Estado
-                  </Label>
-                  <div className="mt-1">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        selectedCompany.is_active
-                          ? "bg-green_xxl text-green_b"
-                          : "bg-red_xxl text-red_b"
-                      }`}
-                    >
-                      {selectedCompany.is_active ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="view-email" className="text-sm font-medium">
-                    Email de Contacto
-                  </Label>
-                  <div className="flex items-center mt-1 gap-2">
-                    <Mail className="h-4 w-4 text-gray_m" />
-                    <p>{selectedCompany.contact_email}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="view-phone" className="text-sm font-medium">
-                    Teléfono Principal
-                  </Label>
-                  <div className="flex items-center mt-1 gap-2">
-                    <Phone className="h-4 w-4 text-gray_m" />
-                    <p>{selectedCompany.main_phone}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="view-address" className="text-sm font-medium">
-                  Dirección Fiscal
-                </Label>
-                <div className="flex items-center mt-1 gap-2">
-                  <MapPin className="h-4 w-4 text-gray_m" />
-                  <p>{selectedCompany.fiscal_address}</p>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="view-api-days" className="text-sm font-medium">
-                  Duración de API Key
-                </Label>
-                <p className="mt-1">
-                  {selectedCompany.api_key_duration_days} días
-                </p>
-              </div>
-
-              <div className=" pt-4">
-                <h3 className="font-semibold mb-3">Administrador Principal</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label
-                      htmlFor="view-admin-name"
-                      className="text-sm font-medium"
-                    >
-                      Nombre Completo
-                    </Label>
-                    <div className="flex items-center mt-1 gap-2">
-                      <User className="h-4 w-4 text-gray_m" />
-                      <p>
-                        {selectedCompany.admin_first_name}{" "}
-                        {selectedCompany.admin_last_name}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="view-admin-username"
-                      className="text-sm font-medium"
-                    >
-                      Usuario
-                    </Label>
-                    <p className="mt-1">{selectedCompany.admin_username}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <Label
-                      htmlFor="view-admin-email"
-                      className="text-sm font-medium"
-                    >
-                      Email
-                    </Label>
-                    <div className="flex items-center mt-1 gap-2">
-                      <Mail className="h-4 w-4 text-gray_m" />
-                      <p>{selectedCompany.admin_email}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="view-admin-phone"
-                      className="text-sm font-medium"
-                    >
-                      Teléfono
-                    </Label>
-                    <div className="flex items-center mt-1 gap-2">
-                      <Phone className="h-4 w-4 text-gray_m" />
-                      <p>{selectedCompany.admin_phone}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="view-created" className="text-sm font-medium">
-                  Fecha de Creación
-                </Label>
-                <p className="mt-1">{formatDate(selectedCompany.created_at)}</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setCompanyToDelete(null);
+              }}
+              className="w-full sm:w-auto"
             >
-              Cerrar
+              Cancelar
             </Button>
-          </div>
+            <Button
+              type="button"
+              onClick={() => handleDeleteCompany(companyToDelete?.id)}
+              disabled={deleteLoading || !companyToDelete?.id}
+              className="w-full sm:w-auto"
+            >
+              {deleteLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar Empresa
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -740,6 +624,8 @@ const CompaniesPage = () => {
           if (!open) {
             setIsEditDialogOpen(false);
             setIsCreateDialogOpen(false);
+            setSelectedCompany(null);
+            form.reset();
           }
         }}
       >
@@ -759,186 +645,145 @@ const CompaniesPage = () => {
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
-            {/* Nombre y código */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre de la Empresa *</Label>
-                <Input
-                  id="name"
-                  {...form.register("name")}
-                  placeholder="Empresa ABC, C.A."
-                />
-                {form.formState.errors.name && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="code">Código *</Label>
-                <Input
-                  id="code"
-                  {...form.register("code")}
-                  placeholder="ABC001"
-                />
-                {form.formState.errors.code && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.code.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* RIF y API Key */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="legal_tax_id">RIF *</Label>
-                <Input
-                  id="legal_tax_id"
-                  {...form.register("legal_tax_id")}
-                  placeholder="J-123456789"
-                />
-                {form.formState.errors.legal_tax_id && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.legal_tax_id.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="api_key_duration_days">
-                  Duración API Key (días) *
-                </Label>
-                <Input
-                  id="api_key_duration_days"
-                  type="number"
-                  {...form.register("api_key_duration_days", {
-                    valueAsNumber: true,
-                  })}
-                  placeholder="30"
-                />
-                {form.formState.errors.api_key_duration_days && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.api_key_duration_days.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Email y teléfono */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contact_email">Email de Contacto *</Label>
-                <Input
-                  id="contact_email"
-                  type="email"
-                  {...form.register("contact_email")}
-                />
-                {form.formState.errors.contact_email && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.contact_email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="main_phone">Teléfono Principal *</Label>
-                <Input
-                  id="main_phone"
-                  {...form.register("main_phone")}
-                  placeholder="+1234567890"
-                />
-                {form.formState.errors.main_phone && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.main_phone.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Dirección */}
-            <div className="space-y-2">
-              <Label htmlFor="fiscal_address">Dirección Fiscal *</Label>
-              <Input id="fiscal_address" {...form.register("fiscal_address")} />
-              {form.formState.errors.fiscal_address && (
-                <p className="text-red-500 text-sm">
-                  {form.formState.errors.fiscal_address.message}
-                </p>
-              )}
-            </div>
-
-            {/* Admin principal */}
-            <div className=" pt-4">
-              <h3 className="font-semibold mb-3">Administrador Principal</h3>
+            {/* Información de la Empresa */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray_b">
+                Información de la Empresa
+              </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="admin_first_name">Nombre *</Label>
+                  <Label htmlFor="name">Nombre de la Empresa *</Label>
                   <Input
-                    id="admin_first_name"
-                    {...form.register("admin_first_name")}
+                    id="name"
+                    {...form.register("name")}
+                    placeholder="Empresa ABC, C.A."
                   />
+                  {form.formState.errors.name && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.name.message}
+                    </p>
+                  )}
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="admin_last_name">Apellido *</Label>
+                  <Label htmlFor="code">Código *</Label>
                   <Input
-                    id="admin_last_name"
-                    {...form.register("admin_last_name")}
+                    id="code"
+                    {...form.register("code")}
+                    placeholder="ABC001"
                   />
+                  {form.formState.errors.code && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.code.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="admin_username">Usuario *</Label>
+                  <Label htmlFor="legal_tax_id">ID Empresa *</Label>
                   <Input
-                    id="admin_username"
-                    {...form.register("admin_username")}
+                    id="legal_tax_id"
+                    {...form.register("legal_tax_id")}
+                    placeholder="12345"
                   />
+                  {form.formState.errors.legal_tax_id && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.legal_tax_id.message}
+                    </p>
+                  )}
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="admin_email">Email *</Label>
+                  <Label htmlFor="api_key_duration_days">
+                    Duración API Key (días) *
+                  </Label>
                   <Input
-                    id="admin_email"
+                    id="api_key_duration_days"
+                    type="number"
+                    {...form.register("api_key_duration_days", {
+                      valueAsNumber: true,
+                    })}
+                    placeholder="180"
+                  />
+                  {form.formState.errors.api_key_duration_days && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.api_key_duration_days.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Email de Contacto *</Label>
+                  <Input
+                    id="contact_email"
                     type="email"
-                    {...form.register("admin_email")}
+                    {...form.register("contact_email")}
+                    placeholder="contacto@empresa.com"
                   />
+                  {form.formState.errors.contact_email && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.contact_email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="main_phone">Teléfono Principal *</Label>
+                  <Input
+                    id="main_phone"
+                    {...form.register("main_phone")}
+                    placeholder="+58 412-1234567"
+                  />
+                  {form.formState.errors.main_phone && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.main_phone.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                <div className="space-y-2">
-                  <Label htmlFor="admin_phone">Teléfono *</Label>
-                  <Input id="admin_phone" {...form.register("admin_phone")} />
-                </div>
-                {!selectedCompany && (
-                  <div className="space-y-2">
-                    <Label htmlFor="admin_password">Contraseña *</Label>
-                    <Input
-                      id="admin_password"
-                      type="password"
-                      {...form.register("admin_password")}
-                    />
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="fiscal_address">Dirección Fiscal *</Label>
+                <Input
+                  id="fiscal_address"
+                  {...form.register("fiscal_address")}
+                  placeholder="Av. Principal, Edificio XYZ, Piso 4"
+                />
+                {form.formState.errors.fiscal_address && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.fiscal_address.message}
+                  </p>
                 )}
               </div>
             </div>
 
-            {/* Botones */}
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setIsEditDialogOpen(false);
                   setIsCreateDialogOpen(false);
+                  setSelectedCompany(null);
+                  form.reset();
                 }}
               >
                 Cancelar
               </Button>
-              <Button type="submit">
-                {selectedCompany ? "Actualizar" : "Crear"} Empresa
+              <Button type="submit" disabled={createLoading || updateLoading}>
+                {createLoading || updateLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {selectedCompany ? "Actualizando..." : "Creando..."}
+                  </>
+                ) : (
+                  <>{selectedCompany ? "Actualizar" : "Crear"} Empresa</>
+                )}
               </Button>
             </DialogFooter>
           </form>

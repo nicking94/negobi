@@ -1,25 +1,25 @@
-// hooks/companies/useAddCompanies.ts
+// hooks/companies/useUpdateCompanies.ts
 import { useState } from "react";
 import { CompaniesService } from "@/services/companies/companies.service";
 import { NewCompanyType, ApiError } from "@/types";
 
-const useAddCompanies = () => {
+const useUpdateCompanies = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const newCompany = async (data: NewCompanyType) => {
+  const updateCompany = async (id: string, data: Partial<NewCompanyType>) => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Creando nueva empresa:", data);
+      console.log("🟡 Actualizando empresa ID:", id, "Data:", data);
 
-      const response = await CompaniesService.createCompany(data);
+      const response = await CompaniesService.patchCompany(id, data);
 
-      console.log("🟢 Respuesta de creación:", response);
+      console.log("🟢 Respuesta de actualización:", response);
       return response; // Devuelve la respuesta completa
     } catch (err) {
       const apiError = err as ApiError;
-      console.error("🔴 Error creando empresa:", apiError);
+      console.error("🔴 Error actualizando empresa:", apiError);
       setError(apiError);
       throw apiError;
     } finally {
@@ -28,10 +28,10 @@ const useAddCompanies = () => {
   };
 
   return {
-    newCompany,
+    updateCompany,
     loading,
     error,
   };
 };
 
-export default useAddCompanies;
+export default useUpdateCompanies;

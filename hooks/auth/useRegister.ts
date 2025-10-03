@@ -26,19 +26,16 @@ const useRegister = () => {
         is_active: true,
         code: params.code || "",
         organizationId: 0,
-        api_key_duration_days: params.api_key_duration_days || 30,
+        api_key_duration_days: params.api_key_duration_days || 180,
       };
 
       const { data, status } = await AuthService.registerAction(registerData);
 
       if (status === 200 || status === 201) {
-        // Almacenar la API Key generada por el backend
         if (data.data.api_key) {
           localStorage.setItem("NEGOBI_USER_API_KEY", data.data.api_key);
-          console.log("API Key almacenada:", data.data.api_key);
         }
 
-        // También almacenar información de expiración si está disponible
         if (data.data.api_key_expiration_date) {
           localStorage.setItem(
             "NEGOBI_API_KEY_EXPIRATION",

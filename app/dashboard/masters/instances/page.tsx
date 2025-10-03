@@ -91,9 +91,8 @@ const InstancesPage = () => {
   }, [editingInstance, reset]);
 
   const onSubmit = async (data: InstanceFormValues) => {
-    console.log(editingInstance);
     const newInstance: InstanceType = {
-      companyId: 4, // Valor fijo para este ejemplo
+      companyId: 4,
       category_code: data.category_code,
       category_name: data.category_name,
       description: data.description,

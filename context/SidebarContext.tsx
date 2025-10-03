@@ -1,23 +1,37 @@
+// context/SidebarContext.tsx
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type SidebarContextType = {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  closeSidebar: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <SidebarContext.Provider
-      value={{ sidebarOpen, setSidebarOpen, toggleSidebar }}
+      value={{
+        sidebarOpen,
+        setSidebarOpen,
+        toggleSidebar,
+        closeSidebar,
+      }}
     >
       {children}
     </SidebarContext.Provider>
