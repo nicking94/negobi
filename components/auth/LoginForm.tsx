@@ -1,4 +1,4 @@
-// components/auth/LoginForm.tsx
+// components/auth/LoginForm.tsx (corregido)
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,13 +44,21 @@ export function LoginForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const { email, password, taxId } = values;
-    const result = await onLogin({ email, password, legal_tax_id: taxId });
+    const { email, password, taxId, rememberMe } = values;
+
+    // Enviar los datos al hook, el rememberMe se manejará en el frontend
+    const result = await onLogin({
+      email,
+      password,
+      legal_tax_id: taxId,
+      rememberMe, // Esto se manejará solo en el frontend
+    });
+
     if (result.success) {
       toast.success("Sesión iniciada correctamente");
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
+      // La redirección ya se maneja en el hook useLogin
+    } else {
+      // El error ya se maneja en el hook useLogin
     }
   };
 
@@ -157,7 +165,7 @@ export function LoginForm() {
                   className="border-2 border-[var(--color-green_l)] data-[state=checked]:bg-[var(--color-green_b)]"
                 />
               </FormControl>
-              <FormLabel className="text-sm font-normal text-[var(--color-gray_b)]">
+              <FormLabel className="text-sm font-normal text-[var(--color-gray_b)] cursor-pointer">
                 Mantener sesión iniciada
               </FormLabel>
             </FormItem>
@@ -168,9 +176,16 @@ export function LoginForm() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors"
+            className="w-full bg-[var(--color-green_b)] hover:bg-[var(--color-green_m)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Iniciando sesión...
+              </div>
+            ) : (
+              "Iniciar sesión"
+            )}
           </Button>
         </div>
 

@@ -375,7 +375,7 @@ const BudgetsPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar por cliente, correlativo, factura o tipo de operación..."
+                  placeholder="Buscar..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -503,7 +503,7 @@ const BudgetsPage = () => {
       </div>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Detalle de Presupuesto {selectedBudget?.correlative}
@@ -643,7 +643,7 @@ const BudgetsPage = () => {
         open={isClientBudgetsDialogOpen}
         onOpenChange={setIsClientBudgetsDialogOpen}
       >
-        <DialogContent className="w-full bg-white  sm:max-w-[800px] md:max-w-[75vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white  sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Presupuestos de {selectedClient}

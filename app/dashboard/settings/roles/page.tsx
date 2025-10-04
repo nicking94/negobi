@@ -441,7 +441,7 @@ const RolesPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar por nombre, usuario, email o teléfono..."
+                  placeholder="Buscar..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -524,7 +524,7 @@ const RolesPage = () => {
 
       {/* Modal para ver detalles de usuario */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Detalles de Usuario
@@ -673,7 +673,7 @@ const RolesPage = () => {
           }
         }}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {selectedUser ? "Editar Usuario" : "Crear Nuevo Usuario"}

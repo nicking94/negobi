@@ -15,7 +15,7 @@ const Hero = () => {
           <div className="lg:w-1/2 mb-12 lg:mb-0">
             <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
               Transforma tu fuerza de ventas con{" "}
-              <span className="text-green_xl">tecnología inteligente</span>
+              <span className="text-green_m">tecnología inteligente</span>
             </h1>
             <p className="text-xl lg:text-2xl mb-8 opacity-90">
               Negobi digitaliza, controla y potencia todo tu proceso comercial,

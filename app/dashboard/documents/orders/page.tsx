@@ -555,7 +555,7 @@ const OrdersPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar por cliente, correlativo o tipo de operación..."
+                  placeholder="Buscar..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -663,7 +663,7 @@ const OrdersPage = () => {
 
       {/* Modal para ver detalle de pedido */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Detalle de Pedido {selectedOrder?.order_number}
@@ -795,7 +795,7 @@ const OrdersPage = () => {
         open={isClientOrdersDialogOpen}
         onOpenChange={setIsClientOrdersDialogOpen}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Pedidos de {selectedClient}

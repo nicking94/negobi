@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Edit, Plus, Search } from "lucide-react"; // Agregar Search
+import { MoreHorizontal, Trash2, Edit, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -60,7 +60,7 @@ const OrganizationsPage = () => {
   const [organizationToDelete, setOrganizationToDelete] =
     useState<OrganizationType | null>(null);
 
-  // ✅ Hooks - ahora con searchTerm
+  // ✅ Hooks - ahora usando search en lugar de searchTerm
   const { newOrganization, loading: creating } = usePostOrganizations();
   const { deleteOrganization, loading: deleteLoading } =
     useDeleteOrganizations();
@@ -71,10 +71,10 @@ const OrganizationsPage = () => {
     total,
     setPage,
     setItemsPerPage,
-    setSearchTerm, // Nuevo
+    setSearch, // ✅ Cambiado de setSearchTerm a setSearch
     page,
     itemsPerPage,
-    searchTerm, // Nuevo
+    search, // ✅ Cambiado de searchTerm a search
   } = useGetOrganizations();
 
   // ✅ Form
@@ -176,7 +176,6 @@ const OrganizationsPage = () => {
 
   // ✅ Función para manejar el clic en eliminar
   const handleDeleteClick = (org: OrganizationType) => {
-    console.log("🟡 handleDeleteClick ejecutado", org.name);
     if (!org.id) {
       toast.error("No se puede eliminar: ID no disponible");
       return;
@@ -187,17 +186,12 @@ const OrganizationsPage = () => {
 
   // ✅ Función para eliminar organización
   const handleDeleteOrganization = async (orgId?: string) => {
-    console.log("🔴 handleDeleteOrganization ejecutado");
-
     const idToDelete = orgId || organizationToDelete?.id;
 
     if (!idToDelete) {
-      console.log("❌ No hay ID para eliminar");
       toast.error("No se pudo identificar la organización a eliminar");
       return;
     }
-
-    console.log("🔴 Eliminando organización con ID:", idToDelete);
 
     const result = await deleteOrganization(idToDelete);
 
@@ -241,10 +235,10 @@ const OrganizationsPage = () => {
     },
     {
       accessorKey: "legal_tax_id",
-      header: "RIF",
+      header: "ID Empresa",
       cell: ({ row }) =>
         row.getValue("legal_tax_id") || (
-          <span className="text-gray-400 text-sm">Sin RIF</span>
+          <span className="text-gray-400 text-sm">Sin ID Empresa</span>
         ),
     },
     {
@@ -326,17 +320,17 @@ const OrganizationsPage = () => {
             </h1>
           </div>
 
-          {/* 🔍 AGREGAR BARRA DE BÚSQUEDA - Similar a Companies */}
+          {/* 🔍 BARRA DE BÚSQUEDA - Ahora funcional */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   type="search"
-                  placeholder="Buscar por nombre, RIF, email o teléfono..."
+                  placeholder="Buscar..."
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
             </div>
@@ -437,6 +431,7 @@ const OrganizationsPage = () => {
                     {...register("name")}
                     required
                     disabled={isSubmitting}
+                    placeholder="Organizacion 1"
                   />
                   {errors.name && (
                     <p className="text-xs text-red-600">
@@ -448,7 +443,7 @@ const OrganizationsPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2">
                 <Label htmlFor="rif" className="sm:text-right">
-                  RIF
+                  ID Empresa
                 </Label>
                 <div className="col-span-1 sm:col-span-3 space-y-1">
                   <Input
@@ -456,6 +451,7 @@ const OrganizationsPage = () => {
                     {...register("rif")}
                     required
                     disabled={isSubmitting}
+                    placeholder="12345"
                   />
                   {errors.rif && (
                     <p className="text-xs text-red-600">{errors.rif.message}</p>
@@ -474,6 +470,7 @@ const OrganizationsPage = () => {
                     {...register("email")}
                     required
                     disabled={isSubmitting}
+                    placeholder="tuemail@ejemplo.com"
                   />
                   {errors.email && (
                     <p className="text-xs text-red-600">
@@ -494,6 +491,7 @@ const OrganizationsPage = () => {
                     {...register("phone")}
                     required
                     disabled={isSubmitting}
+                    placeholder="1234567891"
                   />
                   {errors.phone && (
                     <p className="text-xs text-red-600">

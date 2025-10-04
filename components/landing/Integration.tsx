@@ -16,7 +16,7 @@ const Integration = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
-            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+            <div className="bg-green_b w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"
@@ -41,7 +41,7 @@ const Integration = () => {
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
-            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+            <div className="bg-green_b w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"
@@ -66,7 +66,7 @@ const Integration = () => {
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray_xxl">
-            <div className="bg-green_xl w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
+            <div className="bg-green_b w-16 h-16 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg
                 className="w-8 h-8 text-green_m"
                 fill="none"

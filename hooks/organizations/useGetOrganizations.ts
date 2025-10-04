@@ -1,3 +1,4 @@
+// hooks/organizations/useGetOrganizations.ts
 import { OrganizationsService } from "@/services/organizations/organizations.service";
 import { useEffect, useState, useCallback } from "react";
 import { OrganizationType } from "@/types";
@@ -12,7 +13,7 @@ const useGetOrganizations = () => {
   const [totalPage, setTotalPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const getOrganizations = useCallback(async () => {
@@ -20,20 +21,12 @@ const useGetOrganizations = () => {
       setLoading(true);
       setError(null);
 
-      console.log("🔍 Fetching organizations with params:", {
-        search: searchTerm,
-        page,
-        itemsPerPage,
-      });
-
       const response = await OrganizationsService.getOrganizations({
-        search: searchTerm,
+        search: search.trim(),
         page,
         itemsPerPage,
-        order: "ASC" as const,
+        order: "ASC",
       });
-
-      console.log("📦 Raw API Response:", response);
 
       if (!response.data.success) {
         throw new Error(
@@ -43,31 +36,19 @@ const useGetOrganizations = () => {
 
       const responseData = response.data;
 
-      console.log("📊 Response data structure:", responseData);
-
-      // ✅ CORREGIDO: Extraer datos de la estructura correcta
+      // ✅ ESTRUCTURA CORRECTA: data.data.data
       let organizationsArray: any[] = [];
       let totalPages = 1;
       let totalCount = 0;
 
-      // La estructura es: response.data.data.data (array) y response.data.data.total, etc.
       if (
         responseData.data &&
         responseData.data.data &&
         Array.isArray(responseData.data.data)
       ) {
         organizationsArray = responseData.data.data;
-        totalCount = responseData.data.total || organizationsArray.length;
-        totalPages =
-          responseData.data.totalPages || Math.ceil(totalCount / itemsPerPage);
-
-        console.log("✅ Datos extraídos correctamente:", {
-          organizationsCount: organizationsArray.length,
-          total: totalCount,
-          totalPages: totalPages,
-          currentPage: page,
-          itemsPerPage: itemsPerPage,
-        });
+        totalCount = responseData.data.total || 0;
+        totalPages = responseData.data.totalPages || 1;
       } else {
         console.warn("⚠️ Estructura de respuesta inesperada");
         organizationsArray = [];
@@ -95,13 +76,14 @@ const useGetOrganizations = () => {
         })
       );
 
-      console.log("🎯 Organizaciones transformadas:", transformedOrganizations);
-
       setOrganizationsResponse(transformedOrganizations);
       setTotalPage(totalPages);
       setTotal(totalCount);
     } catch (e: any) {
-      console.error("❌ Error fetching organizations:", e);
+      console.error(
+        "❌ [useGetOrganizations] Error fetching organizations:",
+        e
+      );
       const errorMessage =
         e?.response?.data?.message ||
         e?.message ||
@@ -113,11 +95,11 @@ const useGetOrganizations = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, page, itemsPerPage]);
+  }, [search, page, itemsPerPage]);
 
   useEffect(() => {
     getOrganizations();
-  }, [modified, searchTerm, page, itemsPerPage, getOrganizations]);
+  }, [modified, search, page, itemsPerPage, getOrganizations]);
 
   const refetch = useCallback(() => {
     setModified((prev) => !prev);
@@ -132,10 +114,10 @@ const useGetOrganizations = () => {
     total,
     setPage,
     setItemsPerPage,
-    setSearchTerm,
+    setSearch,
     page,
     itemsPerPage,
-    searchTerm,
+    search,
     error,
     refetch,
   };

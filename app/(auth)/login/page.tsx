@@ -41,7 +41,6 @@ export default function LoginPage() {
         <div className="w-full max-w-lg p-8 space-y-6 bg-gray_xxl rounded-lg shadow-lg shadow-green_b border border-green_b">
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-semibold">Redirigiendo...</h1>
-            <p className="text-gray_b">Ya estás autenticado</p>
           </div>
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green_b"></div>

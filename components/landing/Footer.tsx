@@ -1,12 +1,21 @@
 import React from "react";
-
+import Image from "next/image";
+import logo from "@/public/logos/logoConFondo.png";
 const Footer = () => {
   return (
     <footer className="bg-gray_b text-white py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="lg:flex justify-between items-start">
           <div className="mb-8 lg:mb-0">
-            <h3 className="text-2xl font-bold mb-4">Negobi</h3>
+            <div className="mb-4">
+              <Image
+                src={logo} // Ajusta el nombre de tu archivo según corresponda
+                alt="Negobi Logo"
+                width={120} // Ajusta según el tamaño de tu logo
+                height={40}
+                className="h-8 w-auto filter" // Ajusta la altura según necesites
+              />
+            </div>
             <p className="text-gray_l max-w-md">
               La plataforma de gestión de fuerza de ventas que digitaliza,
               controla y potencia todo tu proceso comercial.

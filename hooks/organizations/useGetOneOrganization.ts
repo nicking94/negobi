@@ -3,7 +3,7 @@ import { OrganizationsService } from "@/services/organizations/organizations.ser
 import { useEffect, useState } from "react";
 import { OrganizationType, ApiError } from "@/types";
 
-const useGetOrganization = (id: string) => {
+const useGetOneOrganization = (id: string) => {
   const [loading, setLoading] = useState(false);
   const [organization, setOrganization] = useState<OrganizationType | null>(
     null
@@ -60,4 +60,4 @@ const useGetOrganization = (id: string) => {
   };
 };
 
-export default useGetOrganization;
+export default useGetOneOrganization;

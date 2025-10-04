@@ -52,12 +52,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import { ClientsService } from "@/services/clients/clients.service";
 import useGetClients from "@/hooks/clients/useGetClients";
+import useUpdateClient from "@/hooks/clients/useUpdateClient";
+import useDeleteClient from "@/hooks/clients/useDeleteClient";
+import useAddClient from "@/hooks/clients/useAddClients";
 
 export type Client = {
   id?: string;
-  companyId?: number;
+  businessTypeId?: number;
   salespersonUserId?: number;
   zoneId?: number;
   client_code: string;
@@ -65,6 +67,7 @@ export type Client = {
   tax_document_type: string;
   tax_document_number: string;
   client_type: string;
+  is_special_taxpayer?: boolean;
   fiscal_country_id?: number;
   fiscal_state_id?: number;
   fiscal_city_id?: number;
@@ -77,11 +80,10 @@ export type Client = {
   contact_phone?: string;
   commercial_name?: string;
   delivery_address?: string;
+  fiscal_address?: string;
   zip_code?: string;
-  location?: {
-    type: string;
-    coordinates: [number, number];
-  };
+  latitude?: number;
+  longitude?: number;
   map_link?: string;
   payment_term_id?: number;
   credit_limit?: number;
@@ -102,13 +104,16 @@ export type Client = {
   last_payment_date?: string;
   last_payment_number?: string;
   last_payment_amount?: number;
+  is_active?: boolean;
 };
 
-// Actualiza el clientSchema para que coincida con el Swagger:
+// Schema con tipos específicos en lugar de 'any'
 const clientSchema = z.object({
-  companyId: z.number().min(1, "La compañía es requerida").optional(),
-  salespersonUserId: z.number().optional(),
-  zoneId: z.number().optional(),
+  businessTypeId: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  salespersonUserId: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  zoneId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   client_code: z.string().min(1, "El código de cliente es requerido"),
   legal_name: z
     .string()
@@ -120,10 +125,13 @@ const clientSchema = z.object({
     .string()
     .min(1, "El número de documento fiscal es requerido"),
   client_type: z.string().min(1, "El tipo de cliente es requerido"),
-  fiscal_country_id: z.number().optional(),
-  fiscal_state_id: z.number().optional(),
-  fiscal_city_id: z.number().optional(),
-  fiscal_zone_id: z.number().optional(),
+  is_special_taxpayer: z.boolean().optional(),
+  fiscal_country_id: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  fiscal_state_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  fiscal_city_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  fiscal_zone_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
   email: z
     .string()
     .email("El email debe ser válido")
@@ -140,15 +148,41 @@ const clientSchema = z.object({
   contact_phone: z.string().optional(),
   commercial_name: z.string().optional(),
   delivery_address: z.string().optional(),
+  fiscal_address: z.string().optional(),
   zip_code: z.string().optional(),
+  latitude: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  longitude: z.union([z.number(), z.string(), z.undefined()]).optional(),
   map_link: z.string().optional(),
-  payment_term_id: z.number().optional(),
-  credit_limit: z.number().optional(),
-  credit_days: z.number().optional(),
+  payment_term_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  credit_limit: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  credit_days: z.union([z.number(), z.string(), z.undefined()]).optional(),
   has_credit: z.boolean(),
-  default_discount_percentage: z.number().optional(),
-  default_price_level: z.number().optional(),
+  default_discount_percentage: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  default_price_level: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
   notes: z.string().optional(),
+  balance_due: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  advance_balance: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  average_payment_days: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  last_sale_date: z.string().optional(),
+  last_sale_number: z.string().optional(),
+  last_sale_amount: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  last_order_date: z.string().optional(),
+  last_order_number: z.string().optional(),
+  last_order_amount: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  last_payment_date: z.string().optional(),
+  last_payment_number: z.string().optional(),
+  last_payment_amount: z
+    .union([z.number(), z.string(), z.undefined()])
+    .optional(),
+  is_active: z.boolean().optional(),
 });
 
 type ClientForm = z.infer<typeof clientSchema>;
@@ -165,6 +199,7 @@ const ClientsPage = () => {
     { value: string; name: string }[]
   >([]);
 
+  // Usar los hooks personalizados
   const {
     clientsResponse,
     page,
@@ -176,7 +211,47 @@ const ClientsPage = () => {
     setModified,
   } = useGetClients({
     search: searchTerm,
-    salespersonUserId: selectedSeller,
+    salespersonUserId: selectedSeller !== "all" ? selectedSeller : undefined,
+  });
+
+  const { createClient, isLoading: isCreating } = useAddClient({
+    onSuccess: () => {
+      toast.success("Cliente creado exitosamente");
+      setModified((prev) => !prev);
+      setIsModalOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      const errorMessage =
+        error.response?.data?.message || "Error al crear el cliente";
+      toast.error(errorMessage);
+    },
+  });
+
+  const { updateClient, isLoading: isUpdating } = useUpdateClient({
+    onSuccess: () => {
+      toast.success("Cliente actualizado exitosamente");
+      setModified((prev) => !prev);
+      setIsModalOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      const errorMessage =
+        error.response?.data?.message || "Error al actualizar el cliente";
+      toast.error(errorMessage);
+    },
+  });
+
+  const { deleteClient } = useDeleteClient({
+    onSuccess: () => {
+      toast.success("Cliente eliminado exitosamente");
+      setModified((prev) => !prev);
+    },
+    onError: (error) => {
+      const errorMessage =
+        error.response?.data?.message || "Error al eliminar el cliente";
+      toast.error(errorMessage);
+    },
   });
 
   useEffect(() => {
@@ -198,6 +273,7 @@ const ClientsPage = () => {
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
+      businessTypeId: undefined,
       salespersonUserId: undefined,
       zoneId: undefined,
       client_code: "",
@@ -205,6 +281,7 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
+      is_special_taxpayer: false,
       fiscal_country_id: undefined,
       fiscal_state_id: undefined,
       fiscal_city_id: undefined,
@@ -217,7 +294,10 @@ const ClientsPage = () => {
       contact_phone: "",
       commercial_name: "",
       delivery_address: "",
+      fiscal_address: "",
       zip_code: "",
+      latitude: undefined,
+      longitude: undefined,
       map_link: "",
       payment_term_id: undefined,
       credit_limit: undefined,
@@ -226,40 +306,102 @@ const ClientsPage = () => {
       default_discount_percentage: undefined,
       default_price_level: undefined,
       notes: "",
+      balance_due: undefined,
+      advance_balance: undefined,
+      average_payment_days: undefined,
+
+      last_sale_date: undefined,
+      last_sale_number: "",
+      last_sale_amount: undefined,
+      last_order_date: undefined,
+      last_order_number: "",
+      last_order_amount: undefined,
+      last_payment_date: undefined,
+      last_payment_number: "",
+      last_payment_amount: undefined,
+      is_active: true,
     },
   });
 
   const onSubmit = async (values: ClientForm) => {
+    console.log("Form submitted with values:", values);
+
     try {
-      if (editingClient) {
-        const response = await ClientsService.updateClient(
-          editingClient.id!,
-          values
-        );
+      // Limpiar datos antes de enviar
+      const cleanData: Record<string, unknown> = {
+        client_code: values.client_code,
+        legal_name: values.legal_name,
+        tax_document_type: values.tax_document_type,
+        tax_document_number: values.tax_document_number,
+        client_type: values.client_type,
+        is_special_taxpayer: values.is_special_taxpayer ?? false,
+        has_credit: values.has_credit ?? false,
+        is_active: values.is_active ?? true,
+      };
 
-        if (response.status === 200) {
-          toast.success("Cliente actualizado exitosamente");
-          setModified((prev) => !prev);
-        } else {
-          toast.error("Error al actualizar el cliente");
+      // Función helper para limpiar valores
+      const cleanValue = (value: unknown): unknown => {
+        if (
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          value === "0"
+        ) {
+          return undefined;
         }
+        return value;
+      };
+
+      // Agregar campos opcionales solo si tienen valor válido
+      const optionalFields = [
+        "businessTypeId",
+        "salespersonUserId",
+        "zoneId",
+        "fiscal_country_id",
+        "fiscal_state_id",
+        "fiscal_city_id",
+        "fiscal_zone_id",
+        "email",
+        "main_phone",
+        "mobile_phone",
+        "contact_person",
+        "contact_email",
+        "contact_phone",
+        "commercial_name",
+        "delivery_address",
+        "fiscal_address",
+        "zip_code",
+        "latitude",
+        "longitude",
+        "map_link",
+        "payment_term_id",
+        "credit_limit",
+        "credit_days",
+        "default_discount_percentage",
+        "default_price_level",
+        "notes",
+        "balance_due",
+        "advance_balance",
+        "average_payment_days",
+      ];
+
+      optionalFields.forEach((field) => {
+        const value = values[field as keyof ClientForm];
+        const cleanedValue = cleanValue(value);
+        if (cleanedValue !== undefined) {
+          cleanData[field] = cleanedValue;
+        }
+      });
+
+      console.log("Final data to send:", cleanData);
+
+      if (editingClient && editingClient.id) {
+        await updateClient(editingClient.id, cleanData);
       } else {
-        // Para crear nuevo cliente
-        const response = await ClientsService.addClient(values as Client);
-
-        if (response.status === 201) {
-          toast.success("Cliente creado exitosamente");
-          setModified((prev) => !prev);
-        } else {
-          toast.error("Error al crear el cliente");
-        }
+        await createClient(cleanData as Client);
       }
-
-      resetForm();
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("Error saving client:", error);
-      toast.error("Error al guardar el cliente");
+    } catch {
+      // El error ya se maneja en los callbacks de los hooks
     }
   };
 
@@ -269,9 +411,11 @@ const ClientsPage = () => {
       action: {
         label: "Eliminar",
         onClick: async () => {
-          await ClientsService.deleteClient(client.id!);
-          toast.success("Cliente eliminado exitosamente");
-          setModified((prev) => !prev);
+          try {
+            await deleteClient(client.id!);
+          } catch {
+            // El error ya se maneja en el callback del hook
+          }
         },
       },
       cancel: {
@@ -285,14 +429,46 @@ const ClientsPage = () => {
 
   const handleEdit = (client: Client) => {
     setEditingClient(client);
+
+    // Función helper para limpiar valores al cargar
+    const cleanValueForForm = (value: unknown): unknown => {
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        value === 0
+      ) {
+        return undefined;
+      }
+      return value;
+    };
+
     form.reset({
-      salespersonUserId: client.salespersonUserId,
-      zoneId: client.zoneId,
+      businessTypeId: cleanValueForForm(client.businessTypeId) as
+        | number
+        | undefined,
+      salespersonUserId: cleanValueForForm(client.salespersonUserId) as
+        | number
+        | undefined,
+      zoneId: cleanValueForForm(client.zoneId) as number | undefined,
       client_code: client.client_code,
       legal_name: client.legal_name,
       tax_document_type: client.tax_document_type,
       tax_document_number: client.tax_document_number,
       client_type: client.client_type,
+      is_special_taxpayer: client.is_special_taxpayer || false,
+      fiscal_country_id: cleanValueForForm(client.fiscal_country_id) as
+        | number
+        | undefined,
+      fiscal_state_id: cleanValueForForm(client.fiscal_state_id) as
+        | number
+        | undefined,
+      fiscal_city_id: cleanValueForForm(client.fiscal_city_id) as
+        | number
+        | undefined,
+      fiscal_zone_id: cleanValueForForm(client.fiscal_zone_id) as
+        | number
+        | undefined,
       email: client.email || "",
       main_phone: client.main_phone || "",
       mobile_phone: client.mobile_phone || "",
@@ -301,20 +477,56 @@ const ClientsPage = () => {
       contact_phone: client.contact_phone || "",
       commercial_name: client.commercial_name || "",
       delivery_address: client.delivery_address || "",
+      fiscal_address: client.fiscal_address || "",
       zip_code: client.zip_code || "",
+      latitude: cleanValueForForm(client.latitude) as number | undefined,
+      longitude: cleanValueForForm(client.longitude) as number | undefined,
       map_link: client.map_link || "",
-      payment_term_id: client.payment_term_id,
-      credit_days: client.credit_days,
+      payment_term_id: cleanValueForForm(client.payment_term_id) as
+        | number
+        | undefined,
+      credit_limit: cleanValueForForm(client.credit_limit) as
+        | number
+        | undefined,
+      credit_days: cleanValueForForm(client.credit_days) as number | undefined,
       has_credit: client.has_credit ?? false,
-      default_price_level: client.default_price_level,
+      default_discount_percentage: cleanValueForForm(
+        client.default_discount_percentage
+      ) as number | undefined,
+      default_price_level: cleanValueForForm(client.default_price_level) as
+        | number
+        | undefined,
       notes: client.notes || "",
+      balance_due: cleanValueForForm(client.balance_due) as number | undefined,
+      advance_balance: cleanValueForForm(client.advance_balance) as
+        | number
+        | undefined,
+      average_payment_days: cleanValueForForm(client.average_payment_days) as
+        | number
+        | undefined,
+      last_sale_date: client.last_sale_date || undefined,
+      last_sale_number: client.last_sale_number || "",
+      last_sale_amount: cleanValueForForm(client.last_sale_amount) as
+        | number
+        | undefined,
+      last_order_date: client.last_order_date || undefined,
+      last_order_number: client.last_order_number || "",
+      last_order_amount: cleanValueForForm(client.last_order_amount) as
+        | number
+        | undefined,
+      last_payment_date: client.last_payment_date || undefined,
+      last_payment_number: client.last_payment_number || "",
+      last_payment_amount: cleanValueForForm(client.last_payment_amount) as
+        | number
+        | undefined,
+      is_active: client.is_active ?? true,
     });
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
     form.reset({
-      companyId: undefined,
+      businessTypeId: undefined,
       salespersonUserId: undefined,
       zoneId: undefined,
       client_code: "",
@@ -322,6 +534,7 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
+      is_special_taxpayer: false,
       fiscal_country_id: undefined,
       fiscal_state_id: undefined,
       fiscal_city_id: undefined,
@@ -334,7 +547,10 @@ const ClientsPage = () => {
       contact_phone: "",
       commercial_name: "",
       delivery_address: "",
+      fiscal_address: "",
       zip_code: "",
+      latitude: undefined,
+      longitude: undefined,
       map_link: "",
       payment_term_id: undefined,
       credit_limit: undefined,
@@ -343,6 +559,19 @@ const ClientsPage = () => {
       default_discount_percentage: undefined,
       default_price_level: undefined,
       notes: "",
+      balance_due: undefined,
+      advance_balance: undefined,
+      average_payment_days: undefined,
+      last_sale_date: undefined,
+      last_sale_number: "",
+      last_sale_amount: undefined,
+      last_order_date: undefined,
+      last_order_number: "",
+      last_order_amount: undefined,
+      last_payment_date: undefined,
+      last_payment_number: "",
+      last_payment_amount: undefined,
+      is_active: true,
     });
     setEditingClient(null);
   };
@@ -445,6 +674,30 @@ const ClientsPage = () => {
     },
   ];
 
+  const isSubmitting = isCreating || isUpdating;
+
+  // Agrega esto en tu componente, después de la declaración del form
+  useEffect(() => {
+    console.log("Form state changed - isValid:", form.formState.isValid);
+    console.log("Form state changed - errors:", form.formState.errors);
+    console.log(
+      "Form state changed - isSubmitting:",
+      form.formState.isSubmitting
+    );
+  }, [
+    form.formState.isValid,
+    form.formState.errors,
+    form.formState.isSubmitting,
+  ]);
+
+  // También para ver cambios en los campos
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      console.log(`Field ${name} changed:`, value);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -470,7 +723,7 @@ const ClientsPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar por razón social, código, email o teléfono..."
+                  placeholder="Buscar..."
                   className="pl-8 "
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -519,6 +772,7 @@ const ClientsPage = () => {
                   setIsModalOpen(true);
                 }}
                 className="gap-2 w-full sm:w-auto"
+                disabled={isSubmitting}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo cliente</span>
@@ -541,7 +795,7 @@ const ClientsPage = () => {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               {editingClient ? "Editar cliente" : "Nuevo cliente"}
@@ -549,7 +803,40 @@ const ClientsPage = () => {
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+            <form
+              onSubmit={async (e) => {
+                console.log("Form submit event triggered");
+                e.preventDefault();
+
+                try {
+                  console.log("Manually validating form...");
+
+                  // Validación manual directa
+                  const isValid = await form.trigger();
+                  console.log("Form validation result:", isValid);
+
+                  if (!isValid) {
+                    const errors = form.formState.errors;
+                    console.log("Form errors:", errors);
+                    toast.error(
+                      "Por favor, corrige los errores en el formulario"
+                    );
+                    return;
+                  }
+
+                  // Obtener valores directamente
+                  const values = form.getValues();
+                  console.log("Form values:", values);
+                  console.log("Editing client:", editingClient);
+
+                  // Llamar a onSubmit manualmente
+                  await onSubmit(values);
+                } catch (error) {
+                  console.error("Form submission error:", error);
+                }
+              }}
+              noValidate
+            >
               <div className="grid gap-4 py-2 sm:py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Información básica */}
@@ -563,7 +850,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Razón Social *</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -577,7 +868,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Nombre Comercial</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -591,7 +886,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Código de Cliente *</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -611,6 +910,7 @@ const ClientsPage = () => {
                                 value === "0" ? undefined : parseInt(value)
                               )
                             }
+                            disabled={isSubmitting}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
@@ -648,6 +948,7 @@ const ClientsPage = () => {
                           <Select
                             value={field.value}
                             onValueChange={field.onChange}
+                            disabled={isSubmitting}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
@@ -674,7 +975,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Número de Documento Fiscal *</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -693,6 +998,7 @@ const ClientsPage = () => {
                                 field.onChange(value);
                               }
                             }}
+                            disabled={isSubmitting}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
@@ -714,6 +1020,28 @@ const ClientsPage = () => {
                         </FormItem>
                       )}
                     />
+                    {/* En la sección de Información Fiscal, después del campo client_type */}
+                    <FormField
+                      control={form.control}
+                      name="is_special_taxpayer"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>¿Contribuyente especial?</FormLabel>
+                            <FormDescription className="text-xs sm:text-sm">
+                              Marcar si el cliente es un contribuyente especial
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
 
@@ -729,7 +1057,12 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input {...field} type="email" className="w-full" />
+                            <Input
+                              {...field}
+                              type="email"
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -743,7 +1076,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Teléfono Principal</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -757,7 +1094,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Teléfono Móvil</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -771,7 +1112,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Persona de Contacto</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -785,7 +1130,12 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Email de Contacto</FormLabel>
                           <FormControl>
-                            <Input {...field} type="email" className="w-full" />
+                            <Input
+                              {...field}
+                              type="email"
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -799,7 +1149,11 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Teléfono de Contacto</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -810,7 +1164,25 @@ const ClientsPage = () => {
                   {/* Dirección y crédito */}
                   <div className="space-y-4 ">
                     <h3 className="font-medium">Dirección y Crédito</h3>
-
+                    {/* En la sección de Dirección y Crédito, antes del delivery_address */}
+                    <FormField
+                      control={form.control}
+                      name="fiscal_address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dirección Fiscal</FormLabel>
+                          <FormControl>
+                            <textarea
+                              {...field}
+                              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              rows={3}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="delivery_address"
@@ -822,6 +1194,7 @@ const ClientsPage = () => {
                               {...field}
                               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               rows={3}
+                              disabled={isSubmitting}
                             />
                           </FormControl>
                           <FormMessage />
@@ -836,7 +1209,11 @@ const ClientsPage = () => {
                         <FormItem className="mt-12">
                           <FormLabel>Código Postal</FormLabel>
                           <FormControl>
-                            <Input {...field} className="w-full" />
+                            <Input
+                              {...field}
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -852,6 +1229,7 @@ const ClientsPage = () => {
                             <Checkbox
                               checked={field.value}
                               onCheckedChange={field.onChange}
+                              disabled={isSubmitting}
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
@@ -885,6 +1263,7 @@ const ClientsPage = () => {
                                     )
                                   }
                                   className="w-full"
+                                  disabled={isSubmitting}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -911,6 +1290,7 @@ const ClientsPage = () => {
                                     )
                                   }
                                   className="w-full"
+                                  disabled={isSubmitting}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -935,6 +1315,7 @@ const ClientsPage = () => {
                             {...field}
                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             rows={3}
+                            disabled={isSubmitting}
                           />
                         </FormControl>
                         <FormMessage />
@@ -953,11 +1334,16 @@ const ClientsPage = () => {
                     resetForm();
                   }}
                   className="w-full sm:w-auto"
+                  disabled={isSubmitting}
                 >
                   Cerrar
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  {form.formState.isSubmitting
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting
                     ? "Guardando..."
                     : editingClient
                     ? "Actualizar"

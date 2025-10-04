@@ -25,12 +25,12 @@ const About = () => {
           </div>
           <div className="lg:w-1/2 bg-white p-8 rounded-lg shadow-sm">
             <h3 className="text-2xl font-bold mb-6 text-black">
-              Para Quién va Dirigido
+              Para quién va dirigido
             </h3>
 
             <div className="space-y-6">
               <div className="flex items-center">
-                <div className="bg-green_m p-3 rounded-full mr-4">
+                <div className="bg-green_b p-3 rounded-full mr-4">
                   <svg
                     className="w-5 h-5 text-white"
                     fill="none"
@@ -57,7 +57,7 @@ const About = () => {
               </div>
 
               <div className="flex items-center">
-                <div className="bg-green_m p-3 rounded-full mr-4">
+                <div className="bg-green_b p-3 rounded-full mr-4">
                   <svg
                     className="w-5 h-5 text-white"
                     fill="none"
@@ -84,7 +84,7 @@ const About = () => {
               </div>
 
               <div className="flex items-center">
-                <div className="bg-green_m p-3 rounded-full mr-4">
+                <div className="bg-green_b p-3 rounded-full mr-4">
                   <svg
                     className="w-5 h-5 text-white"
                     fill="none"

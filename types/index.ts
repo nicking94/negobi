@@ -115,7 +115,6 @@ export interface OrganizationsListResponse {
   };
 }
 
-// Tipo para empresas existentes (con todos los campos requeridos)
 export type CompanyType = {
   id: number;
   organizationId: number;
@@ -142,7 +141,6 @@ export type CompanyType = {
   api_key_expiration_date?: Date;
 };
 
-// Tipo para crear nuevas empresas (sin id, organizationId, created_at)
 export type NewCompanyType = {
   name: string;
   legal_tax_id: string;

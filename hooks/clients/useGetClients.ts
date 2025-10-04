@@ -25,14 +25,11 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
         search: params.search || "",
         page,
         itemsPerPage,
-        salespersonUserId:
-          params.salespersonUserId !== "all"
-            ? params.salespersonUserId
-            : undefined,
-        companyId: params.companyId,
+        // Solo incluir parámetros que la API realmente acepta
+        legal_name: params.search || "", // Si quieres buscar por nombre legal
       };
 
-      console.log("Fetching clients with params:", queryParams); // Para debug
+      console.log("Fetching clients with params:", queryParams);
 
       const { data } = await ClientsService.getClients(queryParams);
       setClientsResponse(data.data.data);
@@ -44,13 +41,7 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [
-    params.search,
-    params.salespersonUserId,
-    params.companyId,
-    page,
-    itemsPerPage,
-  ]);
+  }, [params.search, page, itemsPerPage]);
 
   useEffect(() => {
     getClients();

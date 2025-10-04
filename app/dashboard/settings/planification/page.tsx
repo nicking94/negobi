@@ -468,7 +468,7 @@ const PlanningPage = () => {
         open={isPlanningDialogOpen}
         onOpenChange={setIsPlanningDialogOpen}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Planificar Ruta para {selectedSeller?.name}

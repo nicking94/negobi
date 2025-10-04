@@ -42,17 +42,17 @@ const Testimonials = () => {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="bg-gray_xxl p-8 rounded-xl border border-gray_xxl"
+              className="bg-green_b p-8 rounded-xl border border-green_m"
             >
               <div className="flex items-center mb-6">
                 <div>
-                  <h4 className="font-semibold text-gray_b">
+                  <h4 className="font-semibold text-white">
                     {testimonial.name}
                   </h4>
-                  <p className="text-sm text-gray_m">{testimonial.title}</p>
+                  <p className="text-sm text-gray_l">{testimonial.title}</p>
                 </div>
               </div>
-              <p className="text-gray_b italic">{testimonial.quote}</p>
+              <p className="text-gray_xl italic">{testimonial.quote}</p>
             </div>
           ))}
         </div>

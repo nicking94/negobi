@@ -1,4 +1,4 @@
-// hooks/auth/useLogin.ts (actualizado)
+// hooks/auth/useLogin.ts (corregido)
 import { useState } from "react";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";
@@ -11,13 +11,17 @@ const useLogin = () => {
   const router = useRouter();
   const { login } = useAuth();
 
-  const onLogin = async (params: LoginType) => {
+  const onLogin = async (params: LoginType & { rememberMe?: boolean }) => {
     try {
       setLoading(true);
-      const { data, status } = await AuthService.loginAction(params);
+
+      // Extraer rememberMe y enviar solo los datos que espera el backend
+      const { rememberMe, ...loginData } = params;
+
+      const { data, status } = await AuthService.loginAction(loginData);
 
       if (status === 200 || status === 201) {
-        // Usar el contexto para login
+        // Usar el contexto para login, pasando el rememberMe
         login(
           data.data.access_token,
           data.data.user || {
@@ -29,7 +33,8 @@ const useLogin = () => {
             phone: "",
             role: data.data.role || "user",
           },
-          data.data.refresh_token
+          data.data.refresh_token,
+          rememberMe // ← Pasar rememberMe al contexto, no al backend
         );
 
         // Almacenar API Key si viene en la respuesta

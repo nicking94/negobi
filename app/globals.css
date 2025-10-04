@@ -43,8 +43,10 @@
   --color-green_xxl: #b2f5ea;
   --color-green_xl: #81e6d9;
   --color-green_l: #26a69a;
-  --color-green_m: #319795;
-  --color-green_b: #00796b;
+  /* --color-green_m: #319795;
+  --color-green_b: #00796b; */
+  --color-green_m: #00d47e;
+  --color-green_b: #013841;
 
   --color-red_xxl: #f8d7d4;
   --color-red_xl: #ea7e75;

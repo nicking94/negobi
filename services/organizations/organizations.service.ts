@@ -16,8 +16,21 @@ export class OrganizationsService {
   static createOrganization = async (data: OrganizationPayload) =>
     await api.post(OrganizationsRoutes.PostOrganizations, data);
 
-  static getOrganizations = async (querys: OrganizationFilters) =>
-    await api.get(OrganizationsRoutes.GetOrganizations, { params: querys });
+  static getOrganizations = async (querys: OrganizationFilters) => {
+    const cleanQuerys = Object.fromEntries(
+      Object.entries(querys).filter(([value]) => value !== undefined)
+    );
+
+    try {
+      const response = await api.get(OrganizationsRoutes.GetOrganizations, {
+        params: cleanQuerys,
+      });
+      return response;
+    } catch (error) {
+      console.error("🔍 [OrganizationsService] Error:", error);
+      throw error;
+    }
+  };
 
   // Obtener una organización específica por ID
   static getOrganization = async (id: string) =>

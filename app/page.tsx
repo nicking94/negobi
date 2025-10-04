@@ -11,6 +11,8 @@ import Testimonials from "@/components/landing/Testimonials";
 import { MessageCircle } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import Image from "next/image";
+import logo from "@/public/logos/logo.svg";
 
 export default function Home() {
   useEffect(() => {
@@ -30,7 +32,16 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="flex justify-between items-center px-8 py-4">
-          <h1 className="text-2xl font-bold text-green_b">Negobi</h1>
+          <div className="flex items-center">
+            <Image
+              src={logo}
+              alt="Negobi Logo"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
+          </div>
           <div className="flex gap-4">
             <Button asChild>
               <a href="/login">Iniciar sesión</a>
