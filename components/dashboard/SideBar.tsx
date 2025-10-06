@@ -24,9 +24,10 @@ import {
   FaUserTie,
   FaTags,
   FaWarehouse,
-  FaDollarSign, // Icono para ventas
-  FaBox, // Icono para productos
-  FaUserFriends, // Icono para vendedores
+  FaDollarSign,
+  FaBox,
+  FaUserFriends,
+  FaFileContract,
 } from "react-icons/fa";
 import { HiChevronRight, HiChevronDown } from "react-icons/hi";
 import { cn } from "@/lib/utils";
@@ -101,6 +102,7 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
+  // En tu archivo Sidebar.tsx, actualiza la sección de Maestros:
   {
     icon: FaFolder,
     label: "Maestros",
@@ -135,6 +137,12 @@ const menuItems: MenuItem[] = [
         icon: FaLandmark,
         label: "Servicios",
         path: "/dashboard/masters/services",
+      },
+
+      {
+        icon: FaFileContract,
+        label: "Términos de Pago",
+        path: "/dashboard/masters/terminos-de-pago",
       },
     ],
   },

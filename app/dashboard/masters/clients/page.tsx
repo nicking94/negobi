@@ -56,6 +56,8 @@ import useGetClients from "@/hooks/clients/useGetClients";
 import useUpdateClient from "@/hooks/clients/useUpdateClient";
 import useDeleteClient from "@/hooks/clients/useDeleteClient";
 import useAddClient from "@/hooks/clients/useAddClients";
+import useGetPaymentTerms from "@/hooks/paymentTerms/useGetPaymentTerms";
+import { PaymentTermType } from "@/types";
 
 export type Client = {
   id?: string;
@@ -86,6 +88,7 @@ export type Client = {
   longitude?: number;
   map_link?: string;
   payment_term_id?: number;
+  payment_term?: PaymentTermType;
   credit_limit?: number;
   credit_days?: number;
   has_credit: boolean;
@@ -199,7 +202,13 @@ const ClientsPage = () => {
     { value: string; name: string }[]
   >([]);
 
-  // Usar los hooks personalizados
+  // Usar el hook de términos de pago
+  const {
+    paymentTerms,
+    loading: paymentTermsLoading,
+    error: paymentTermsError,
+  } = useGetPaymentTerms();
+
   const {
     clientsResponse,
     page,
@@ -254,6 +263,9 @@ const ClientsPage = () => {
     },
   });
 
+  // Filtrar solo términos de pago activos
+  const activePaymentTerms = paymentTerms.filter((term) => term.is_active);
+
   useEffect(() => {
     setSellers([
       { id: 1, name: "Juan Pérez" },
@@ -269,6 +281,14 @@ const ClientsPage = () => {
       { value: "dni", name: "DNI" },
     ]);
   }, []);
+
+  // Efecto para manejar errores de carga de términos de pago
+  useEffect(() => {
+    if (paymentTermsError) {
+      console.error("Error loading payment terms:", paymentTermsError);
+      toast.error("Error al cargar los términos de pago");
+    }
+  }, [paymentTermsError]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -624,6 +644,23 @@ const ClientsPage = () => {
       },
     },
     {
+      accessorKey: "payment_term_id",
+      header: "Término de Pago",
+      cell: ({ row }) => {
+        const paymentTermId = row.getValue("payment_term_id") as number;
+        const paymentTerm = activePaymentTerms.find(
+          (term) => term.id === paymentTermId
+        );
+        return (
+          <div className="font-medium">
+            {paymentTerm
+              ? `${paymentTerm.term_name} (${paymentTerm.number_of_days} días)`
+              : "-"}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
@@ -723,7 +760,7 @@ const ClientsPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar por nombre, código, documento..."
                   className="pl-8 "
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -852,6 +889,7 @@ const ClientsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
+                              placeholder="Ingresa la razón social del cliente"
                               className="w-full"
                               disabled={isSubmitting}
                             />
@@ -870,6 +908,7 @@ const ClientsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
+                              placeholder="Ingresa el nombre comercial"
                               className="w-full"
                               disabled={isSubmitting}
                             />
@@ -888,6 +927,7 @@ const ClientsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
+                              placeholder="Ej: CLI-001"
                               className="w-full"
                               disabled={isSubmitting}
                             />
@@ -977,6 +1017,7 @@ const ClientsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
+                              placeholder="Ingresa el número de documento"
                               className="w-full"
                               disabled={isSubmitting}
                             />
@@ -1025,7 +1066,7 @@ const ClientsPage = () => {
                       control={form.control}
                       name="is_special_taxpayer"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormItem className="bg-white flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                           <FormControl>
                             <Checkbox
                               checked={field.value}
@@ -1049,120 +1090,127 @@ const ClientsPage = () => {
                   {/* Información de contacto */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información de Contacto</h3>
+                    <div className="mt-6.5 space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="email"
+                                placeholder="cliente@empresa.com"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="email"
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="main_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Teléfono Principal</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="+58 412 123 4567"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="main_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Teléfono Principal</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="mobile_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Teléfono Móvil</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="+58 414 123 4567"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="mobile_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Teléfono Móvil</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="contact_person"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Persona de Contacto</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Nombre del contacto principal"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="contact_person"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Persona de Contacto</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="contact_email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email de Contacto</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="email"
+                                placeholder="contacto@empresa.com"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="contact_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email de Contacto</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="email"
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="contact_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Teléfono de Contacto</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="contact_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Teléfono de Contacto</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="+58 212 123 4567"
+                                className="w-full"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
 
                   {/* Dirección y crédito */}
-                  <div className="space-y-4 ">
+                  <div className=" space-y-4 ">
                     <h3 className="font-medium">Dirección y Crédito</h3>
                     {/* En la sección de Dirección y Crédito, antes del delivery_address */}
                     <FormField
@@ -1174,7 +1222,8 @@ const ClientsPage = () => {
                           <FormControl>
                             <textarea
                               {...field}
-                              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Ingresa la dirección fiscal completa"
+                              className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               rows={3}
                               disabled={isSubmitting}
                             />
@@ -1192,7 +1241,8 @@ const ClientsPage = () => {
                           <FormControl>
                             <textarea
                               {...field}
-                              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Ingresa la dirección para entregas"
+                              className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               rows={3}
                               disabled={isSubmitting}
                             />
@@ -1206,11 +1256,12 @@ const ClientsPage = () => {
                       control={form.control}
                       name="zip_code"
                       render={({ field }) => (
-                        <FormItem className="mt-12">
+                        <FormItem>
                           <FormLabel>Código Postal</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
+                              placeholder="Ej: 1010"
                               className="w-full"
                               disabled={isSubmitting}
                             />
@@ -1220,11 +1271,57 @@ const ClientsPage = () => {
                       )}
                     />
 
+                    {/* Selector de Términos de Pago - AGREGADO */}
+                    <FormField
+                      control={form.control}
+                      name="payment_term_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Término de Pago</FormLabel>
+                          <Select
+                            value={field.value?.toString() || "0"}
+                            onValueChange={(value) =>
+                              field.onChange(
+                                value === "0" ? undefined : parseInt(value)
+                              )
+                            }
+                            disabled={isSubmitting || paymentTermsLoading}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue
+                                  placeholder={
+                                    paymentTermsLoading
+                                      ? "Cargando términos..."
+                                      : "Selecciona un término de pago"
+                                  }
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="0">
+                                Sin término de pago
+                              </SelectItem>
+                              {activePaymentTerms.map((term) => (
+                                <SelectItem
+                                  key={term.id}
+                                  value={term.id.toString()}
+                                >
+                                  {term.term_name} ({term.number_of_days} días)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="has_credit"
                       render={({ field }) => (
-                        <FormItem className="-mt-0.5 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormItem className="bg-white flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                           <FormControl>
                             <Checkbox
                               checked={field.value}
@@ -1248,12 +1345,13 @@ const ClientsPage = () => {
                           control={form.control}
                           name="credit_limit"
                           render={({ field }) => (
-                            <FormItem className="-mt-3">
+                            <FormItem>
                               <FormLabel>Límite de Crédito</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   type="number"
+                                  placeholder="0.00"
                                   value={field.value || ""}
                                   onChange={(e) =>
                                     field.onChange(
@@ -1281,6 +1379,7 @@ const ClientsPage = () => {
                                 <Input
                                   {...field}
                                   type="number"
+                                  placeholder="30"
                                   value={field.value || ""}
                                   onChange={(e) =>
                                     field.onChange(
@@ -1313,7 +1412,8 @@ const ClientsPage = () => {
                         <FormControl>
                           <textarea
                             {...field}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Información adicional sobre el cliente..."
+                            className="bg-white flex w-full rounded-md border border-input  px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             rows={3}
                             disabled={isSubmitting}
                           />

@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "cursor-pointer bg-gradient-to-r from-green_m to-green_b text-white shadow-xs hover:from-green_m hover:to-green_b transition-all duration-300 ",
+          "cursor-pointer bg-gradient-to-r from-green_m to-green_b hover:bg-gradient-to-br hover:from-green_b/30 hover:to-green_m/30 text-white shadow-xs hover:from-green_m hover:to-green_b transition-all duration-300",
         outline:
           "cursor-pointer bg-white hover:bg-gradient-to-r hover:from-green_xxl/30 hover:to-green_xl/30 text-black border border-green_l shadow-xs shadow-green_l/50 transition-all duration-300",
         destructive:

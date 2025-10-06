@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -58,38 +58,18 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 
-export type Supplier = {
-  id?: string;
-  companyId: number;
-  supplier_code: string;
-  legal_name: string;
-  tax_document_type: string;
-  tax_document_number: string;
-  person_type: string;
-  email?: string;
-  main_phone?: string;
-  mobile_phone?: string;
-  contact_person?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  commercial_name?: string;
-  credit_limit?: number;
-  credit_days?: number;
-  notes?: string;
-  balance_due: number;
-  advance_balance: number;
-  last_purchase_date: string;
-  last_purchase_number: string;
-  last_purchase_amount: number;
-  last_payment_date: string;
-  last_payment_number: string;
-  last_payment_amount: number;
-  is_active: boolean;
-  created_by: string;
-  updated_by: string;
-};
+// Importar hooks
+import useGetSuppliers from "@/hooks/suppliers/useGetSuppliers";
+import useAddSupplier from "@/hooks/suppliers/useAddSupplier";
+import usePutSupplier from "@/hooks/suppliers/usePutSupplier";
+import useDeleteSupplier from "@/hooks/suppliers/useDeleteSupplier";
+import useGetOneSupplier from "@/hooks/suppliers/useGetOneSupplier";
+import { useAuth } from "@/context/AuthContext";
+import { SupplierCreatePayload, SupplierType } from "@/types";
 
+// Schema de validación actualizado según el swagger
 const supplierSchema = z.object({
+  companyId: z.number().min(1, "La compañía es requerida"),
   supplier_code: z.string().min(1, "El código es requerido"),
   legal_name: z
     .string()
@@ -108,7 +88,10 @@ const supplierSchema = z.object({
     .or(z.literal("")),
   contact_phone: z.string().optional(),
   commercial_name: z.string().optional(),
-  paymentTermId: z.number().optional().nullable(),
+  address: z.string().optional(),
+  fiscal_address: z.string().optional(),
+  zip_code: z.string().optional(),
+  paymentTermId: z.number().optional(),
   credit_limit: z
     .number()
     .min(0, "El límite de crédito no puede ser negativo")
@@ -118,112 +101,59 @@ const supplierSchema = z.object({
     .min(0, "Los días de crédito no pueden ser negativos")
     .optional(),
   notes: z.string().optional(),
+  balance_due: z.number().optional(),
+  advance_balance: z.number().optional(),
   is_active: z.boolean(),
+  created_by: z.string().optional(),
+  updated_by: z.string().optional(),
 });
+
+type SupplierFormData = z.infer<typeof supplierSchema>;
+
+// Interfaces para los datos locales
+interface PaymentTerm {
+  id: number;
+  name: string;
+}
+
+interface Company {
+  id: number;
+  name: string;
+}
 
 const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [editingSupplierId, setEditingSupplierId] = useState<number | null>(
+    null
+  );
+
+  const {
+    suppliersResponse,
+    setModified,
+    totalPage,
+    total,
+    setPage,
+    setItemsPerPage,
+    setSearch,
+    setCompanyId,
+    page,
+    itemsPerPage,
+    search,
+    companyId,
+  } = useGetSuppliers();
+
+  const { createSupplier, loading: creating } = useAddSupplier();
+  const { updateSupplier, loading: updating } = usePutSupplier();
+  const { deleteSupplier } = useDeleteSupplier();
+  const { supplier: currentSupplier, loading: loadingOne } =
+    useGetOneSupplier(editingSupplierId);
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [instanceFilter, setInstanceFilter] = useState<string>("all");
 
-  // Datos de ejemplo
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    {
-      id: "1",
-      companyId: 1,
-      supplier_code: "PROV001",
-      legal_name: "Tecnologías Avanzadas S.A.",
-      tax_document_type: "RIF",
-      tax_document_number: "J-123456789",
-      person_type: "Jurídica",
-      email: "ventas@tecnologiasavanzadas.com",
-      main_phone: "0212-555-1234",
-      mobile_phone: "0414-555-1234",
-      contact_person: "Carlos Rodríguez",
-      contact_email: "carlos@tecnologiasavanzadas.com",
-      contact_phone: "0412-555-5678",
-      commercial_name: "TecnoAvanzada",
-      credit_limit: 5000,
-      credit_days: 30,
-      notes: "Proveedor preferencial para equipos tecnológicos",
-      balance_due: 1250.75,
-      advance_balance: 0,
-      last_purchase_date: "2024-01-15T10:30:00Z",
-      last_purchase_number: "OC-2024-00125",
-      last_purchase_amount: 2500.5,
-      last_payment_date: "2024-01-05T14:20:00Z",
-      last_payment_number: "P-2024-00087",
-      last_payment_amount: 3000.0,
-      is_active: true,
-      created_by: "admin",
-      updated_by: "admin",
-    },
-    {
-      id: "2",
-      companyId: 1,
-      supplier_code: "PROV002",
-      legal_name: "Suministros Industriales C.A.",
-      tax_document_type: "RIF",
-      tax_document_number: "J-987654321",
-      person_type: "Jurídica",
-      email: "info@suministrosindustriales.com",
-      main_phone: "0212-555-4321",
-      mobile_phone: "0414-555-4321",
-      contact_person: "María González",
-      contact_email: "maria.g@suministrosindustriales.com",
-      contact_phone: "0412-555-8765",
-      commercial_name: "Suministros Ind.",
-      credit_limit: 10000,
-      credit_days: 45,
-      notes: "Proveedor de materiales de oficina y limpieza",
-      balance_due: 0,
-      advance_balance: 500.0,
-      last_purchase_date: "2024-01-10T09:15:00Z",
-      last_purchase_number: "OC-2024-00098",
-      last_purchase_amount: 1500.75,
-      last_payment_date: "2024-01-08T11:45:00Z",
-      last_payment_number: "P-2024-00092",
-      last_payment_amount: 2000.0,
-      is_active: true,
-      created_by: "admin",
-      updated_by: "admin",
-    },
-    {
-      id: "3",
-      companyId: 2,
-      supplier_code: "PROV003",
-      legal_name: "Juan Pérez",
-      tax_document_type: "Cédula",
-      tax_document_number: "V-12345678",
-      person_type: "Natural",
-      email: "juanperez@gmail.com",
-      main_phone: "0212-555-1111",
-      mobile_phone: "0414-555-1111",
-      contact_person: "Juan Pérez",
-      contact_email: "juanperez@gmail.com",
-      contact_phone: "0414-555-1111",
-      commercial_name: "Servicios JP",
-      credit_limit: 2000,
-      credit_days: 15,
-      notes: "Proveedor de servicios de mantenimiento",
-      balance_due: 750.25,
-      advance_balance: 0,
-      last_purchase_date: "2024-01-12T16:20:00Z",
-      last_purchase_number: "OC-2024-00105",
-      last_purchase_amount: 1000.0,
-      last_payment_date: "2023-12-28T10:30:00Z",
-      last_payment_number: "P-2023-00125",
-      last_payment_amount: 500.0,
-      is_active: false,
-      created_by: "admin",
-      updated_by: "admin",
-    },
-  ]);
-
-  const [paymentTerms, setPaymentTerms] = useState([
+  // Datos de ejemplo para selects (deberías obtener estos de la API)
+  const [paymentTerms] = useState<PaymentTerm[]>([
     { id: 1, name: "Contado" },
     { id: 2, name: "15 días" },
     { id: 3, name: "30 días" },
@@ -231,47 +161,17 @@ const SuppliersPage = () => {
     { id: 5, name: "60 días" },
   ]);
 
-  const [instances, setInstances] = useState([
+  const [companies] = useState<Company[]>([
     { id: 1, name: "Instancia Principal" },
     { id: 2, name: "Sucursal Norte" },
     { id: 3, name: "Sucursal Sur" },
   ]);
 
-  // Filtrar proveedores según los criterios
-  const filteredSuppliers = useMemo(() => {
-    return suppliers.filter((supplier) => {
-      const matchesSearch =
-        supplier.legal_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplier.supplier_code
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        supplier.commercial_name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        supplier.tax_document_number
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      // Filtrar por estado
-      let matchesStatus = true;
-      if (statusFilter === "active") {
-        matchesStatus = supplier.is_active;
-      } else if (statusFilter === "inactive") {
-        matchesStatus = !supplier.is_active;
-      }
-
-      // Filtrar por instancia (si no es "todas")
-      const matchesInstance =
-        instanceFilter === "all" ||
-        supplier.companyId.toString() === instanceFilter;
-
-      return matchesSearch && matchesStatus && matchesInstance;
-    });
-  }, [suppliers, searchTerm, statusFilter, instanceFilter]);
-
-  const form = useForm<z.infer<typeof supplierSchema>>({
+  // Configurar form
+  const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
+      companyId: 1, // Valor por defecto
       supplier_code: "",
       legal_name: "",
       tax_document_type: "",
@@ -284,38 +184,148 @@ const SuppliersPage = () => {
       contact_email: "",
       contact_phone: "",
       commercial_name: "",
+      address: "",
+      fiscal_address: "",
+      zip_code: "",
       paymentTermId: undefined,
       credit_limit: 0,
       credit_days: 0,
       notes: "",
+      balance_due: 0,
+      advance_balance: 0,
       is_active: true,
+      created_by: user?.username || "admin",
+      updated_by: user?.username || "admin",
     },
   });
 
-  const onSubmit = async () => {
+  // Cuando se selecciona un supplier para editar, cargar sus datos
+  useEffect(() => {
+    if (currentSupplier && editingSupplierId) {
+      form.reset({
+        companyId: currentSupplier.companyId,
+        supplier_code: currentSupplier.supplier_code,
+        legal_name: currentSupplier.legal_name,
+        tax_document_type: currentSupplier.tax_document_type,
+        tax_document_number: currentSupplier.tax_document_number,
+        person_type: currentSupplier.person_type,
+        email: currentSupplier.email || "",
+        main_phone: currentSupplier.main_phone || "",
+        mobile_phone: currentSupplier.mobile_phone || "",
+        contact_person: currentSupplier.contact_person || "",
+        contact_email: currentSupplier.contact_email || "",
+        contact_phone: currentSupplier.contact_phone || "",
+        commercial_name: currentSupplier.commercial_name || "",
+        address: currentSupplier.address || "",
+        fiscal_address: currentSupplier.fiscal_address || "",
+        zip_code: currentSupplier.zip_code || "",
+        paymentTermId: currentSupplier.paymentTermId,
+        credit_limit: currentSupplier.credit_limit || 0,
+        credit_days: currentSupplier.credit_days || 0,
+        notes: currentSupplier.notes || "",
+        balance_due: currentSupplier.balance_due || 0,
+        advance_balance: currentSupplier.advance_balance || 0,
+        is_active: currentSupplier.is_active,
+        created_by: currentSupplier.created_by,
+        updated_by: user?.username || "admin",
+      });
+    }
+  }, [currentSupplier, editingSupplierId, form, user]);
+
+  // Filtrar suppliers según los criterios (filtro adicional en frontend si es necesario)
+  const filteredSuppliers = useMemo(() => {
+    if (!suppliersResponse) return [];
+
+    return suppliersResponse.filter((supplier: SupplierType) => {
+      // Filtrar por estado si es necesario
+      let matchesStatus = true;
+      if (statusFilter === "active") {
+        matchesStatus = supplier.is_active;
+      } else if (statusFilter === "inactive") {
+        matchesStatus = !supplier.is_active;
+      }
+
+      return matchesStatus;
+    });
+  }, [suppliersResponse, statusFilter]);
+
+  const onSubmit = async (data: SupplierFormData) => {
     try {
-      if (editingSupplier) {
-        // Lógica para actualizar
+      // Preparar datos para enviar con los campos faltantes
+      const supplierData: SupplierCreatePayload = {
+        ...data,
+        // Asegurar que los campos opcionales string tengan valores por defecto
+        email: data.email || "",
+        main_phone: data.main_phone || "",
+        mobile_phone: data.mobile_phone || "",
+        contact_person: data.contact_person || "",
+        contact_email: data.contact_email || "",
+        contact_phone: data.contact_phone || "",
+        commercial_name: data.commercial_name || "",
+        address: data.address || "",
+        fiscal_address: data.fiscal_address || "",
+        zip_code: data.zip_code || "",
+        notes: data.notes || "",
+
+        // Asegurar que los campos numéricos opcionales tengan valores por defecto
+        paymentTermId: data.paymentTermId || 0, // o un valor por defecto apropiado
+        credit_limit: data.credit_limit || 0,
+        credit_days: data.credit_days || 0,
+        balance_due: data.balance_due || 0,
+        advance_balance: data.advance_balance || 0,
+
+        // Usuario
+        created_by: user?.username || "admin",
+        updated_by: user?.username || "admin",
+
+        // Campos adicionales requeridos por SupplierCreatePayload
+        last_purchase_date: "", // o null si tu API lo permite
+        last_purchase_number: "",
+        last_purchase_amount: 0,
+        last_payment_date: "", // o null si tu API lo permite
+        last_payment_number: "",
+        last_payment_amount: 0,
+      };
+
+      if (editingSupplierId) {
+        // Actualizar supplier existente
+        await updateSupplier(editingSupplierId, supplierData);
         toast.success("Proveedor actualizado exitosamente");
       } else {
+        // Crear nuevo supplier
+        await createSupplier(supplierData);
         toast.success("Proveedor creado exitosamente");
       }
 
       resetForm();
       setIsModalOpen(false);
-    } catch (error) {
-      toast.error("Error al guardar el proveedor");
+      setModified((prev) => !prev); // Refrescar la lista
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error al guardar el proveedor";
+      toast.error(errorMessage);
     }
   };
 
-  const handleDelete = (supplier: Supplier) => {
-    toast.error(`¿Eliminar el proveedor "${supplier.legal_name}"?`, {
+  const handleDelete = async (supplierId: number, supplierName: string) => {
+    toast.error(`¿Eliminar el proveedor "${supplierName}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          setSuppliers((prev) => prev.filter((s) => s.id !== supplier.id));
-          toast.success("Proveedor eliminado exitosamente");
+          try {
+            await deleteSupplier(supplierId);
+            toast.success("Proveedor eliminado exitosamente");
+            setModified((prev) => !prev); // Refrescar la lista
+          } catch (error: unknown) {
+            const errorMessage =
+              error instanceof Error
+                ? error.message
+                : "Error al eliminar el proveedor";
+            toast.error(errorMessage);
+          }
         },
       },
       cancel: {
@@ -327,32 +337,45 @@ const SuppliersPage = () => {
     });
   };
 
-  const handleEdit = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    form.reset({
-      supplier_code: supplier.supplier_code,
-      legal_name: supplier.legal_name,
-      tax_document_type: supplier.tax_document_type,
-      tax_document_number: supplier.tax_document_number,
-      person_type: supplier.person_type,
-      email: supplier.email,
-      main_phone: supplier.main_phone,
-      mobile_phone: supplier.mobile_phone,
-      contact_person: supplier.contact_person,
-      contact_email: supplier.contact_email,
-      contact_phone: supplier.contact_phone,
-      commercial_name: supplier.commercial_name || "",
-      credit_limit: supplier.credit_limit,
-      credit_days: supplier.credit_days,
-      notes: supplier.notes || "",
-      is_active: supplier.is_active,
-    });
+  const handleEdit = (supplierId: number) => {
+    setEditingSupplierId(supplierId);
+    setIsModalOpen(true);
+  };
+
+  const handleCreateNew = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
-    form.reset();
-    setEditingSupplier(null);
+    form.reset({
+      companyId: 1,
+      supplier_code: "",
+      legal_name: "",
+      tax_document_type: "",
+      tax_document_number: "",
+      person_type: "",
+      email: "",
+      main_phone: "",
+      mobile_phone: "",
+      contact_person: "",
+      contact_email: "",
+      contact_phone: "",
+      commercial_name: "",
+      address: "",
+      fiscal_address: "",
+      zip_code: "",
+      paymentTermId: undefined,
+      credit_limit: 0,
+      credit_days: 0,
+      notes: "",
+      balance_due: 0,
+      advance_balance: 0,
+      is_active: true,
+      created_by: user?.username || "admin",
+      updated_by: user?.username || "admin",
+    });
+    setEditingSupplierId(null);
   };
 
   const formatCurrency = (value: number) => {
@@ -363,30 +386,35 @@ const SuppliersPage = () => {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("es-ES");
   };
 
-  const columns: ColumnDef<Supplier>[] = [
+  // Definir las columnas con tipos correctos
+  const columns: ColumnDef<SupplierType>[] = [
     {
       accessorKey: "legal_name",
       header: "Proveedor",
-      cell: ({ row }) => (
-        <div className="font-medium">
-          <div className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-gray_m" />
-            <span>{row.getValue("legal_name")}</span>
-          </div>
-          {row.original.commercial_name && (
-            <div className="text-xs text-gray_m">
-              {row.original.commercial_name}
+      cell: ({ row }) => {
+        const supplier = row.original;
+        return (
+          <div className="font-medium">
+            <div className="flex items-center gap-2">
+              <Building className="h-4 w-4 text-gray_m" />
+              <span>{supplier.legal_name}</span>
             </div>
-          )}
-          <div className="text-xs text-gray_m flex items-center gap-1 mt-1">
-            <span>{row.original.tax_document_type}:</span>
-            <span>{row.original.tax_document_number}</span>
+            {supplier.commercial_name && (
+              <div className="text-xs text-gray_m">
+                {supplier.commercial_name}
+              </div>
+            )}
+            <div className="text-xs text-gray_m flex items-center gap-1 mt-1">
+              <span>{supplier.tax_document_type}:</span>
+              <span>{supplier.tax_document_number}</span>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       accessorKey: "supplier_code",
@@ -396,7 +424,7 @@ const SuppliersPage = () => {
       ),
     },
     {
-      accessorKey: "contact_info",
+      id: "contact_info",
       header: "Contacto",
       cell: ({ row }) => {
         const supplier = row.original;
@@ -425,7 +453,7 @@ const SuppliersPage = () => {
       },
     },
     {
-      accessorKey: "credit_info",
+      id: "credit_info",
       header: "Límite de Crédito",
       cell: ({ row }) => {
         const supplier = row.original;
@@ -456,11 +484,14 @@ const SuppliersPage = () => {
       header: "Última Compra",
       cell: ({ row }) => {
         const date = row.getValue("last_purchase_date") as string;
+        if (!date)
+          return <div className="text-sm text-gray_m">Sin compras</div>;
+
         return (
           <div className="text-sm">
             <div>{formatDate(date)}</div>
             <div className="text-xs text-gray_m">
-              {formatCurrency(row.original.last_purchase_amount)}
+              {formatCurrency(row.original.last_purchase_amount || 0)}
             </div>
           </div>
         );
@@ -499,14 +530,14 @@ const SuppliersPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => handleEdit(supplier)}
+                  onClick={() => handleEdit(supplier.id)}
                   className="cursor-pointer flex items-center gap-2"
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => handleDelete(supplier)}
+                  onClick={() => handleDelete(supplier.id, supplier.legal_name)}
                   className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -519,6 +550,7 @@ const SuppliersPage = () => {
       },
     },
   ];
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -544,10 +576,10 @@ const SuppliersPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar por nombre, código o documento..."
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
@@ -580,24 +612,28 @@ const SuppliersPage = () => {
                     <DropdownMenuSeparator />
 
                     <div className="px-2 py-1.5">
-                      <Label htmlFor="instance-filter">Instancia</Label>
+                      <Label htmlFor="company-filter">Compañía</Label>
                       <Select
-                        value={instanceFilter}
-                        onValueChange={setInstanceFilter}
+                        value={companyId?.toString() || "all"}
+                        onValueChange={(value) =>
+                          setCompanyId(
+                            value === "all" ? undefined : parseInt(value)
+                          )
+                        }
                       >
-                        <SelectTrigger id="instance-filter" className="mt-1">
-                          <SelectValue placeholder="Todas las instancias" />
+                        <SelectTrigger id="company-filter" className="mt-1">
+                          <SelectValue placeholder="Todas las compañías" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">
-                            Todas las instancias
+                            Todas las compañías
                           </SelectItem>
-                          {instances.map((instance) => (
+                          {companies.map((company) => (
                             <SelectItem
-                              key={instance.id}
-                              value={instance.id.toString()}
+                              key={company.id}
+                              value={company.id.toString()}
                             >
-                              {instance.name}
+                              {company.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -609,11 +645,9 @@ const SuppliersPage = () => {
             </div>
             <div>
               <Button
-                onClick={() => {
-                  resetForm();
-                  setIsModalOpen(true);
-                }}
+                onClick={handleCreateNew}
                 className="gap-2 w-full sm:w-auto"
+                disabled={creating || updating}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo proveedor</span>
@@ -621,16 +655,16 @@ const SuppliersPage = () => {
             </div>
           </div>
 
-          <DataTable<Supplier, Supplier>
+          <DataTable
             columns={columns}
-            data={filteredSuppliers || []}
+            data={filteredSuppliers}
             noResultsText="No se encontraron proveedores"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredSuppliers.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
+            page={page}
+            setPage={setPage}
+            totalPage={totalPage}
+            total={total}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </main>
       </div>
@@ -639,7 +673,7 @@ const SuppliersPage = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
-              {editingSupplier ? "Editar proveedor" : "Nuevo proveedor"}
+              {editingSupplierId ? "Editar proveedor" : "Nuevo proveedor"}
             </DialogTitle>
           </DialogHeader>
 
@@ -652,7 +686,7 @@ const SuppliersPage = () => {
                     name="supplier_code"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Código</FormLabel>
+                        <FormLabel>Código *</FormLabel>
                         <FormControl>
                           <Input {...field} className="w-full" />
                         </FormControl>
@@ -666,7 +700,7 @@ const SuppliersPage = () => {
                     name="person_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tipo de Persona</FormLabel>
+                        <FormLabel>Tipo de Persona *</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -692,7 +726,7 @@ const SuppliersPage = () => {
                   name="legal_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Razón Social</FormLabel>
+                      <FormLabel>Razón Social *</FormLabel>
                       <FormControl>
                         <Input {...field} className="w-full" />
                       </FormControl>
@@ -721,7 +755,7 @@ const SuppliersPage = () => {
                     name="tax_document_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tipo de Documento</FormLabel>
+                        <FormLabel>Tipo de Documento *</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -748,7 +782,7 @@ const SuppliersPage = () => {
                     name="tax_document_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Número de Documento</FormLabel>
+                        <FormLabel>Número de Documento *</FormLabel>
                         <FormControl>
                           <Input {...field} className="w-full" />
                         </FormControl>
@@ -817,7 +851,6 @@ const SuppliersPage = () => {
                     )}
                   />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -848,23 +881,49 @@ const SuppliersPage = () => {
                   />
                 </div>
 
-                {/* <FormField
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="fiscal_address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección Fiscal</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
                   control={form.control}
-                  name="delivery_address"
+                  name="zip_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Dirección de Entrega (Opcional)</FormLabel>
+                      <FormLabel>Código Postal</FormLabel>
                       <FormControl>
-                        <textarea
-                          {...field}
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          rows={2}
-                        />
+                        <Input {...field} className="w-full" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
-                /> */}
+                />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
@@ -996,17 +1055,18 @@ const SuppliersPage = () => {
                     resetForm();
                   }}
                   className="w-full sm:w-auto"
+                  disabled={creating || updating}
                 >
                   Cerrar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  disabled={creating || updating || loadingOne}
                   className="w-full sm:w-auto"
                 >
-                  {form.formState.isSubmitting
+                  {creating || updating
                     ? "Guardando..."
-                    : editingSupplier
+                    : editingSupplierId
                     ? "Actualizar"
                     : "Guardar"}
                 </Button>

@@ -1,22 +1,70 @@
-import { Supplier } from "@/app/dashboard/masters/suppliers/page";
-import * as SupplierRoute from "./suppliers.route"
-import api from "@/utils/api";
+import api from "../../utils/api";
+import {
+  SupplierCreatePayload,
+  SupplierUpdatePayload,
+  SupplierQueryType,
+  SupplierSyncPayload,
+  SupplierResponse,
+  SuppliersListResponse,
+  SupplierDeleteResponse,
+  SupplierSyncResponse,
+} from "../../types/index";
 
-export class SupplierService {
+export const supplierService = {
+  async getSuppliers(
+    params: SupplierQueryType
+  ): Promise<SuppliersListResponse> {
+    const response = await api.get<SuppliersListResponse>("/suppliers", {
+      params,
+    });
+    return response.data;
+  },
 
-    static async getSuppliers() {
-        return api.get(SupplierRoute.getSuppliers);
-    }
+  // GET - Obtener proveedor por ID
+  async getSupplierById(id: number): Promise<SupplierResponse> {
+    const response = await api.get<SupplierResponse>(`/suppliers/${id}`);
+    return response.data;
+  },
 
-    static async postSuppliers(data: Supplier) {
-        return api.post(SupplierRoute.postSuppliers, data);
-    }
+  // POST - Crear nuevo proveedor
+  async createSupplier(
+    supplierData: SupplierCreatePayload
+  ): Promise<SupplierResponse> {
+    const response = await api.post<SupplierResponse>(
+      "/suppliers",
+      supplierData
+    );
+    return response.data;
+  },
 
-    static async putSuppliers(id: number, data: Supplier) {
-        return api.patch(`${SupplierRoute.putSuppliers}/${id}`, data);
-    }
+  // PATCH - Actualizar proveedor
+  async updateSupplier(
+    id: number,
+    supplierData: SupplierUpdatePayload
+  ): Promise<SupplierResponse> {
+    const response = await api.patch<SupplierResponse>(
+      `/suppliers/${id}`,
+      supplierData
+    );
+    return response.data;
+  },
 
-    static async deleteSuppliers(id: number) {
-        return api.delete(`${SupplierRoute.deleteSuppliers}/${id}`);
-    }
-}
+  // DELETE - Eliminar proveedor
+  async deleteSupplier(id: number): Promise<SupplierDeleteResponse> {
+    const response = await api.delete<SupplierDeleteResponse>(
+      `/suppliers/${id}`
+    );
+    return response.data;
+  },
+
+  // POST - Sincronizar proveedores desde ERP
+  async syncSuppliers(
+    syncData: SupplierSyncPayload
+  ): Promise<SupplierSyncResponse> {
+    const response = await api.post<SupplierSyncResponse>(
+      "/suppliers/sync",
+      syncData
+    );
+    return response.data;
+  },
+};

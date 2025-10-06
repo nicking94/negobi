@@ -2,11 +2,15 @@ export interface ApiError {
   response?: {
     data?: {
       message?: string;
+      statusCode?: number;
+      success?: boolean;
     };
     status?: number;
   };
   status?: number;
   message?: string;
+  statusCode?: number;
+  success?: boolean;
 }
 
 export type OrganizationPayload = {
@@ -168,6 +172,173 @@ export type OrganizationType = {
   companies?: string[];
   roles?: string[];
   logo?: string;
+};
+
+export type SupplierType = {
+  id: number;
+  companyId: number;
+  supplier_code: string;
+  legal_name: string;
+  tax_document_type: string;
+  tax_document_number: string;
+  person_type: string;
+  email: string;
+  main_phone: string;
+  mobile_phone: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone: string;
+  commercial_name: string;
+  address: string;
+  fiscal_address: string;
+  zip_code: string;
+  paymentTermId: number;
+  credit_limit: number;
+  credit_days: number;
+  notes: string;
+  balance_due: number;
+  advance_balance: number;
+  last_purchase_date: string;
+  last_purchase_number: string;
+  last_purchase_amount: number;
+  last_payment_date: string;
+  last_payment_number: string;
+  last_payment_amount: number;
+  is_active: boolean;
+  created_by: string;
+  updated_by: string;
+
+  // Additional fields from responses
+  external_code?: string;
+  sync_with_erp?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};
+
+export type SupplierCreatePayload = Omit<
+  SupplierType,
+  | "id"
+  | "external_code"
+  | "sync_with_erp"
+  | "created_at"
+  | "updated_at"
+  | "deleted_at"
+>;
+
+export type SupplierUpdatePayload = Partial<SupplierCreatePayload>;
+
+export type SupplierResponse = {
+  success: boolean;
+  data: SupplierType;
+};
+
+// Actualiza en tus types:
+export type SuppliersListResponse = {
+  success: boolean;
+  data: {
+    data: SupplierType[];
+    totalPages: number;
+    total: number;
+  };
+};
+
+export type SupplierDeleteResponse = {
+  success: boolean;
+  data: {
+    message: string;
+  };
+};
+
+// Sync Types
+export type SupplierSyncPayload = {
+  companyId: number;
+  data: SupplierCreatePayload[];
+};
+
+export type SupplierSyncResponse = {
+  success: boolean;
+  data: {
+    message: string;
+  };
+};
+
+// Query Parameters
+export type SupplierQueryType = {
+  page: number;
+  itemsPerPage: number;
+  order?: "ASC" | "DESC";
+  search?: string;
+  companyId?: number;
+  supplier_code?: string;
+  legal_name?: string;
+  tax_document_type?: string;
+  tax_document_number?: string;
+  person_type?: string;
+  email?: string;
+  contact_person?: string;
+  commercial_name?: string;
+  paymentTermId?: number;
+  is_active?: boolean;
+};
+
+export type PaymentTermType = {
+  id: number;
+  term_name: string;
+  term_description: string;
+  number_of_days: number;
+  is_active: boolean;
+  external_code?: string;
+  sync_with_erp?: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+};
+
+export type PaymentTermCreatePayload = {
+  term_name: string;
+  term_description: string;
+  number_of_days: number;
+  is_active: boolean;
+};
+
+export type PaymentTermUpdatePayload = Partial<PaymentTermCreatePayload>;
+
+export type PaymentTermsResponse = {
+  success: boolean;
+  data: PaymentTermType[];
+};
+
+export type PaymentTermResponse = {
+  success: boolean;
+  data: PaymentTermType;
+};
+
+export type PaginatedPaymentTermsResponse = {
+  success: boolean;
+  data: {
+    data: PaymentTermType[];
+    totalPages: number;
+    total: number;
+  };
+};
+
+export type PaymentTermDeleteResponse = {
+  success: boolean;
+  data: {
+    message: string;
+  };
+};
+
+export type GetPaymentTermsParams = {
+  page?: number;
+  itemsPerPage?: number;
+  order?: "ASC" | "DESC";
+  search?: string;
+  term_name?: string;
+  term_description?: string;
+  number_of_days?: number;
+  is_active?: boolean;
 };
 
 export type OrganizationQueryType = {

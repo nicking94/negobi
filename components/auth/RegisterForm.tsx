@@ -108,6 +108,14 @@ export function RegisterForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const result = await onRegister(values);
     console.log("Resultado del registro:", result);
+    if (result?.success) {
+      toast.success("Redirigiendo al login...");
+
+      // Redirige después de un breve delay para que el usuario vea el mensaje de éxito
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+    }
   };
 
   return (

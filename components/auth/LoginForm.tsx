@@ -153,25 +153,6 @@ export function LoginForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="rememberMe"
-          render={({ field }) => (
-            <FormItem className="flex items-center space-x-2">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  className="border-2 border-[var(--color-green_l)] data-[state=checked]:bg-[var(--color-green_b)]"
-                />
-              </FormControl>
-              <FormLabel className="text-sm font-normal text-[var(--color-gray_b)] cursor-pointer">
-                Mantener sesión iniciada
-              </FormLabel>
-            </FormItem>
-          )}
-        />
-
         <div className="w-full flex justify-center pt-2">
           <Button
             type="submit"
