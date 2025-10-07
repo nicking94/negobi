@@ -1,53 +1,110 @@
-import { UsersService } from "@/services/users/users.service";
+// hooks/users/useGetUsers.ts
+import {
+  UsersService,
+  UsersListResponse,
+} from "@/services/users/users.service";
 import { useEffect, useState, useCallback } from "react";
+import { OrganizationQueryType, UserType, ApiError } from "@/types";
 
-const useGetUsers = () => {
-    const [loading, setLoading] = useState(false);
-    const [usersResponse, setUsersResponse] = useState([]);
-    const [modified, setModified] = useState(false);
-    const [page, setPage] = useState(1);
-    const [totalPage, setTotalPage] = useState(0);
-    const [total, setTotal] = useState(0);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [search, setSearch] = useState("");
-    const [companyId, setCompanyId] = useState(4);
+interface UseGetUsersReturn {
+  loading: boolean;
+  users: UserType[];
+  modified: boolean;
+  setModified: (modified: boolean) => void;
+  page: number;
+  totalPage: number;
+  total: number;
+  itemsPerPage: number;
+  search: string;
+  companyId: number;
+  error: string | null;
+  setPage: (page: number) => void;
+  setItemsPerPage: (itemsPerPage: number) => void;
+  setSearch: (search: string) => void;
+  setCompanyId: (companyId: number) => void;
+  refetch: () => void;
+}
 
-    const getUsers = useCallback(async () => {
-        try {
-            setLoading(true);
-            const { data } = await UsersService.getUsers({
-                search,
-                page,
-                itemsPerPage,
-                companyId,
-            });
-            setUsersResponse(data.data.data);
-            setTotalPage(data.data.totalPages);
-            setTotal(data.data.total);
-        } catch (e) {
-            return e;
-        } finally {
-            setLoading(false);
-        }
-    }, [search, page, itemsPerPage]);
+const useGetUsers = (): UseGetUsersReturn => {
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [modified, setModified] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [search, setSearch] = useState("");
+  const [companyId, setCompanyId] = useState(4);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        getUsers();
-    }, [modified, search, page, itemsPerPage, getUsers]);
+  const getUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    return {
-        setModified,
-        loading,
-        usersResponse,
-        modified,
-        totalPage,
-        total,
-        setPage,
-        setItemsPerPage,
-        setSearch,
+      const params: OrganizationQueryType = {
+        search: search.trim(),
         page,
         itemsPerPage,
-    };
+        companyId,
+      };
+
+      const response: UsersListResponse = await UsersService.getUsers(params);
+
+      if (response.success && response.data) {
+        setUsers(response.data.data || []);
+        setTotalPage(response.data.totalPages || 0);
+        setTotal(response.data.total || 0);
+      } else {
+        console.warn("⚠️ Respuesta inesperada:", response);
+        setUsers([]);
+        setTotalPage(0);
+        setTotal(0);
+      }
+    } catch (err: unknown) {
+      console.error("❌ [useGetUsers] Error fetching users:", err);
+
+      const apiError = err as ApiError;
+      const errorMessage =
+        apiError.response?.data?.message ||
+        apiError.message ||
+        "Error al cargar los usuarios";
+
+      setError(errorMessage);
+      setUsers([]);
+      setTotalPage(0);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, page, itemsPerPage, companyId]);
+
+  useEffect(() => {
+    getUsers();
+  }, [modified, search, page, itemsPerPage, companyId, getUsers]);
+
+  const refetch = useCallback(() => {
+    setModified((prev) => !prev);
+  }, []);
+
+  return {
+    loading,
+    users,
+    modified,
+    setModified,
+    totalPage,
+    total,
+    page,
+    itemsPerPage,
+    search,
+    companyId,
+    error,
+    setPage,
+    setItemsPerPage,
+    setSearch,
+    setCompanyId,
+    refetch,
+  };
 };
 
 export default useGetUsers;

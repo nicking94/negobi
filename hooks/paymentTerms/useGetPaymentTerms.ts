@@ -1,7 +1,7 @@
 // hooks/paymentTerms/useGetPaymentTerms.ts
 import { paymentTermsService } from "@/services/paymentTerms/paymentTerms.service";
 import { useEffect, useState, useCallback } from "react";
-import { PaymentTermType } from "@/types";
+import { GetPaymentTermsParams, PaymentTermType } from "@/types";
 
 const useGetPaymentTerms = () => {
   const [loading, setLoading] = useState(false);
@@ -20,15 +20,16 @@ const useGetPaymentTerms = () => {
       setLoading(true);
       setError(null);
 
-      const params = {
+      const params: GetPaymentTermsParams = {
         search: search.trim(),
         page,
         itemsPerPage,
-        order: "ASC" as const,
-        ...(statusFilter !== "all" && {
-          is_active: statusFilter === "active",
-        }),
+        order: "ASC",
       };
+
+      if (statusFilter !== "all") {
+        params.is_active = statusFilter === "active";
+      }
 
       const response = await paymentTermsService.getPaymentTerms(params);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -50,185 +50,288 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import * as z from "zod";
-import { UsersService } from "@/services/users/users.service";
 import useGetUsers from "@/hooks/users/useGetUsers";
+import { useCreateUser } from "@/hooks/users/useCreateUsers";
+import { useUpdateUser } from "@/hooks/users/useUpdateUser";
+import { useDeleteUser } from "@/hooks/users/useDeleteUser";
+import {
+  CreateUserPayload,
+  UpdateUserPayload,
+} from "@/services/users/users.service";
+import { UserType } from "@/types";
+import { useUserRoles } from "@/hooks/users/useUserRoles";
+import { useRoleTranslation } from "@/hooks/translation/useRoleTranslation";
 
-const userSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  username: z.string().min(3, "El nombre de usuario es obligatorio"),
-  password: z
-    .string()
-    .min(6, "La contraseña debe tener mínimo 6 caracteres")
-    .optional(),
-  first_name: z.string().min(1, "El nombre es obligatorio"),
-  last_name: z.string().min(1, "El apellido es obligatorio"),
-  phone: z.string().optional(),
-  role: z.enum(["superAdmin", "admin", "sellers", "user"], {
-    error: "Selecciona un rol",
-  }),
-  seller_code: z.string().optional(),
-});
+const createUserSchema = (availableRoles: string[] = []) => {
+  return z.object({
+    email: z.string().email("Correo inválido"),
+    username: z.string().min(3, "El nombre de usuario es obligatorio"),
+    password: z
+      .string()
+      .min(6, "La contraseña debe tener mínimo 6 caracteres")
+      .optional()
+      .or(z.literal("")),
 
-type UserFormValues = z.infer<typeof userSchema>;
+    first_name: z.string().min(1, "El nombre es obligatorio"),
+    last_name: z.string().min(1, "El apellido es obligatorio"),
+    phone: z.string().optional(),
 
-export type User = {
-  id?: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  role: "superAdmin" | "admin" | "user" | "sellers";
-  seller_code: string;
-  branch_id: number;
-  company_id: number;
-  status?: "active" | "inactive";
-  created_at?: Date;
+    // 🚀 validación dinámica de roles
+    role: z.string().refine((val) => availableRoles.includes(val), {
+      message: "Selecciona un rol válido",
+    }),
+
+    seller_code: z.string().optional(),
+  });
 };
+
+type UserFormValues = z.infer<ReturnType<typeof createUserSchema>>;
 
 const UsersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // ✅ Usar el hook de traducción
+  const { translateRole } = useRoleTranslation();
+
+  // Obtener roles desde la API
+  const {
+    data: rolesData,
+    loading: rolesLoading,
+    error: rolesError,
+  } = useUserRoles();
+
+  // DEBUG: Ver qué devuelve exactamente la API
+  useEffect(() => {
+    console.log("🔍 rolesData:", rolesData);
+    console.log("🔍 rolesLoading:", rolesLoading);
+    console.log("🔍 rolesError:", rolesError);
+  }, [rolesData, rolesLoading, rolesError]);
+
+  // Obtener los nombres de los roles disponibles de forma más robusta
+  const getAvailableRoles = () => {
+    if (!rolesData) return [];
+
+    try {
+      // Según el Swagger, la respuesta es: { success: true, data: { message: "Operación completada exitosamente" } }
+      // Pero esto no parece contener los roles. Necesitamos ver qué devuelve realmente.
+
+      // Si la respuesta contiene un array de roles en data.message
+      if (rolesData.data?.message) {
+        const parsed = JSON.parse(rolesData.data.message);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+
+      // Si los roles vienen en otra propiedad
+      if (Array.isArray(rolesData.data)) {
+        return rolesData.data;
+      }
+
+      // Si los roles vienen directamente en data
+      if (rolesData.data && typeof rolesData.data === "object") {
+        // Intentar extraer roles de diferentes formas
+        const rolesArray = Object.values(rolesData.data).flat();
+        return Array.isArray(rolesArray) ? rolesArray : [];
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error parsing roles:", error);
+      return [];
+    }
+  };
+
+  const availableRoles = getAvailableRoles();
+
+  // DEBUG: Ver los roles disponibles
+  useEffect(() => {
+    console.log("🎯 Available roles:", availableRoles);
+  }, [availableRoles]);
+
+  // Crear schema basado en los roles disponibles
+  const userSchema = createUserSchema(availableRoles);
+
+  // Usar los hooks
+  const {
+    users,
+    page,
+    totalPage,
+    total,
+    itemsPerPage,
+    search,
+    setPage,
+    setItemsPerPage,
+    setSearch,
+    error: usersError,
+    refetch: refetchUsers,
+  } = useGetUsers();
+
+  const {
+    createUser: createUserHook,
+    loading: creatingUser,
+    reset: resetCreate,
+  } = useCreateUser({
+    onSuccess: () => {
+      toast.success("Usuario creado exitosamente");
+      setIsCreateDialogOpen(false);
+      form.reset();
+      resetCreate();
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const {
+    updateUser: updateUserHook,
+    loading: updatingUser,
+    reset: resetUpdate,
+  } = useUpdateUser({
+    onSuccess: () => {
+      toast.success("Usuario actualizado exitosamente");
+      setIsEditDialogOpen(false);
+      form.reset();
+      resetUpdate();
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const { deleteUser: deleteUserHook } = useDeleteUser({
+    onSuccess: () => {
+      toast.success("Usuario eliminado exitosamente");
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: selectedUser
-      ? {
-          ...selectedUser,
-        }
-      : {
-          email: "",
-          username: "",
-          password: "",
-          first_name: "",
-          last_name: "",
-          phone: "",
-          role: "user",
-          seller_code: "",
-        },
+    defaultValues: {
+      email: "",
+      username: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      phone: "",
+      role: availableRoles[0] || "user",
+      seller_code: "",
+    },
   });
 
-  // Estado para el formulario de creación/edición
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    role: "user" as "superAdmin" | "admin" | "user" | "sellers",
-    phone: "",
-    username: "",
-    branch_id: 0,
-    company_id: 0,
-    first_name: "",
-    last_name: "",
-    seller_code: "",
-  });
+  useEffect(() => {
+    console.log("rolesData:", rolesData);
+  }, [rolesData]);
 
-  // Roles para los filtros
-  const roles = [
-    { id: "1", name: "superAdmin", label: "Super Administrador" },
-    { id: "2", name: "admin", label: "Administrador" },
-    { id: "3", name: "user", label: "Usuario" },
-    { id: "4", name: "sellers", label: "Vendedor" },
-  ];
+  // Actualizar form cuando cambian los roles disponibles
+  useEffect(() => {
+    if (availableRoles.length > 0 && !selectedUser) {
+      form.reset({
+        ...form.getValues(),
+        role: availableRoles[0],
+      });
+    }
+  }, [availableRoles, form, selectedUser]);
 
-  // Estados para los filtros
+  // Efecto para resetear form cuando se cierran los diálogos
+  useEffect(() => {
+    if (!isEditDialogOpen && !isCreateDialogOpen) {
+      form.reset();
+      setSelectedUser(null);
+    }
+  }, [isEditDialogOpen, isCreateDialogOpen, form]);
+
+  // Efecto para cargar datos del usuario en edición
+  useEffect(() => {
+    if (selectedUser && isEditDialogOpen && availableRoles.length > 0) {
+      form.reset({
+        email: selectedUser.email,
+        username: selectedUser.username,
+        password: "",
+        first_name: selectedUser.first_name,
+        last_name: selectedUser.last_name,
+        phone: selectedUser.phone,
+        role: selectedUser.role,
+        seller_code: selectedUser.seller_code || "",
+      });
+    }
+  }, [selectedUser, isEditDialogOpen, form, availableRoles]);
+
+  // Status options para filtros
   const statusOptions = [
     { id: "1", name: "active", label: "Activo" },
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
 
-  const handleViewUser = (user: User) => {
+  const handleViewUser = (user: UserType) => {
     setSelectedUser(user);
     setIsViewDialogOpen(true);
   };
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: UserType) => {
     setSelectedUser(user);
-    form.reset(user);
-
     setIsEditDialogOpen(true);
   };
 
-  const {
-    usersResponse,
-    page,
-    itemsPerPage,
-    setItemsPerPage,
-    setModified,
-    setPage,
-    setSearch,
-    total,
-    totalPage,
-  } = useGetUsers();
-
   const handleCreateUser = () => {
-    setFormData({
-      email: "",
-      password: "",
-      role: "user",
-      phone: "",
-      username: "",
-      branch_id: 1,
-      company_id: 1,
-      first_name: "",
-      last_name: "",
-      seller_code: "",
-    });
+    setSelectedUser(null);
     setIsCreateDialogOpen(true);
   };
 
   const handleSaveUser = async (data: UserFormValues) => {
-    const newUser: User = {
-      ...data,
-      branch_id: 4,
-      company_id: 4,
-      phone: data.phone ?? "", //
-      seller_code: data.seller_code ?? "",
-    };
     if (selectedUser) {
-      const response = await UsersService.patchUser(selectedUser.id!, newUser);
-      if (response.status === 200) {
-        toast.success("Usuario actualizado exitosamente");
-        setIsEditDialogOpen(false);
-        setIsCreateDialogOpen(false);
-        setModified((prev) => !prev);
-        form.reset();
-      } else {
-        toast.error("Error al crear el usuario");
-      }
-    } else {
-      // Crear nuevo usuario
+      // ✅ Actualizar solo campos modificados y evitar conflictos de email
+      const updateData: UpdateUserPayload = {
+        username: data.username,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone,
+        role: data.role,
+        seller_code: data.seller_code,
+      };
 
-      const response = await UsersService.postUser(newUser);
-      if (response.status === 201) {
-        toast.success("Usuario creado exitosamente");
-        setIsEditDialogOpen(false);
-        setIsCreateDialogOpen(false);
-        setModified((prev) => !prev);
-        form.reset();
-      } else {
-        toast.error("Error al crear el usuario");
+      // ✅ Solo incluir email si realmente cambió
+      if (data.email !== selectedUser.email) {
+        updateData.email = data.email;
       }
+
+      await updateUserHook(selectedUser.id, updateData);
+    } else {
+      // Crear nuevo usuario (tu código existente)
+      const createData: CreateUserPayload = {
+        email: data.email,
+        password: data.password || "",
+        username: data.username,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone || "",
+        role: data.role,
+        seller_code: data.seller_code || "",
+        branch_id: 4,
+        company_id: 4,
+      };
+
+      await createUserHook(createData);
     }
   };
 
-  const handleDeleteUser = (user: User) => {
-    toast.error(`¿Eliminar el usuario"${user.first_name}"?`, {
+  const handleDeleteUser = (user: UserType) => {
+    toast.error(`¿Eliminar el usuario "${user.first_name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          const response = await UsersService.deleteUser(user.id as string);
-          if (response.status === 200) {
-            toast.success("Usuario eliminado exitosamente");
-            setModified((prev) => !prev);
-          } else {
-            toast.error("Error al eliminar el usuario");
-          }
+          await deleteUserHook(user.id);
         },
       },
       cancel: {
@@ -240,25 +343,30 @@ const UsersPage = () => {
     });
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "No especificada";
-    return format(date, "dd/MM/yyyy hh:mm a");
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "superAdmin":
-        return "Super Admin";
-      case "admin":
-        return "Administrador";
-      case "sellers":
-        return "Vendedor";
-      default:
-        return "Usuario";
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "No especificada";
+    try {
+      const date = new Date(dateString);
+      return format(date, "dd/MM/yyyy hh:mm a");
+    } catch {
+      return "Fecha inválida";
     }
   };
 
-  const columns: ColumnDef<User>[] = [
+  // ✅ Eliminada la función getRoleLabel y reemplazada por translateRole
+
+  // Filtrar usuarios basado en los filtros
+  const filteredUsers = users.filter((user) => {
+    const roleMatch = roleFilter === "all" || user.role === roleFilter;
+    const statusMatch =
+      statusFilter === "all" ||
+      (statusFilter === "active" && user.is_active) ||
+      (statusFilter === "inactive" && !user.is_active);
+
+    return roleMatch && statusMatch;
+  });
+
+  const columns: ColumnDef<UserType>[] = [
     {
       accessorKey: "username",
       header: "Usuario",
@@ -282,14 +390,17 @@ const UsersPage = () => {
       accessorKey: "phone",
       header: "Teléfono",
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("phone")}</div>
+        <div className="font-medium">{row.getValue("phone") || "N/A"}</div>
       ),
     },
     {
       accessorKey: "role",
       header: "Rol",
       cell: ({ row }) => (
-        <div className="font-medium">{getRoleLabel(row.getValue("role"))}</div>
+        <div className="font-medium">
+          {/* ✅ Usar translateRole aquí */}
+          {translateRole(row.getValue("role"))}
+        </div>
       ),
     },
     {
@@ -309,12 +420,10 @@ const UsersPage = () => {
         return (
           <div
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              status === true
-                ? "bg-green_xxl text-green_b"
-                : "bg-red_xxl text-red_b"
+              status ? "bg-green_xxl text-green_b" : "bg-red_xxl text-red_b"
             }`}
           >
-            {status === true ? "Activo" : "Inactivo"}
+            {status ? "Activo" : "Inactivo"}
           </div>
         );
       },
@@ -323,7 +432,7 @@ const UsersPage = () => {
       accessorKey: "created_at",
       header: "Creado",
       cell: ({ row }) => {
-        const date = row.getValue("created_at") as Date;
+        const date = row.getValue("created_at") as string;
         return <div className="font-medium">{formatDate(date)}</div>;
       },
     },
@@ -391,14 +500,28 @@ const UsersPage = () => {
             </h1>
           </div>
 
-          <div className=" flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className=" flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+          {/* Mostrar errores de carga */}
+          {usersError && (
+            <div className="bg-red_xxl border border-red_b text-red_b px-4 py-3 rounded mb-4">
+              {usersError}
+            </div>
+          )}
+
+          {rolesError && (
+            <div className="bg-red_xxl border border-red_b text-red_b px-4 py-3 rounded mb-4">
+              Error al cargar los roles: {rolesError.message}
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
                   placeholder="Buscar..."
                   className="pl-8"
+                  value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
@@ -420,9 +543,10 @@ const UsersPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Todos los roles</SelectItem>
-                          {roles.map((role) => (
-                            <SelectItem key={role.id} value={role.name}>
-                              {role.label}
+                          {availableRoles.map((role: string, index: number) => (
+                            <SelectItem key={index} value={role}>
+                              {/* ✅ Usar translateRole aquí también */}
+                              {translateRole(role)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -457,15 +581,16 @@ const UsersPage = () => {
             <Button
               onClick={handleCreateUser}
               className="flex items-center gap-2"
+              disabled={creatingUser || updatingUser || rolesLoading}
             >
               <Plus className="h-4 w-4" />
               <span>Crear Usuario</span>
             </Button>
           </div>
 
-          <DataTable<User, User>
+          <DataTable<UserType, UserType>
             columns={columns}
-            data={usersResponse || []}
+            data={filteredUsers}
             noResultsText="No se encontraron usuarios"
             page={page}
             setPage={setPage}
@@ -508,7 +633,7 @@ const UsersPage = () => {
                   </Label>
                   <div className="flex items-center mt-1 gap-2">
                     <Phone className="h-4 w-4 text-gray_m" />
-                    <p>{selectedUser.phone}</p>
+                    <p>{selectedUser.phone || "N/A"}</p>
                   </div>
                 </div>
               </div>
@@ -533,7 +658,8 @@ const UsersPage = () => {
                   </Label>
                   <div className="flex items-center mt-1 gap-2">
                     <BadgeCheck className="h-4 w-4 text-gray_m" />
-                    <p>{getRoleLabel(selectedUser.role)}</p>
+                    {/* ✅ Usar translateRole aquí */}
+                    <p>{translateRole(selectedUser.role)}</p>
                   </div>
                 </div>
               </div>
@@ -558,12 +684,12 @@ const UsersPage = () => {
                   <div className="mt-1">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        selectedUser.status === "active"
+                        selectedUser.is_active
                           ? "bg-green_xxl text-green_b"
                           : "bg-red_xxl text-red_b"
                       }`}
                     >
-                      {selectedUser.status === "active" ? "Activo" : "Inactivo"}
+                      {selectedUser.is_active ? "Activo" : "Inactivo"}
                     </span>
                   </div>
                 </div>
@@ -586,14 +712,14 @@ const UsersPage = () => {
                   <Label htmlFor="view-branch" className="text-sm font-medium">
                     ID Sucursal
                   </Label>
-                  <p className="mt-1">{selectedUser.branch_id}</p>
+                  <p className="mt-1">{selectedUser.branch_id || "N/A"}</p>
                 </div>
 
                 <div>
                   <Label htmlFor="view-company" className="text-sm font-medium">
                     ID Empresa
                   </Label>
-                  <p className="mt-1">{selectedUser.company_id}</p>
+                  <p className="mt-1">{selectedUser.company_id || "N/A"}</p>
                 </div>
               </div>
 
@@ -601,9 +727,7 @@ const UsersPage = () => {
                 <Label htmlFor="view-created" className="text-sm font-medium">
                   Fecha de Creación
                 </Label>
-                <p className="mt-1">
-                  {formatDate(selectedUser.created_at ?? null)}
-                </p>
+                <p className="mt-1">{formatDate(selectedUser.created_at)}</p>
               </div>
             </div>
           )}
@@ -630,7 +754,7 @@ const UsersPage = () => {
           }
         }}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-gray_xxl sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {selectedUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
@@ -642,159 +766,166 @@ const UsersPage = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={form.handleSubmit(handleSaveUser)}
-            className="grid gap-4 py-4"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="ejemplo@empresa.com"
-                  {...form.register("email")}
-                />
-                {form.formState.errors.email && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="username">Nombre de Usuario *</Label>
-                <Input
-                  id="username"
-                  placeholder="nombre.usuario"
-                  {...form.register("username")}
-                />
-                {form.formState.errors.username && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.username.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {!selectedUser && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  {...form.register("password")}
-                />
-                {form.formState.errors.password && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.password.message}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">Nombre *</Label>
-                <Input
-                  id="first_name"
-                  placeholder="Juan"
-                  {...form.register("first_name")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name">Apellido *</Label>
-                <Input
-                  id="last_name"
-                  placeholder="Pérez"
-                  {...form.register("last_name")}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input
-                  id="phone"
-                  placeholder="+1234567890"
-                  {...form.register("phone")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Rol *</Label>
-                <Controller
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Seleccionar rol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="superAdmin">
-                          Super Administrador
-                        </SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="sellers">Vendedor</SelectItem>
-                        <SelectItem value="user">Usuario</SelectItem>
-                      </SelectContent>
-                    </Select>
+          {rolesLoading ? (
+            <div className="py-4 text-center">Cargando roles...</div>
+          ) : (
+            <form
+              onSubmit={form.handleSubmit(handleSaveUser)}
+              className="grid gap-4 py-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="ejemplo@empresa.com"
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.email.message}
+                    </p>
                   )}
-                />
-              </div>
-            </div>
+                </div>
 
-            {form.watch("role") === "sellers" && (
-              <div className="space-y-2">
-                <Label htmlFor="seller_code">Código de Vendedor</Label>
-                <Input
-                  id="seller_code"
-                  placeholder="VD001"
-                  {...form.register("seller_code")}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="username">Nombre de Usuario *</Label>
+                  <Input
+                    id="username"
+                    placeholder="nombre.usuario"
+                    {...form.register("username")}
+                  />
+                  {form.formState.errors.username && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.username.message}
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
 
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="branch_id">ID Sucursal</Label>
-                <Input
-                  id="branch_id"
-                  type="number"
-                  placeholder="1"
-                  {...form.register("branch_id")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company_id">ID Empresa</Label>
-                <Input
-                  id="company_id"
-                  type="number"
-                  placeholder="1"
-                  {...form.register("company_id")}
-                />
-              </div>
-            </div> */}
+              {!selectedUser && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...form.register("password")}
+                  />
+                  {form.formState.errors.password && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+              )}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setIsCreateDialogOpen(false);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {selectedUser ? "Actualizar" : "Crear"} Usuario
-              </Button>
-            </DialogFooter>
-          </form>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">Nombre *</Label>
+                  <Input
+                    id="first_name"
+                    placeholder="Juan"
+                    {...form.register("first_name")}
+                  />
+                  {form.formState.errors.first_name && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.first_name.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Apellido *</Label>
+                  <Input
+                    id="last_name"
+                    placeholder="Pérez"
+                    {...form.register("last_name")}
+                  />
+                  {form.formState.errors.last_name && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.last_name.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Teléfono</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+1234567890"
+                    {...form.register("phone")}
+                  />
+                </div>
+
+                <div className=" space-y-2">
+                  <Label htmlFor="role">Rol *</Label>
+                  <Controller
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger id="role" className="w-full">
+                          <SelectValue placeholder="Seleccionar rol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableRoles.map((role: string, index: number) => (
+                            <SelectItem key={index} value={role}>
+                              {/* ✅ Usar translateRole aquí también */}
+                              {translateRole(role)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.role && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.role.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {form.watch("role") === "sellers" && (
+                <div className="space-y-2">
+                  <Label htmlFor="seller_code">Código de Vendedor</Label>
+                  <Input
+                    id="seller_code"
+                    placeholder="VD001"
+                    {...form.register("seller_code")}
+                  />
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setIsCreateDialogOpen(false);
+                  }}
+                  disabled={creatingUser || updatingUser}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={creatingUser || updatingUser}>
+                  {creatingUser || updatingUser
+                    ? "Procesando..."
+                    : selectedUser
+                    ? "Actualizar"
+                    : "Crear"}{" "}
+                  Usuario
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

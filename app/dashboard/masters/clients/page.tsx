@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -835,8 +836,13 @@ const ClientsPage = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
-              {editingClient ? "Editar cliente" : "Nuevo cliente"}
+              {editingClient ? "Editar cliente" : "Crear Nuevo cliente"}
             </DialogTitle>
+            <DialogDescription>
+              {editingClient
+                ? "Modifica la información del cliente seleccionado"
+                : "Completa la información para crear un nuevo cliente"}
+            </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>

@@ -6,6 +6,7 @@ import { PaymentTermResponse, PaymentTermUpdatePayload } from "@/types";
 interface UsePatchPaymentTermsProps {
   onSuccess?: (data: PaymentTermResponse) => void;
   onError?: (error: Error) => void;
+  refetch?: () => void; // ← Agregar esta prop
 }
 
 interface UsePatchPaymentTermsReturn {
@@ -22,6 +23,7 @@ interface UsePatchPaymentTermsReturn {
 export const usePatchPaymentTerms = ({
   onSuccess,
   onError,
+  refetch, // ← Recibir la prop
 }: UsePatchPaymentTermsProps = {}): UsePatchPaymentTermsReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export const usePatchPaymentTerms = ({
 
         setData(response);
         onSuccess?.(response);
+        refetch?.(); // ← Llamar refetch después del éxito
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -57,7 +60,7 @@ export const usePatchPaymentTerms = ({
         setLoading(false);
       }
     },
-    [onSuccess, onError]
+    [onSuccess, onError, refetch] // ← Agregar refetch a las dependencias
   );
 
   const reset = useCallback(() => {

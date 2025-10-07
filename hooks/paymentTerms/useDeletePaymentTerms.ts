@@ -6,6 +6,7 @@ import { PaymentTermDeleteResponse } from "@/types";
 interface UseDeletePaymentTermsProps {
   onSuccess?: (data: PaymentTermDeleteResponse) => void;
   onError?: (error: Error) => void;
+  refetch?: () => void;
 }
 
 interface UseDeletePaymentTermsReturn {
@@ -19,6 +20,7 @@ interface UseDeletePaymentTermsReturn {
 export const useDeletePaymentTerms = ({
   onSuccess,
   onError,
+  refetch,
 }: UseDeletePaymentTermsProps = {}): UseDeletePaymentTermsReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export const useDeletePaymentTerms = ({
 
         setData(response);
         onSuccess?.(response);
+        refetch?.();
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -45,7 +48,7 @@ export const useDeletePaymentTerms = ({
         setLoading(false);
       }
     },
-    [onSuccess, onError]
+    [onSuccess, onError, refetch]
   );
 
   const reset = useCallback(() => {

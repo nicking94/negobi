@@ -13,6 +13,31 @@ export interface ApiError {
   success?: boolean;
 }
 
+export interface UserType {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  is_active: boolean;
+  role: string;
+  seller_code?: string;
+  external_code?: string;
+  erp_cod_sucu?: string;
+  company_id?: number;
+  branch_id?: number;
+  location?: string;
+  remember_password?: string;
+  rm_password_expired?: string;
+  sync_with_erp?: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+  externalId?: number;
+  dni?: string;
+}
+
 export type OrganizationPayload = {
   name: string;
   contact_email?: string;

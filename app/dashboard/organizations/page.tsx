@@ -417,6 +417,11 @@ const OrganizationsPage = () => {
             <DialogTitle>
               {editingOrg ? "Editar organización" : "Nueva organización"}
             </DialogTitle>
+            <DialogDescription>
+              {editingOrg
+                ? "Modifica la información de la organización seleccionada"
+                : "Completa la información para crear una nueva organización"}
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>

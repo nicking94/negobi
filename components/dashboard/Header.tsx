@@ -156,15 +156,7 @@ const DashboardHeader = ({
                         Usuarios
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
-                      <Link
-                        href="/dashboard/settings/roles"
-                        className="flex items-center w-full"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Roles
-                      </Link>
-                    </DropdownMenuItem>
+
                     <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                       <Link
                         href="/dashboard/settings/general"

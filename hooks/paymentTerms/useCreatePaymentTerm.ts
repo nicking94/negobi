@@ -6,6 +6,7 @@ import { PaymentTermResponse, PaymentTermCreatePayload } from "@/types";
 interface UseCreatePaymentTermProps {
   onSuccess?: (data: PaymentTermResponse) => void;
   onError?: (error: Error) => void;
+  refetch?: () => void;
 }
 
 interface UseCreatePaymentTermReturn {
@@ -19,6 +20,7 @@ interface UseCreatePaymentTermReturn {
 export const useCreatePaymentTerm = ({
   onSuccess,
   onError,
+  refetch,
 }: UseCreatePaymentTermProps = {}): UseCreatePaymentTermReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export const useCreatePaymentTerm = ({
 
         setData(response);
         onSuccess?.(response);
+        refetch?.();
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -45,7 +48,7 @@ export const useCreatePaymentTerm = ({
         setLoading(false);
       }
     },
-    [onSuccess, onError]
+    [onSuccess, onError, refetch]
   );
 
   const reset = useCallback(() => {

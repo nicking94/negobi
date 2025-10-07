@@ -1,32 +1,49 @@
-// services/users/users.service.ts
-import { User } from "@/app/dashboard/users/page";
-import * as UserRoutes from "./user.routes";
 import api from "@/utils/api";
-import { ApiKeyType, OrganizationQueryType } from "@/types";
+import * as UserRoutes from "./user.routes";
+import {
+  OrganizationQueryType,
+  ApiKeyType,
+  UserType,
+  CompanyType,
+} from "@/types";
 
-export interface UserProfile {
-  id: number;
-  username: string;
+export interface UserProfile extends UserType {
+  company?: CompanyType;
+  api_key?: ApiKeyType;
+}
+
+export interface CreateUserPayload {
   email: string;
+  password: string;
+  role: string;
+  phone: string;
+  username: string;
+  branch_id?: number;
+  company_id?: number;
   first_name: string;
   last_name: string;
-  phone: string;
-  is_active: boolean;
-  role: string;
+  seller_code?: string;
+  external_code?: string;
+  erp_cod_sucu?: string;
+}
+
+export interface UpdateUserPayload {
+  dni?: string;
+  remember_password?: string;
+  rm_password_expired?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  username?: string;
+  role?: string;
   seller_code?: string;
   external_code?: string;
   erp_cod_sucu?: string;
   company_id?: number;
   branch_id?: number;
   location?: string;
-  remember_password?: string;
-  rm_password_expired?: string;
   sync_with_erp?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  deleted_at?: string | null;
-  company?: any;
-  api_key?: ApiKeyType;
 }
 
 export interface ChangePasswordData {
@@ -34,43 +51,117 @@ export interface ChangePasswordData {
   legal_tax_id: string;
 }
 
-// Interface para actualizar perfil según Swagger
-export interface UpdateProfileData {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
-  username?: string;
-  // Otros campos que acepte el endpoint según Swagger
+export interface UsersListResponse {
+  success: boolean;
+  data: {
+    page: number;
+    total: number;
+    itemsPerPage: number;
+    totalPages: number;
+    order: string;
+    data: UserType[];
+  };
+}
+
+export interface UserResponse {
+  success: boolean;
+  data: UserType;
+}
+
+export interface UserDeleteResponse {
+  success: boolean;
+  data: {
+    message: string;
+  };
+}
+
+export interface UserRolesResponse {
+  success: boolean;
+  data: {
+    message: string;
+  };
+}
+
+export interface SyncUsersPayload {
+  companyId: number;
+  data: CreateUserPayload[];
+}
+
+export interface SyncUsersResponse {
+  success: boolean;
+  data: Array<{
+    code: string;
+    sync: boolean;
+    error: string | null;
+    negobi_db_id: number;
+  }>;
 }
 
 export class UsersService {
-  static postUser(data: User) {
-    return api.post(UserRoutes.postUser, data);
+  // Crear usuario
+  static async createUser(data: CreateUserPayload): Promise<UserResponse> {
+    const response = await api.post(UserRoutes.postUser, data);
+    return response.data;
   }
 
-  static getUsers(data: OrganizationQueryType) {
-    return api.get(UserRoutes.getUsers, { params: data });
+  // Listar usuarios
+  static async getUsers(
+    params: OrganizationQueryType
+  ): Promise<UsersListResponse> {
+    const response = await api.get(UserRoutes.getUsers, { params });
+    return response.data;
   }
 
-  static patchUser(id: string, data: Partial<User>) {
-    return api.patch(`${UserRoutes.patchUser}/${id}`, data);
+  // Obtener usuario por ID
+  static async getUserById(id: number): Promise<UserResponse> {
+    const response = await api.get(`${UserRoutes.getUser}/${id}`);
+    return response.data;
   }
 
-  static deleteUser(id: string) {
-    return api.delete(`${UserRoutes.deleteUser}/${id}`);
+  // ✅ CORREGIDO - usa PATCH
+  static async updateUser(
+    id: number,
+    data: UpdateUserPayload
+  ): Promise<UserResponse> {
+    const response = await api.patch(`${UserRoutes.patchUser}/${id}`, data);
+    return response.data;
   }
 
-  static getProfile() {
-    return api.get(UserRoutes.getProfile);
+  // Eliminar usuario
+  static async deleteUser(id: number): Promise<UserDeleteResponse> {
+    const response = await api.delete(`${UserRoutes.deleteUser}/${id}`);
+    return response.data;
   }
 
-  // CORREGIDO: Usar la interfaz específica y asegurar el ID
-  static updateProfile(id: number, data: UpdateProfileData) {
-    return api.patch(`${UserRoutes.updateProfile}/${id}`, data);
+  // Obtener perfil del usuario logueado
+  static async getProfile(): Promise<UserResponse> {
+    const response = await api.get(UserRoutes.getProfile);
+    return response.data;
   }
 
-  static changePassword(data: ChangePasswordData) {
-    return api.put(UserRoutes.changePassword, data);
+  // Actualizar perfil (alias de updateUser pero para el perfil actual)
+  static async updateProfile(
+    id: number,
+    data: UpdateUserPayload
+  ): Promise<UserResponse> {
+    return this.updateUser(id, data);
+  }
+
+  // Cambiar contraseña
+  static async changePassword(data: ChangePasswordData): Promise<UserResponse> {
+    const response = await api.put(UserRoutes.changePassword, data);
+    return response.data;
+  }
+
+  // Obtener roles de usuario
+  static async getUserRoles(): Promise<UserRolesResponse> {
+    const response = await api.get(UserRoutes.getUserRoles);
+    return response.data;
+  }
+
+  // Sincronizar usuarios desde ERP
+  static async syncUsers(data: SyncUsersPayload): Promise<SyncUsersResponse> {
+    const response = await api.post(UserRoutes.syncUsers, data);
+    return response.data;
   }
 }

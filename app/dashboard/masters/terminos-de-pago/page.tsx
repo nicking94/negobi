@@ -85,6 +85,7 @@ const PaymentTermsPage = () => {
     statusFilter,
     setStatusFilter,
     error,
+    refetch,
   } = useGetPaymentTerms();
 
   useEffect(() => {
@@ -112,6 +113,7 @@ const PaymentTermsPage = () => {
     onError: (error) => {
       toast.error(error.message || "Error al crear el término de pago");
     },
+    refetch,
   });
 
   const {
@@ -127,6 +129,7 @@ const PaymentTermsPage = () => {
     onError: (error) => {
       toast.error(error.message || "Error al actualizar el término de pago");
     },
+    refetch,
   });
 
   const {
@@ -141,6 +144,7 @@ const PaymentTermsPage = () => {
     onError: (error) => {
       toast.error(error.message || "Error al eliminar el término de pago");
     },
+    refetch,
   });
 
   const form = useForm<PaymentTermFormValues>({

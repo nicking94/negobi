@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import {
   UsersService,
   UserProfile,
-  UpdateProfileData,
+  UpdateUserPayload,
+  UserResponse,
 } from "@/services/users/users.service";
+import { ApiError } from "@/types";
 
 export const useProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -16,17 +18,21 @@ export const useProfile = () => {
     try {
       setLoadingProfile(true);
       setError(null);
-      const response = await UsersService.getProfile();
-      setProfile(response.data.data);
-    } catch (error: any) {
-      console.error("Error fetching profile:", error);
-      setError(error.response?.data?.message || "Error al cargar el perfil");
+      const response: UserResponse = await UsersService.getProfile();
+      setProfile(response.data);
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      const errorMessage =
+        apiError.response?.data?.message ||
+        apiError.message ||
+        "Error al crear el usuario";
+      console.error(errorMessage);
     } finally {
       setLoadingProfile(false);
     }
   };
 
-  const updateProfile = async (data: UpdateProfileData) => {
+  const updateProfile = async (data: UpdateUserPayload) => {
     try {
       if (!profile?.id) {
         throw new Error("ID de usuario no disponible");
@@ -37,10 +43,12 @@ export const useProfile = () => {
       const response = await UsersService.updateProfile(profile.id, data);
       setProfile(response.data);
       return { success: true, data: response.data };
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
       const errorMessage =
-        error.response?.data?.message || "Error al actualizar el perfil";
+        apiError.response?.data?.message ||
+        apiError.message ||
+        "Error al actualizar el perfil";
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -57,10 +65,12 @@ export const useProfile = () => {
         legal_tax_id: legalTaxId,
       });
       return { success: true, data: response.data };
-    } catch (error: any) {
-      console.error("Error changing password:", error);
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
       const errorMessage =
-        error.response?.data?.message || "Error al cambiar contraseña";
+        apiError.response?.data?.message ||
+        apiError.message ||
+        "Error al cambiar la contraseña";
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
