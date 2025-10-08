@@ -6,6 +6,7 @@ import { ApiError, LoginType } from "@/types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
+// hooks/auth/useLogin.ts - CORREGIDO
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -14,27 +15,31 @@ const useLogin = () => {
   const onLogin = async (params: LoginType & { rememberMe?: boolean }) => {
     try {
       setLoading(true);
-
-      // Extraer rememberMe y enviar solo los datos que espera el backend
       const { rememberMe, ...loginData } = params;
 
       const { data, status } = await AuthService.loginAction(loginData);
 
       if (status === 200 || status === 201) {
-        // Usar el contexto para login, pasando el rememberMe
+        // ✅ CORREGIDO: Obtener datos completos del usuario
+        const userData = {
+          id:
+            data.data.user?.id?.toString() ||
+            data.data.user_id?.toString() ||
+            "",
+          email: data.data.user?.email || params.email,
+          username: data.data.user?.username || params.email.split("@")[0],
+          first_name: data.data.user?.first_name || "",
+          last_name: data.data.user?.last_name || "",
+          phone: data.data.user?.phone || "",
+          role: data.data.user?.role || data.data.role || "user",
+        };
+
+        // ✅ Usar el contexto para login
         login(
           data.data.access_token,
-          data.data.user || {
-            id: data.data.user_id || "",
-            email: params.email,
-            username: params.email.split("@")[0],
-            first_name: "",
-            last_name: "",
-            phone: "",
-            role: data.data.role || "user",
-          },
+          userData,
           data.data.refresh_token,
-          rememberMe // ← Pasar rememberMe al contexto, no al backend
+          rememberMe
         );
 
         // Almacenar API Key si viene en la respuesta
@@ -43,8 +48,6 @@ const useLogin = () => {
         }
 
         toast.success("Inicio de sesión exitoso");
-
-        // Usar replace y forzar una navegación completa
         router.replace("/dashboard");
         return { data, status, success: true };
       } else {

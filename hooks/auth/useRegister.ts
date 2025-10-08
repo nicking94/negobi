@@ -1,21 +1,14 @@
-// hooks/auth/useRegister.ts
+// hooks/auth/useRegister.ts - MEJORADO
 import { useState } from "react";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";
 import { RegisterType } from "@/types";
 import { ApiError } from "@/types";
-
-// Type guard para verificar si es un ApiError
-const isApiError = (error: unknown): error is ApiError => {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    ("response" in error || "message" in error)
-  );
-};
+import { useRouter } from "next/navigation";
 
 const useRegister = () => {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const onRegister = async (params: RegisterType) => {
     try {
@@ -46,6 +39,12 @@ const useRegister = () => {
         toast.success(
           "Registro exitoso. Empresa y administrador creados correctamente."
         );
+
+        // ✅ Redirigir automáticamente al login después del registro
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+
         return { data, status, success: true };
       } else {
         toast.error(data.message || "Error en el registro");
@@ -71,6 +70,15 @@ const useRegister = () => {
   };
 
   return { onRegister, loading };
+};
+
+// Type guard para verificar si es un ApiError
+const isApiError = (error: unknown): error is ApiError => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ("response" in error || "message" in error)
+  );
 };
 
 export default useRegister;

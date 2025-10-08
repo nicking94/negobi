@@ -29,9 +29,11 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { Toaster, toast } from "sonner";
 import { useProfile } from "@/hooks/users/useProfile";
+import { useRoleTranslation } from "@/hooks/translation/useRoleTranslation";
 
 const ProfilePage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { translateRole } = useRoleTranslation();
   const [activeSection, setActiveSection] = useState("profile");
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -209,7 +211,7 @@ const ProfilePage = () => {
               <div className="text-sm text-gray_m">
                 Rol:{" "}
                 <span className="font-medium text-green_b capitalize">
-                  {profile.role || "Usuario"}
+                  {translateRole(profile.role) || "Usuario"}
                 </span>
               </div>
             )}
