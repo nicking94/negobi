@@ -2,6 +2,7 @@
 import { Client } from "@/app/dashboard/masters/clients/page";
 import * as ClientsRoute from "./clients.routes";
 import api from "@/utils/api";
+import { ClientTypesResponse, ClientType } from "@/types"; // Asegúrate de importar los tipos
 
 interface ClientsQueryType {
   search?: string;
@@ -55,5 +56,30 @@ export class ClientsService {
 
   static async deleteClient(id: string) {
     return await api.delete(`${ClientsRoute.GetClients}/${id}`);
+  }
+
+  // NUEVOS MÉTODOS PARA TIPOS DE CLIENTE
+  static async getClientTypes(): Promise<ClientTypesResponse> {
+    try {
+      console.log("Fetching client types from:", ClientsRoute.GetClientTypes);
+      const response = await api.get(ClientsRoute.GetClientTypes);
+      console.log("Client types response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching client types:", error);
+      throw error;
+    }
+  }
+
+  static async getClientType(
+    id: number
+  ): Promise<{ success: boolean; data: ClientType }> {
+    try {
+      const response = await api.get(`${ClientsRoute.GetClientTypes}/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching client type ${id}:`, error);
+      throw error;
+    }
   }
 }

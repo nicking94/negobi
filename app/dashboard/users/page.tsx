@@ -60,7 +60,7 @@ import {
 } from "@/services/users/users.service";
 import { UserType } from "@/types";
 import { useUserRoles } from "@/hooks/users/useUserRoles";
-import { useRoleTranslation } from "@/hooks/translation/useRoleTranslation";
+import { useTranslation } from "@/hooks/translation/useTranslation";
 
 const createUserSchema = (availableRoles: string[] = []) => {
   return z.object({
@@ -97,7 +97,7 @@ const UsersPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // ✅ Usar el hook de traducción
-  const { translateRole } = useRoleTranslation();
+  const { translateRole } = useTranslation();
 
   // Obtener roles desde la API
   const {

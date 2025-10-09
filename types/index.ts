@@ -15,6 +15,7 @@ export interface ApiError {
 
 export interface UserType {
   id: number;
+  name: string;
   username: string;
   email: string;
   first_name: string;
@@ -36,6 +37,26 @@ export interface UserType {
   deleted_at?: string | null;
   externalId?: number;
   dni?: string;
+}
+
+export interface ClientType {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  external_code?: string;
+  sync_with_erp?: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+}
+
+export interface ClientTypesResponse {
+  success: boolean;
+  data: {
+    message: string;
+    data?: ClientType[];
+  };
 }
 
 export type OrganizationPayload = {

@@ -6,6 +6,10 @@ import {
 import { useEffect, useState, useCallback } from "react";
 import { OrganizationQueryType, UserType, ApiError } from "@/types";
 
+interface UseGetUsersProps {
+  roleFilter?: string;
+}
+
 interface UseGetUsersReturn {
   loading: boolean;
   users: UserType[];
@@ -25,7 +29,8 @@ interface UseGetUsersReturn {
   refetch: () => void;
 }
 
-const useGetUsers = (): UseGetUsersReturn => {
+const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
+  const { roleFilter } = props || {};
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserType[]>([]);
   const [modified, setModified] = useState(false);
@@ -42,12 +47,18 @@ const useGetUsers = (): UseGetUsersReturn => {
       setLoading(true);
       setError(null);
 
-      const params: OrganizationQueryType = {
+      const params: OrganizationQueryType & { role?: string } = {
         search: search.trim(),
         page,
         itemsPerPage,
         companyId,
       };
+
+      // Agregar filtro por rol si está presente
+      if (roleFilter) {
+        params.role = roleFilter;
+      }
+      console.log("🔍 Params enviados al backend:", params);
 
       const response: UsersListResponse = await UsersService.getUsers(params);
 
@@ -77,11 +88,11 @@ const useGetUsers = (): UseGetUsersReturn => {
     } finally {
       setLoading(false);
     }
-  }, [search, page, itemsPerPage, companyId]);
+  }, [search, page, itemsPerPage, companyId, roleFilter]);
 
   useEffect(() => {
     getUsers();
-  }, [modified, search, page, itemsPerPage, companyId, getUsers]);
+  }, [modified, search, page, itemsPerPage, companyId, roleFilter, getUsers]);
 
   const refetch = useCallback(() => {
     setModified((prev) => !prev);

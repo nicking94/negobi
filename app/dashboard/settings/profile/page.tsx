@@ -29,11 +29,11 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { Toaster, toast } from "sonner";
 import { useProfile } from "@/hooks/users/useProfile";
-import { useRoleTranslation } from "@/hooks/translation/useRoleTranslation";
+import { useTranslation } from "@/hooks/translation/useTranslation";
 
 const ProfilePage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const { translateRole } = useRoleTranslation();
+  const { translateRole } = useTranslation();
   const [activeSection, setActiveSection] = useState("profile");
   const [showPasswords, setShowPasswords] = useState({
     current: false,

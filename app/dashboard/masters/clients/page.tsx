@@ -58,7 +58,10 @@ import useUpdateClient from "@/hooks/clients/useUpdateClient";
 import useDeleteClient from "@/hooks/clients/useDeleteClient";
 import useAddClient from "@/hooks/clients/useAddClients";
 import useGetPaymentTerms from "@/hooks/paymentTerms/useGetPaymentTerms";
-import { PaymentTermType } from "@/types";
+import { PaymentTermType, ClientType } from "@/types";
+import { useGetSellers } from "@/hooks/users/useGetSellsers";
+import { useClientTypes } from "@/hooks/clients/useClientTypes";
+import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
 
 export type Client = {
   id?: string;
@@ -197,13 +200,24 @@ const ClientsPage = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
-  const [sellers, setSellers] = useState<{ id: number; name: string }[]>([]);
-  const [clientTypes, setClientTypes] = useState<string[]>([]);
+  const { users: sellers, loading: sellersLoading } = useGetSellers();
+  const {
+    clientTypes,
+    loading: clientTypesLoading,
+    error: clientTypesError,
+  } = useClientTypes();
+
   const [taxDocumentTypes, setTaxDocumentTypes] = useState<
     { value: string; name: string }[]
   >([]);
 
-  // Usar el hook de términos de pago
+  const sellerOptions = sellers
+    .filter((user) => user.is_active)
+    .map((user) => ({
+      id: user.id,
+      name: `${user.first_name} ${user.last_name} (${user.username})`,
+    }));
+
   const {
     paymentTerms,
     loading: paymentTermsLoading,
@@ -264,32 +278,41 @@ const ClientsPage = () => {
     },
   });
 
-  // Filtrar solo términos de pago activos
   const activePaymentTerms = paymentTerms.filter((term) => term.is_active);
 
-  useEffect(() => {
-    setSellers([
-      { id: 1, name: "Juan Pérez" },
-      { id: 2, name: "María García" },
-      { id: 3, name: "Carlos Rodríguez" },
-    ]);
-
-    setClientTypes(["taxpayer", "end_consumer", "Gobierno", "Extranjero"]);
-    setTaxDocumentTypes([
-      { value: "rif", name: "RIF" },
-      { value: "cedula", name: "Cédula" },
-      { value: "pasaporte", name: "Pasaporte" },
-      { value: "dni", name: "DNI" },
-    ]);
-  }, []);
-
-  // Efecto para manejar errores de carga de términos de pago
   useEffect(() => {
     if (paymentTermsError) {
       console.error("Error loading payment terms:", paymentTermsError);
       toast.error("Error al cargar los términos de pago");
     }
   }, [paymentTermsError]);
+  useEffect(() => {
+    if (clientTypesError) {
+      console.error("Error loading client types:", clientTypesError);
+      toast.error("Error al cargar los tipos de cliente");
+    }
+  }, [clientTypesError]);
+
+  // En tu componente, agrega este useEffect para debuggear
+  useEffect(() => {
+    console.log("🔍 DEBUG - Client Types State:", {
+      clientTypesLoading,
+      clientTypesError,
+      totalClientTypes: clientTypes.length,
+      clientTypes: clientTypes.map((type) => ({
+        id: type.id,
+        name: type.name,
+        description: type.description,
+        is_active: type.is_active,
+      })),
+      // Verificar si los nombres coinciden con las traducciones
+      translationCheck: clientTypes.map((type) => ({
+        name: type.name,
+        translated: clientTypeTranslations[type.name],
+        existsInTranslations: !!clientTypeTranslations[type.name],
+      })),
+    });
+  }, [clientTypes, clientTypesLoading, clientTypesError]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -640,7 +663,7 @@ const ClientsPage = () => {
       header: "Vendedor",
       cell: ({ row }) => {
         const sellerId = row.getValue("salespersonUserId") as number;
-        const seller = sellers.find((s) => s.id === sellerId);
+        const seller = sellerOptions.find((s) => s.id === sellerId);
         return <div className="font-medium">{seller?.name || "-"}</div>;
       },
     },
@@ -714,20 +737,6 @@ const ClientsPage = () => {
 
   const isSubmitting = isCreating || isUpdating;
 
-  // Agrega esto en tu componente, después de la declaración del form
-  useEffect(() => {
-    console.log("Form state changed - isValid:", form.formState.isValid);
-    console.log("Form state changed - errors:", form.formState.errors);
-    console.log(
-      "Form state changed - isSubmitting:",
-      form.formState.isSubmitting
-    );
-  }, [
-    form.formState.isValid,
-    form.formState.errors,
-    form.formState.isSubmitting,
-  ]);
-
   // También para ver cambios en los campos
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -789,7 +798,7 @@ const ClientsPage = () => {
                         <SelectItem value="all">
                           Todos los vendedores
                         </SelectItem>
-                        {sellers.map((seller) => (
+                        {sellerOptions.map((seller) => (
                           <SelectItem
                             key={seller.id}
                             value={seller.id.toString()}
@@ -840,7 +849,7 @@ const ClientsPage = () => {
             </DialogTitle>
             <DialogDescription>
               {editingClient
-                ? "Modifica la información del cliente seleccionado"
+                ? "Modifica la información del cliente"
                 : "Completa la información para crear un nuevo cliente"}
             </DialogDescription>
           </DialogHeader>
@@ -956,16 +965,22 @@ const ClientsPage = () => {
                                 value === "0" ? undefined : parseInt(value)
                               )
                             }
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || sellersLoading}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecciona un vendedor" />
+                                <SelectValue
+                                  placeholder={
+                                    sellersLoading
+                                      ? "Cargando vendedores..."
+                                      : "Selecciona un vendedor"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Sin vendedor</SelectItem>
-                              {sellers.map((seller) => (
+                              {sellerOptions.map((seller) => (
                                 <SelectItem
                                   key={seller.id}
                                   value={seller.id.toString()}
@@ -1039,28 +1054,47 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Tipo de Cliente *</FormLabel>
                           <Select
-                            value={field.value || "none"}
-                            onValueChange={(value) => {
-                              if (value !== "none") {
-                                field.onChange(value);
-                              }
-                            }}
-                            disabled={isSubmitting}
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            disabled={isSubmitting || clientTypesLoading}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecciona un tipo de cliente" />
+                                <SelectValue
+                                  placeholder={
+                                    clientTypesLoading
+                                      ? "Cargando tipos..."
+                                      : clientTypesError
+                                      ? "Error al cargar"
+                                      : "Selecciona un tipo de cliente"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="none" disabled>
-                                Selecciona una opción
-                              </SelectItem>
-                              {clientTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
+                              {clientTypesLoading ? (
+                                <SelectItem value="loading" disabled>
+                                  Cargando tipos de cliente...
                                 </SelectItem>
-                              ))}
+                              ) : clientTypesError ? (
+                                <SelectItem value="error" disabled>
+                                  Error al cargar tipos
+                                </SelectItem>
+                              ) : clientTypes.length === 0 ? (
+                                <SelectItem value="empty" disabled>
+                                  No hay tipos disponibles
+                                </SelectItem>
+                              ) : (
+                                clientTypes.map((type: ClientType) => (
+                                  <SelectItem key={type.id} value={type.name}>
+                                    {/* Aplica la traducción aquí */}
+                                    {clientTypeTranslations[type.name] ||
+                                      type.name}
+                                    {type.description &&
+                                      ` - ${type.description}`}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />

@@ -31,7 +31,7 @@ import useLogout from "@/hooks/auth/useLogout";
 import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
-import { useRoleTranslation } from "@/hooks/translation/useRoleTranslation";
+import { useTranslation } from "@/hooks/translation/useTranslation";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -45,12 +45,10 @@ const DashboardHeader = ({
   const { logout, user, refreshUserProfile } = useAuth();
   const { loading } = useLogout();
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
-  const { translateRole } = useRoleTranslation(); // Usar el hook de traducción
+  const { translateRole } = useTranslation();
 
-  // Efecto para refrescar el perfil cuando el componente se monta
   useEffect(() => {
     const refreshProfile = async () => {
-      // Solo refrescar si tenemos usuario pero faltan datos
       if (user && (!user.first_name || !user.last_name || !user.role)) {
         setIsRefreshingProfile(true);
         try {
