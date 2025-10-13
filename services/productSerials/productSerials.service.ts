@@ -165,7 +165,7 @@ export const productSerialService = {
   ): Promise<ProductSerial[]> => {
     return productSerialService.getProductSerials({
       productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -174,7 +174,7 @@ export const productSerialService = {
   ): Promise<ProductSerial[]> => {
     return productSerialService.getProductSerials({
       currentWarehouseId: warehouseId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -183,7 +183,7 @@ export const productSerialService = {
   ): Promise<ProductSerial[]> => {
     return productSerialService.getProductSerials({
       status,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -207,7 +207,7 @@ export const productSerialService = {
   ): Promise<ProductSerial[]> => {
     const params: GetProductSerialsParams = {
       status: "Available",
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     };
     if (productId) {
       params.productId = productId;

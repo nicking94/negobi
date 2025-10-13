@@ -134,7 +134,7 @@ export const paymentMethodService = {
   getActivePaymentMethods: async (): Promise<PaymentMethod[]> => {
     return paymentMethodService.getPaymentMethods({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

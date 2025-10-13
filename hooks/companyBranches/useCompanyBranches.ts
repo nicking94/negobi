@@ -7,9 +7,8 @@ import {
   GetCompanyBranchesParams,
 } from "../../services/companyBranches/companyBranches.service";
 
-// Definir el tipo para los filtros del hook - companyId es obligatorio
 export interface UseCompanyBranchesFilters {
-  companyId: number; // Obligatorio
+  companyId: number;
   search?: string;
   name?: string;
   code?: string;
@@ -20,7 +19,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las sucursales con filtros
   const loadCompanyBranches = async (
     customFilters?: Partial<UseCompanyBranchesFilters>
   ) => {
@@ -28,7 +26,12 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
+      // Si no hay companyId, no cargar nada
+      if (!filters.companyId && !customFilters?.companyId) {
+        setCompanyBranches([]);
+        return;
+      }
+
       const combinedFilters: GetCompanyBranchesParams = {
         ...filters,
         ...customFilters,
@@ -41,19 +44,17 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       const branchesData = await companyBranchService.getCompanyBranches(
         combinedFilters
       );
-      console.log("🟢 Datos de sucursales recibidos:", branchesData);
 
       if (Array.isArray(branchesData)) {
         setCompanyBranches(branchesData);
       } else {
-        console.warn("⚠️ Estructura inesperada:", branchesData);
         setCompanyBranches([]);
       }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al cargar sucursales"
       );
-      setCompanyBranches([]); // Asegurar que companyBranches sea un array vacío en caso de error
+      setCompanyBranches([]);
     } finally {
       setLoading(false);
     }
@@ -146,11 +147,8 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Cargar sucursales al montar el hook o cuando cambien los filtros
   useEffect(() => {
-    if (filters.companyId) {
-      loadCompanyBranches();
-    }
+    loadCompanyBranches();
   }, [filters.companyId, filters.search]);
 
   return {

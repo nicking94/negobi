@@ -22,7 +22,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los documentos con filtros
   const loadDocuments = async (
     customFilters?: Partial<UseDocumentsFilters>
   ) => {
@@ -30,37 +29,53 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
+      // MODIFICACIÓN: No lanzar error, simplemente no hacer la petición
+      const currentCompanyId = customFilters?.companyId || filters.companyId;
+      if (!currentCompanyId) {
+        console.log("🟡 companyId no proporcionado, omitiendo carga");
+        setDocuments([]);
+        return;
+      }
+
       const combinedFilters: GetDocumentsParams = {
         ...filters,
         ...customFilters,
         page: 1,
         itemsPerPage: 100,
+        companyId: currentCompanyId, // Usar el valor validado
       };
 
       console.log("🔵 Enviando parámetros:", combinedFilters);
 
-      // documentService.getDocuments ya devuelve Document[] directamente
       const documentsData = await documentService.getDocuments(combinedFilters);
-      console.log("🟢 Datos de documentos recibidos:", documentsData);
+      console.log("🟢 Response completo:", documentsData);
+      console.log(
+        "📝 Número de documentos recibidos:",
+        documentsData?.length || 0
+      );
+      console.log("🏢 Documentos por companyId:", combinedFilters.companyId);
 
-      // documentsData ya debería ser Document[]
       if (Array.isArray(documentsData)) {
+        console.log("👤 Primer documento (ejemplo):", documentsData[0]);
+        console.log(
+          "👤 Cliente del primer documento:",
+          documentsData[0]?.client
+        );
         setDocuments(documentsData);
       } else {
         console.warn("⚠️ Estructura inesperada:", documentsData);
         setDocuments([]);
       }
     } catch (err) {
+      console.error("🔴 Error al cargar documentos:", err);
       setError(
         err instanceof Error ? err.message : "Error al cargar documentos"
       );
-      setDocuments([]); // Asegurar que documents sea un array vacío en caso de error
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
   };
-
   // Crear documento
   const createDocument = async (
     documentData: CreateDocumentData
@@ -120,9 +135,13 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     }
   };
 
-  // Cargar documentos al montar el hook o cuando cambien los filtros
   useEffect(() => {
-    loadDocuments();
+    if (filters.companyId) {
+      loadDocuments();
+    } else {
+      // Si no hay companyId, limpiar los documentos
+      setDocuments([]);
+    }
   }, [filters.companyId, filters.document_type]);
 
   return {

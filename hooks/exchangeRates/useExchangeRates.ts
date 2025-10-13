@@ -36,7 +36,7 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
 
       console.log(

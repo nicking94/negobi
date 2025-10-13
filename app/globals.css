@@ -102,3 +102,15 @@ input {
 button {
   @apply cursor-pointer;
 }
+/* En tu archivo global.css */
+[cmdk-input] {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+[cmdk-input]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}

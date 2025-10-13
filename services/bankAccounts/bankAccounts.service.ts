@@ -158,7 +158,7 @@ export const bankAccountService = {
   getActiveBankAccounts: async (companyId: number): Promise<BankAccount[]> => {
     const accounts = await bankAccountService.getBankAccounts({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return accounts.filter((account) => account.is_active);
   },
@@ -169,7 +169,7 @@ export const bankAccountService = {
   ): Promise<BankAccount[]> => {
     const accounts = await bankAccountService.getBankAccounts({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return accounts.filter(
       (account) => account.payment_method_id === paymentMethodId
@@ -182,7 +182,7 @@ export const bankAccountService = {
   ): Promise<BankAccount[]> => {
     const accounts = await bankAccountService.getBankAccounts({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return accounts.filter((account) =>
       account.bank_name.toLowerCase().includes(bankName.toLowerCase())

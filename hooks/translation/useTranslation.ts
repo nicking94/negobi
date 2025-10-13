@@ -1,6 +1,7 @@
 // hooks/useTranslation.ts
 import { roleTranslations } from "@/utils/roleTranslations";
 import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
+import { documentTypeTranslations } from "@/utils/documentTypeTranslations";
 
 export const useTranslation = () => {
   const translateRole = (role: string): string => {
@@ -11,5 +12,9 @@ export const useTranslation = () => {
     return clientTypeTranslations[clientType] ?? clientType;
   };
 
-  return { translateRole, translateClientType };
+  const translateDocumentType = (documentType: string): string => {
+    return documentTypeTranslations[documentType] ?? documentType;
+  };
+
+  return { translateRole, translateClientType, translateDocumentType };
 };

@@ -168,7 +168,7 @@ export const serviceService = {
   getServicesByCompany: async (companyId: string): Promise<Service[]> => {
     return serviceService.getServices({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -179,7 +179,7 @@ export const serviceService = {
     return serviceService.getServices({
       companyId,
       categoryId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -190,7 +190,7 @@ export const serviceService = {
     return serviceService.getServices({
       companyId,
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -202,7 +202,7 @@ export const serviceService = {
     return serviceService.getServices({
       companyId,
       search: name,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -214,7 +214,7 @@ export const serviceService = {
     return serviceService.getServices({
       companyId,
       search: code,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

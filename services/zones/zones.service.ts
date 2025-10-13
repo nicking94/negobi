@@ -125,7 +125,7 @@ export const zoneService = {
   // Métodos adicionales útiles
   getActiveZones: async (): Promise<Zone[]> => {
     return zoneService.getZones({
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -133,7 +133,7 @@ export const zoneService = {
   searchZonesByName: async (searchTerm: string): Promise<Zone[]> => {
     return zoneService.getZones({
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -141,7 +141,7 @@ export const zoneService = {
   searchZonesByZipCode: async (zipCode: string): Promise<Zone[]> => {
     return zoneService.getZones({
       zip_code: zipCode,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

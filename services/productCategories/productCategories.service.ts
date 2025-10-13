@@ -221,7 +221,7 @@ export const productCategoryService = {
   ): Promise<ProductCategory[]> => {
     return productCategoryService.getProductCategories({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -230,7 +230,7 @@ export const productCategoryService = {
   ): Promise<ProductCategory[]> => {
     const params: GetProductCategoriesParams = {
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     };
     if (companyId) {
       params.companyId = companyId;

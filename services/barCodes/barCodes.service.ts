@@ -148,7 +148,7 @@ export const barCodeService = {
   getBarCodesByCompany: async (companyId: string): Promise<BarCode[]> => {
     return barCodeService.getBarCodes({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -159,7 +159,7 @@ export const barCodeService = {
     return barCodeService.getBarCodes({
       companyId,
       productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -170,7 +170,7 @@ export const barCodeService = {
     return barCodeService.getBarCodes({
       companyId,
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

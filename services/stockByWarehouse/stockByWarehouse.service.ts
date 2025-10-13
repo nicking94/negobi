@@ -225,14 +225,14 @@ export const stockByWarehouseService = {
   ): Promise<StockByWarehouse[]> => {
     return stockByWarehouseService.getStockByWarehouse({
       warehouseId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getStockByProduct: async (productId: number): Promise<StockByWarehouse[]> => {
     return stockByWarehouseService.getStockByWarehouse({
       productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -352,10 +352,10 @@ export const stockByWarehouseService = {
       const stocks = warehouseId
         ? await stockByWarehouseService.getStockByWarehouse({
             warehouseId, // ✅ Pass as object property
-            itemsPerPage: 1000,
+            itemsPerPage: 10,
           })
         : await stockByWarehouseService.getStockByWarehouse({
-            itemsPerPage: 1000,
+            itemsPerPage: 10,
           });
 
       return stocks.filter((stock) => {
@@ -376,10 +376,10 @@ export const stockByWarehouseService = {
       const stocks = warehouseId
         ? await stockByWarehouseService.getStockByWarehouse({
             warehouseId, // ✅ Now correctly passed as object property
-            itemsPerPage: 1000,
+            itemsPerPage: 10,
           })
         : await stockByWarehouseService.getStockByWarehouse({
-            itemsPerPage: 1000,
+            itemsPerPage: 10,
           });
 
       return stocks.filter((stock) => {

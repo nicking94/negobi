@@ -179,14 +179,14 @@ export const visitService = {
   getVisitsByStatus: async (status: VisitStatus): Promise<Visit[]> => {
     return visitService.getVisits({
       status,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getVisitsByClient: async (clientId: number): Promise<Visit[]> => {
     return visitService.getVisits({
       clientId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -197,7 +197,7 @@ export const visitService = {
     return visitService.getVisits({
       date_from: startDate,
       date_to: endDate,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -209,7 +209,7 @@ export const visitService = {
     return visitService.getVisits({
       date_from: startOfDay,
       date_to: endOfDay,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -220,7 +220,7 @@ export const visitService = {
     return visitService.getVisits({
       date_from: now.toISOString(),
       date_to: futureDate.toISOString(),
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -257,7 +257,7 @@ export const visitService = {
         cancelledVisits,
         todayVisits,
       ] = await Promise.all([
-        visitService.getVisits({ itemsPerPage: 1000 }),
+        visitService.getVisits({ itemsPerPage: 10 }),
         visitService.getVisitsByStatus(VISIT_STATUSES.PENDING),
         visitService.getVisitsByStatus(VISIT_STATUSES.COMPLETED),
         visitService.getVisitsByStatus(VISIT_STATUSES.CANCELLED),

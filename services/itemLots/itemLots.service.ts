@@ -130,14 +130,14 @@ export const itemLotService = {
   getItemLotsByItem: async (itemId: number): Promise<ItemLot[]> => {
     return itemLotService.getItemLots({
       itemId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getItemLotsByProductLot: async (productLotId: number): Promise<ItemLot[]> => {
     return itemLotService.getItemLots({
       productLotId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

@@ -85,13 +85,20 @@ export interface Document {
   due_date: string;
   purchase_invoice_date: string;
   dispatch_status?: string;
-
-  // Campos de relación (IDs)
-  companyId?: number;
-  clientId?: number;
+  company?: {
+    id: number;
+    name: string;
+  };
+  client?: {
+    id: number;
+    legal_name: string;
+  };
+  currency?: {
+    id: number;
+    currency_name: string;
+  };
   supplierId?: number;
   operationTypeId?: number;
-  currencyId?: number;
   paymentTermId?: number;
   sourceWarehouseId?: number;
   destinationWarehouseId?: number;
@@ -300,7 +307,25 @@ export const documentService = {
     }
 
     const response = await api.get(`/documents?${queryParams}`);
-    return response.data.data;
+
+    // La respuesta tiene estructura { success: boolean, data: { data: Document[], ... } }
+    console.log("🔵 Estructura completa de respuesta:", response.data);
+
+    // Asegúrate de acceder a data.data
+    if (
+      response.data &&
+      response.data.data &&
+      Array.isArray(response.data.data.data)
+    ) {
+      return response.data.data.data; // Estructura anidada
+    } else if (Array.isArray(response.data.data)) {
+      return response.data.data; // Estructura plana
+    } else if (Array.isArray(response.data)) {
+      return response.data; // Otra posible estructura
+    } else {
+      console.warn("⚠️ Estructura de respuesta inesperada:", response.data);
+      return [];
+    }
   },
 
   // Actualizar un documento

@@ -46,7 +46,11 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useDocuments } from "@/hooks/documents/useDocuments";
 import { Document } from "@/services/documents/documents.service";
-import useGetCompanies from "@/hooks/companies/useGetCompanies"; // Importar el hook de empresas
+import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
+import { SelectSearchable } from "@/components/ui/select-searchable";
+import { useTranslation } from "@/hooks/translation/useTranslation";
+import { documentTypeTranslations } from "@/utils/documentTypeTranslations";
+import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 
 // Tipo Bill basado en Document
 export type Bill = {
@@ -59,6 +63,10 @@ export type Bill = {
   total: number;
   seller?: string;
   status: "pending" | "paid" | "cancelled";
+};
+
+const translateDocumentType = (documentType: string): string => {
+  return documentTypeTranslations[documentType] ?? documentType;
 };
 
 const BillsPage = () => {
@@ -77,11 +85,22 @@ const BillsPage = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
     null
   );
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null
+  );
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // Obtener las empresas
-  const { companiesResponse, loading: companiesLoading } = useGetCompanies();
+  const { companies: companiesResponse, loading: companiesLoading } =
+    useGetAllCompanies();
 
-  // Seleccionar la primera empresa por defecto cuando se cargan las empresas
+  const companyOptions = useMemo(() => {
+    return companiesResponse.map((company) => ({
+      value: company.id.toString(),
+      label: company.name,
+    }));
+  }, [companiesResponse]);
+
   useEffect(() => {
     if (companiesResponse.length > 0 && !selectedCompanyId) {
       setSelectedCompanyId(companiesResponse[0].id);
@@ -89,38 +108,11 @@ const BillsPage = () => {
   }, [companiesResponse, selectedCompanyId]);
 
   // Usar el hook con filtro para facturas - incluir companyId
-  const {
-    documents,
-    loading: documentsLoading,
-    error,
-  } = useDocuments({
+  const { documents } = useDocuments({
     document_type: "invoice",
-    companyId: selectedCompanyId!,
+    companyId: selectedCompanyId || 0,
   });
 
-  // En BillsPage.tsx - actualiza el useMemo de bills
-  const bills: Bill[] = useMemo(() => {
-    // Verificar que documents sea un array antes de usar map
-    if (!documents || !Array.isArray(documents)) {
-      console.warn("⚠️ documents no es un array o está vacío:", documents);
-      return [];
-    }
-
-    return documents.map((doc: Document) => ({
-      id: doc.id.toString(),
-      client: doc.clientId?.toString() || "Cliente no especificado",
-      correlative: doc.document_number,
-      operation_type: doc.operationTypeId?.toString() || doc.document_type,
-      location: doc.sourceWarehouseId?.toString() || "No especificado",
-      issued_date: new Date(doc.document_date),
-      total: doc.total_amount,
-      seller:
-        doc.responsibleUserId?.toString() || doc.salesperson_external_code,
-      status: mapDocumentStatusToBillStatus(doc.status),
-    }));
-  }, [documents]);
-
-  // Función para mapear el estado del documento al estado de la factura
   const mapDocumentStatusToBillStatus = (
     docStatus: string
   ): "pending" | "paid" | "cancelled" => {
@@ -137,16 +129,28 @@ const BillsPage = () => {
     }
   };
 
-  // Resto del código permanece igual...
-  const sellers = useMemo(() => {
-    const uniqueSellers = Array.from(
-      new Set(bills.map((bill) => bill.seller || "").filter(Boolean))
-    );
-    return uniqueSellers.map((seller, index) => ({
-      id: (index + 1).toString(),
-      name: seller,
+  const bills: Bill[] = useMemo(() => {
+    // Verificar que documents sea un array antes de usar map
+    if (!documents || !Array.isArray(documents)) {
+      console.warn("⚠️ documents no es un array o está vacío:", documents);
+      return [];
+    }
+
+    return documents.map((doc: Document) => ({
+      id: doc.id.toString(),
+      client: doc.client?.legal_name || "Cliente no especificado",
+      correlative: doc.document_number,
+      operation_type: translateDocumentType(doc.document_type),
+      location: doc.company?.name || "Empresa no especificada",
+      issued_date: new Date(doc.document_date),
+      total: parseFloat(doc.total_amount.toString()) || 0,
+      seller:
+        doc.responsibleUserId?.toString() ||
+        doc.salesperson_external_code ||
+        "No especificado",
+      status: mapDocumentStatusToBillStatus(doc.status), // Ahora la función está definida
     }));
-  }, [bills]);
+  }, [documents]);
 
   const clients = useMemo(() => {
     const uniqueClients = Array.from(new Set(bills.map((bill) => bill.client)));
@@ -192,8 +196,8 @@ const BillsPage = () => {
 
   // Resto del código permanece igual...
   const handleViewOrder = (bill: Bill) => {
-    setSelectedBill(bill);
-    setIsViewDialogOpen(true);
+    setSelectedDocumentId(bill.id);
+    setIsDetailsModalOpen(true);
   };
 
   const handleViewClientBills = (client: string) => {
@@ -309,6 +313,11 @@ const BillsPage = () => {
         />
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
+              Facturas
+            </h1>
+          </div>
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -381,43 +390,21 @@ const BillsPage = () => {
                 </DropdownMenu>
               </div>
             </div>
-            {/* Selector de compañía */}
             <div className="flex items-center gap-2">
-              <Label htmlFor="company-selector">Seleccionar Empresa:</Label>
-              <Select
-                value={selectedCompanyId?.toString() || ""}
-                onValueChange={(value) => setSelectedCompanyId(Number(value))}
-              >
-                <SelectTrigger id="company-selector" className="w-full md:w-64">
-                  <Building className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Selecciona una compañía" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companiesLoading ? (
-                    <SelectItem value="loading" disabled>
-                      Cargando compañías...
-                    </SelectItem>
-                  ) : companiesResponse.length === 0 ? (
-                    <SelectItem value="empty" disabled>
-                      No hay compañías disponibles
-                    </SelectItem>
-                  ) : (
-                    companiesResponse.map((company) => (
-                      <SelectItem
-                        key={company.id}
-                        value={company.id.toString()}
-                      >
-                        {company.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {!selectedCompanyId && companiesResponse.length > 0 && (
-                <p className="text-sm text-red-500 mt-1">
-                  Por favor selecciona una compañía para ver las facturas
-                </p>
-              )}
+              <Label htmlFor="company-selector" className="text-sm font-medium">
+                Seleccionar Empresa:
+              </Label>
+              <div className="flex items-center gap-2">
+                <SelectSearchable
+                  value={selectedCompanyId?.toString() || ""}
+                  onValueChange={(value) => setSelectedCompanyId(Number(value))}
+                  placeholder="Buscar empresa..."
+                  options={companyOptions}
+                  emptyMessage="No se encontraron empresas."
+                  searchPlaceholder="Buscar empresa por nombre..."
+                  className="w-full md:w-64"
+                />
+              </div>
             </div>
           </div>
 
@@ -441,98 +428,14 @@ const BillsPage = () => {
         </main>
       </div>
 
-      {/* Modal para ver detalle de pedido */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className=" w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Detalle de Pedido {selectedBill?.correlative}
-            </DialogTitle>
-            <DialogDescription>
-              Información completa del pedido seleccionado
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedBill && (
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center justify-between border-b gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Información del Cliente
-                  </h3>
-                  <p className="text-sm">{selectedBill.client}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Información de Venta</h3>
-                  <p className="text-sm">
-                    <span className="font-medium">Vendedor:</span>{" "}
-                    {selectedBill.seller}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Ubicación:</span>{" "}
-                    {selectedBill.location}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Correlativo</h3>
-                  <p className="text-sm">{selectedBill.correlative}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Tipo de Operación</h3>
-                  <p className="text-sm">{selectedBill.operation_type}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Fecha de Emisión</h3>
-                  <p className="text-sm">
-                    {formatDate(selectedBill.issued_date)}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Productos/Servicios</h3>
-                <div className="border rounded-md p-4">
-                  <p className="text-sm text-center text-gray_m">
-                    Aquí iría el detalle de los productos o servicios del pedido
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Subtotal:</span>
-                    <span>{formatCurrency(selectedBill.total * 0.85)}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">IVA (15%):</span>
-                    <span>{formatCurrency(selectedBill.total * 0.15)}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-t">
-                    <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      {formatCurrency(selectedBill.total)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-            >
-              Cerrar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DocumentDetailsModal
+        documentId={selectedDocumentId}
+        isOpen={isDetailsModalOpen}
+        onClose={() => {
+          setIsDetailsModalOpen(false);
+          setSelectedDocumentId(null);
+        }}
+      />
 
       {/* Modal para ver facturas del cliente */}
       <Dialog

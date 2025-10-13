@@ -162,7 +162,7 @@ export const productLotService = {
   getProductLotsByProduct: async (productId: number): Promise<ProductLot[]> => {
     return productLotService.getProductLots({
       productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -171,7 +171,7 @@ export const productLotService = {
   ): Promise<ProductLot[]> => {
     return productLotService.getProductLots({
       currentWarehouseId: warehouseId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -192,7 +192,7 @@ export const productLotService = {
 
   getExpiredProductLots: async (): Promise<ProductLot[]> => {
     const allLots = await productLotService.getProductLots({
-      itemsPerPage: 10000,
+      itemsPerPage: 100,
     });
 
     const today = new Date();
@@ -205,7 +205,7 @@ export const productLotService = {
 
   getExpiringProductLots: async (days: number = 30): Promise<ProductLot[]> => {
     const allLots = await productLotService.getProductLots({
-      itemsPerPage: 10000,
+      itemsPerPage: 100,
     });
 
     const today = new Date();

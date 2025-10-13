@@ -25,6 +25,7 @@ export interface UseOrdersFilters {
   order_date_to?: string;
   total_amount_from?: number;
   total_amount_to?: number;
+  company_id?: number;
 }
 
 export const useOrders = (filters: UseOrdersFilters = {}) => {
@@ -32,7 +33,6 @@ export const useOrders = (filters: UseOrdersFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los pedidos con filtros
   const loadOrders = async (customFilters?: Partial<UseOrdersFilters>) => {
     try {
       setLoading(true);
@@ -43,8 +43,16 @@ export const useOrders = (filters: UseOrdersFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
+
+      // 🔴 REMOVER LA VALIDACIÓN DE company_id YA QUE NO ES REQUERIDA PARA LA LLAMADA
+      // if (!combinedFilters.company_id) {
+      //   console.warn("⚠️ company_id no está definido, no se pueden cargar pedidos");
+      //   setError("Selecciona una compañía para ver los pedidos");
+      //   setOrders([]);
+      //   return;
+      // }
 
       console.log("🔵 Enviando parámetros para pedidos:", combinedFilters);
 
@@ -58,6 +66,7 @@ export const useOrders = (filters: UseOrdersFilters = {}) => {
         setOrders([]);
       }
     } catch (err) {
+      console.error("🔴 Error al cargar pedidos:", err);
       setError(err instanceof Error ? err.message : "Error al cargar pedidos");
       setOrders([]);
     } finally {
@@ -112,7 +121,7 @@ export const useOrders = (filters: UseOrdersFilters = {}) => {
       // Si se actualiza el número de pedido, verificar que no exista
       if (updates.order_number) {
         const existingOrders = await orderService.getOrders({
-          itemsPerPage: 1000,
+          itemsPerPage: 10,
         });
         const numberExists = existingOrders.some(
           (order) =>

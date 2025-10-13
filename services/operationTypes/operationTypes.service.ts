@@ -171,7 +171,7 @@ export const operationTypeService = {
   getActiveOperationTypes: async (): Promise<OperationType[]> => {
     return operationTypeService.getOperationTypes({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -180,7 +180,7 @@ export const operationTypeService = {
   ): Promise<OperationType[]> => {
     return operationTypeService.getOperationTypes({
       applies_to_module: module,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -189,7 +189,7 @@ export const operationTypeService = {
   ): Promise<OperationType[]> => {
     return operationTypeService.getOperationTypes({
       transaction_direction: direction,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -199,7 +199,7 @@ export const operationTypeService = {
   ): Promise<OperationType[]> => {
     return operationTypeService.getOperationTypes({
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

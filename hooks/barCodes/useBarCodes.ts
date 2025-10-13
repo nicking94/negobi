@@ -37,7 +37,7 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
         ...customFilters,
         companyId: customFilters?.companyId || filters.companyId,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
 
       console.log(

@@ -9,6 +9,7 @@ import {
 
 // Parámetros para obtener pedidos
 export interface GetOrdersParams {
+  company_id?: number;
   order_number?: string;
   client_id?: number;
   salesperson_id?: number;
@@ -42,6 +43,7 @@ export type OrderStatus = (typeof ORDER_STATUSES)[keyof typeof ORDER_STATUSES];
 
 // Interfaz para items del pedido
 export interface OrderItem {
+  id?: string;
   order_id?: number;
   product_id: number;
   warehouse_id: number;
@@ -219,55 +221,73 @@ export const orderService = {
     return response.data.data;
   },
 
-  // Obtener todos los pedidos
   getOrders: async (params?: GetOrdersParams): Promise<Order[]> => {
-    const queryParams = new URLSearchParams();
+    try {
+      const queryParams = new URLSearchParams();
 
-    // Parámetros opcionales
-    if (params?.order_number) {
-      queryParams.append("order_number", params.order_number);
-    }
-    if (params?.client_id) {
-      queryParams.append("client_id", params.client_id.toString());
-    }
-    if (params?.salesperson_id) {
-      queryParams.append("salesperson_id", params.salesperson_id.toString());
-    }
-    if (params?.warehouse_id) {
-      queryParams.append("warehouse_id", params.warehouse_id.toString());
-    }
-    if (params?.status) {
-      queryParams.append("status", params.status);
-    }
-    if (params?.order_type) {
-      queryParams.append("order_type", params.order_type);
-    }
-    if (params?.order_date_from) {
-      queryParams.append("order_date_from", params.order_date_from);
-    }
-    if (params?.order_date_to) {
-      queryParams.append("order_date_to", params.order_date_to);
-    }
-    if (params?.total_amount_from) {
+      console.log("🟡 Parámetros recibidos en orderService.getOrders:", params);
+
+      if (params?.order_number) {
+        queryParams.append("order_number", params.order_number);
+      }
+      if (params?.client_id) {
+        queryParams.append("client_id", params.client_id.toString());
+      }
+      if (params?.salesperson_id) {
+        queryParams.append("salesperson_id", params.salesperson_id.toString());
+      }
+      if (params?.warehouse_id) {
+        queryParams.append("warehouse_id", params.warehouse_id.toString());
+      }
+      if (params?.status) {
+        queryParams.append("status", params.status);
+      }
+      if (params?.order_type) {
+        queryParams.append("order_type", params.order_type);
+      }
+      if (params?.order_date_from) {
+        queryParams.append("order_date_from", params.order_date_from);
+      }
+      if (params?.order_date_to) {
+        queryParams.append("order_date_to", params.order_date_to);
+      }
+      if (params?.total_amount_from) {
+        queryParams.append(
+          "total_amount_from",
+          params.total_amount_from.toString()
+        );
+      }
+      if (params?.total_amount_to) {
+        queryParams.append(
+          "total_amount_to",
+          params.total_amount_to.toString()
+        );
+      }
+
+      // Parámetros de paginación
+      queryParams.append("page", params?.page?.toString() || "1");
       queryParams.append(
-        "total_amount_from",
-        params.total_amount_from.toString()
+        "itemsPerPage",
+        params?.itemsPerPage?.toString() || "10"
       );
-    }
-    if (params?.total_amount_to) {
-      queryParams.append("total_amount_to", params.total_amount_to.toString());
-    }
+      queryParams.append("order", params?.order || "DESC");
 
-    // Parámetros de paginación
-    queryParams.append("page", params?.page?.toString() || "1");
-    queryParams.append(
-      "itemsPerPage",
-      params?.itemsPerPage?.toString() || "10"
-    );
-    queryParams.append("order", params?.order || "DESC");
+      const url = `${GetOrders}?${queryParams}`;
+      console.log("🟡 Realizando request a:", url);
 
-    const response = await api.get(`${GetOrders}?${queryParams}`);
-    return response.data.data;
+      const response = await api.get(url);
+      console.log("🟢 Respuesta recibida:", response.data);
+
+      // Validar respuesta
+      if (!response.data) {
+        throw new Error("Respuesta vacía del servidor");
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error("🔴 Error en orderService.getOrders:", error);
+      throw error;
+    }
   },
 
   // Obtener un pedido por ID
@@ -291,35 +311,35 @@ export const orderService = {
   getOrdersByStatus: async (status: OrderStatus): Promise<Order[]> => {
     return orderService.getOrders({
       status,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getOrdersByType: async (orderType: OrderType): Promise<Order[]> => {
     return orderService.getOrders({
       order_type: orderType,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getOrdersByClient: async (clientId: number): Promise<Order[]> => {
     return orderService.getOrders({
       client_id: clientId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getOrdersBySalesperson: async (salespersonId: number): Promise<Order[]> => {
     return orderService.getOrders({
       salesperson_id: salespersonId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getOrdersByWarehouse: async (warehouseId: number): Promise<Order[]> => {
     return orderService.getOrders({
       warehouse_id: warehouseId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -330,7 +350,7 @@ export const orderService = {
     return orderService.getOrders({
       order_date_from: startDate,
       order_date_to: endDate,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -342,7 +362,7 @@ export const orderService = {
     return orderService.getOrders({
       order_date_from: startOfDay,
       order_date_to: endOfDay,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -484,7 +504,7 @@ export const orderService = {
   // Obtener resumen de pedidos
   getOrdersSummary: async (): Promise<OrderSummary> => {
     try {
-      const allOrders = await orderService.getOrders({ itemsPerPage: 1000 });
+      const allOrders = await orderService.getOrders({ itemsPerPage: 10 });
 
       const total_amount = allOrders.reduce(
         (sum, order) => sum + order.total_amount,
@@ -532,7 +552,7 @@ export const orderService = {
     return orderService.getOrders({
       total_amount_from: minAmount,
       total_amount_to: maxAmount,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -540,7 +560,7 @@ export const orderService = {
   searchOrdersByNumber: async (orderNumber: string): Promise<Order[]> => {
     return orderService.getOrders({
       order_number: orderNumber,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

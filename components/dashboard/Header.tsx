@@ -118,22 +118,6 @@ const DashboardHeader = ({
     return translateRole(user.role);
   };
 
-  const getOrganizationName = () => {
-    if (!user) return "ORGANIZACIÓN";
-
-    const { first_name, company_id } = user;
-
-    if (company_id) {
-      return `EMPRESA ${company_id}`;
-    }
-
-    if (first_name) {
-      return first_name.toUpperCase();
-    }
-
-    return "ORGANIZACIÓN";
-  };
-
   const handleLogout = async () => {
     await logout();
   };
@@ -166,11 +150,6 @@ const DashboardHeader = ({
             <button className="bg-white hover:bg-gray_xxl px-2 md:px-3 lg:px-4 py-1 md:py-2 text-gray_m text-xs font-medium rounded-md hover:shadow-sm transition-all duration-300">
               USD
             </button>
-          </div>
-
-          {/* Nombre de la Organización */}
-          <div className="hidden md:block text-xs text-gray_b font-medium">
-            {getOrganizationName()}
           </div>
 
           {/* Dropdown del Usuario */}
@@ -225,14 +204,6 @@ const DashboardHeader = ({
                     <p className="text-xs text-gray_m truncate">
                       {user?.email || "No email"}
                     </p>
-                    <p className="text-xs text-green_b font-medium">
-                      {getUserRole()}
-                    </p>
-                    {user?.company_id && (
-                      <p className="text-xs text-gray_m">
-                        Empresa ID: {user.company_id}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>

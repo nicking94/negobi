@@ -152,7 +152,7 @@ export const currencyService = {
   getActiveCurrencies: async (): Promise<Currency[]> => {
     return currencyService.getCurrencies({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

@@ -1,6 +1,7 @@
+// pages/orders/OrdersPage.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,7 +10,6 @@ import {
   Filter,
   FileText,
   Package,
-  Truck,
   CheckCircle,
   Clock,
   XCircle,
@@ -48,28 +48,44 @@ import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Badge } from "@/components/ui/badge";
+import { useOrders } from "@/hooks/orders/useOrders";
+import {
+  Order as ApiOrder,
+  ORDER_STATUSES,
+} from "@/services/orders/orders.service";
+import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
+import { SelectSearchable } from "@/components/ui/select-searchable";
+import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 
-export type Order = {
-  id: string;
-  order_number: string;
-  client: string;
-  order_date: Date;
-  delivery_date: Date | null;
-  operation_type: string;
-  items: OrderItem[];
-  total: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  seller?: string;
-  location: string;
-  notes?: string;
-};
-
+// Fixed OrderItem type with id property
 export type OrderItem = {
   id: string;
   product_name: string;
   quantity: number;
   unit_price: number;
   total: number;
+};
+
+// Tipo Order basado en la API
+export type Order = {
+  id: string;
+  order_number: string;
+  client: string;
+  client_id?: number;
+  order_date: Date;
+  delivery_date: Date | null;
+  operation_type: string;
+  operation_type_id?: number;
+  items: OrderItem[];
+  total: number;
+  total_amount: number;
+  status: "pending" | "processing" | "completed" | "cancelled";
+  seller?: string;
+  salesperson_id?: number;
+  location: string;
+  warehouse_id?: number;
+  notes?: string;
+  company_id?: number;
 };
 
 const OrdersPage = () => {
@@ -79,177 +95,184 @@ const OrdersPage = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isClientOrdersDialogOpen, setIsClientOrdersDialogOpen] =
     useState(false);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null
+  );
   const [searchTerm, setSearchTerm] = useState("");
-  const [sellerFilter, setSellerFilter] = useState<string>("all");
-  const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
   const [operationTypeFilter, setOperationTypeFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    null
+  );
 
-  // Datos de ejemplo para pedidos
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "1",
-      order_number: "ORD-001",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      order_date: new Date("2025-09-02T12:24:00"),
-      delivery_date: new Date("2025-09-05T10:00:00"),
-      operation_type: "DÓLARES",
-      items: [
-        {
-          id: "1",
-          product_name: "Arroz Premium 5kg",
-          quantity: 10,
-          unit_price: 5.5,
-          total: 55,
-        },
-        {
-          id: "2",
-          product_name: "Aceite de Oliva 1L",
-          quantity: 5,
-          unit_price: 12.8,
-          total: 64,
-        },
-      ],
-      total: 119,
-      seller: "Juan Pérez",
-      location: "Sucursal Principal",
-      status: "processing",
-      notes: "Entregar antes del mediodía",
-    },
-    {
-      id: "2",
-      order_number: "ORD-002",
-      client: "DISTRIBUIDORA LA ECONOMÍA, C.A.",
-      order_date: new Date("2025-09-01T10:15:00"),
-      delivery_date: new Date("2025-09-03T14:30:00"),
-      operation_type: "BOLÍVARES",
-      items: [
-        {
-          id: "3",
-          product_name: "Azúcar Refinada 2kg",
-          quantity: 20,
-          unit_price: 3.2,
-          total: 64,
-        },
-        {
-          id: "4",
-          product_name: "Harina de Trigo 1kg",
-          quantity: 15,
-          unit_price: 2.5,
-          total: 37.5,
-        },
-        {
-          id: "5",
-          product_name: "Leche en Polvo 400g",
-          quantity: 8,
-          unit_price: 7.8,
-          total: 62.4,
-        },
-      ],
-      total: 163.9,
-      seller: "María González",
-      location: "Sucursal Norte",
-      status: "shipped",
-    },
-    {
-      id: "3",
-      order_number: "ORD-003",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      order_date: new Date("2025-08-30T15:45:00"),
-      delivery_date: new Date("2025-09-02T09:00:00"),
-      operation_type: "TRANSFERENCIA",
-      items: [
-        {
-          id: "6",
-          product_name: "Café Molido 500g",
-          quantity: 12,
-          unit_price: 8.5,
-          total: 102,
-        },
-      ],
-      total: 102,
-      seller: "Carlos Rodríguez",
-      location: "Sucursal Sur",
-      status: "delivered",
-    },
-    {
-      id: "4",
-      order_number: "ORD-004",
-      client: "FARMACIAS SALUD Y VIDA, C.A.",
-      order_date: new Date("2025-08-28T09:30:00"),
-      delivery_date: null,
-      operation_type: "DÓLARES",
-      items: [
-        {
-          id: "7",
-          product_name: "Agua Mineral 500ml",
-          quantity: 50,
-          unit_price: 0.9,
-          total: 45,
-        },
-        {
-          id: "8",
-          product_name: "Jugo de Naranja 1L",
-          quantity: 25,
-          unit_price: 2.3,
-          total: 57.5,
-        },
-      ],
-      total: 102.5,
-      seller: "Ana Martínez",
-      location: "Sucursal Este",
-      status: "pending",
-    },
-    {
-      id: "5",
-      order_number: "ORD-005",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      order_date: new Date("2025-08-25T14:20:00"),
-      delivery_date: null,
-      operation_type: "BOLÍVARES",
-      items: [
-        {
-          id: "9",
-          product_name: "Pasta Spaghetti 500g",
-          quantity: 30,
-          unit_price: 1.8,
-          total: 54,
-        },
-        {
-          id: "10",
-          product_name: "Salsa de Tomate 400g",
-          quantity: 20,
-          unit_price: 2.1,
-          total: 42,
-        },
-        {
-          id: "11",
-          product_name: "Atún en Lata 200g",
-          quantity: 15,
-          unit_price: 3.5,
-          total: 52.5,
-        },
-      ],
-      total: 148.5,
-      seller: "Luis Hernández",
-      location: "Sucursal Oeste",
-      status: "cancelled",
-    },
-  ]);
+  // Obtener las empresas
+  const { companies: companiesResponse } = useGetAllCompanies();
 
-  const sellers = useMemo(() => {
-    const uniqueSellers = Array.from(
-      new Set(orders.map((order) => order.seller || "").filter(Boolean))
-    );
-    return uniqueSellers.map((seller, index) => ({
-      id: (index + 1).toString(),
-      name: seller,
+  // 🔴 USAR EL HOOK SIN FILTRO company_id
+  const {
+    orders: apiOrders,
+    loading: ordersLoading,
+    error: ordersError,
+    updateOrderStatus,
+  } = useOrders(); // Sin filtros
+
+  // Mapear los pedidos de la API al formato local CON FILTRADO POR COMPAÑÍA
+  const orders: Order[] = useMemo(() => {
+    if (!apiOrders || !Array.isArray(apiOrders)) {
+      console.warn("⚠️ apiOrders no es un array o está vacío:", apiOrders);
+      return [];
+    }
+
+    console.log("🟡 Pedidos recibidos de la API:", apiOrders.length);
+    console.log("🟡 Company ID seleccionado:", selectedCompanyId);
+
+    // 🔴 FILTRAR POR COMPAÑÍA EN EL FRONTEND
+    const filteredByCompany = selectedCompanyId
+      ? apiOrders.filter(
+          (order: ApiOrder) => order.company_id === selectedCompanyId
+        )
+      : apiOrders;
+
+    console.log("🟢 Pedidos después del filtro:", filteredByCompany.length);
+
+    return filteredByCompany.map((order: ApiOrder) => {
+      // Para datos de ejemplo mientras se resuelve la estructura real de la API
+      const isSampleData = !order.client_id && !order.salesperson_id;
+
+      return {
+        id: order.id.toString(),
+        order_number: order.order_number || `ORD-${order.id}`,
+        client: isSampleData
+          ? `Cliente ${order.id}`
+          : `Cliente ${order.client_id}` || "Cliente no especificado",
+        client_id: order.client_id,
+        order_date: new Date(order.order_date || new Date()),
+        delivery_date: order.transaction_date
+          ? new Date(order.transaction_date)
+          : null,
+        operation_type: order.order_type || "Venta",
+        operation_type_id: order.operation_type_id,
+        items: order.items?.map((item, index) => ({
+          id: item.id?.toString() || `item-${order.id}-${index}`,
+          product_name: item.description || `Producto ${index + 1}`,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          total: item.total_amount || 0,
+        })) || [
+          {
+            id: `item-${order.id}-1`,
+            product_name: "Producto de ejemplo",
+            quantity: 1,
+            unit_price: order.total_amount || 100,
+            total: order.total_amount || 100,
+          },
+        ],
+        total: order.total_amount || 0,
+        total_amount: order.total_amount || 0,
+        status: mapApiStatusToLocalStatus(order.status),
+        seller: isSampleData
+          ? `Vendedor ${order.id}`
+          : `Vendedor ${order.salesperson_id}` || "No especificado",
+        salesperson_id: order.salesperson_id,
+        location:
+          `Almacén ${order.warehouse_id || order.id}` ||
+          "Ubicación no especificada",
+        warehouse_id: order.warehouse_id,
+        notes: order.notes || "Sin notas",
+        company_id: order.company_id,
+      };
+    });
+  }, [apiOrders, selectedCompanyId]); // 🔴 AGREGAR selectedCompanyId COMO DEPENDENCIA
+
+  // Mapear estados de la API a estados locales
+  const mapApiStatusToLocalStatus = (apiStatus: string): Order["status"] => {
+    switch (apiStatus) {
+      case ORDER_STATUSES.PENDING:
+        return "pending";
+      case ORDER_STATUSES.PROCESSED:
+        return "processing";
+      case ORDER_STATUSES.COMPLETED:
+        return "completed";
+      case ORDER_STATUSES.CANCELLED:
+        return "cancelled";
+      default:
+        return "pending";
+    }
+  };
+
+  // Mapear estados locales a estados de la API
+  const mapLocalStatusToApiStatus = (localStatus: Order["status"]): string => {
+    switch (localStatus) {
+      case "pending":
+        return ORDER_STATUSES.PENDING;
+      case "processing":
+        return ORDER_STATUSES.PROCESSED;
+      case "completed":
+        return ORDER_STATUSES.COMPLETED;
+      case "cancelled":
+        return ORDER_STATUSES.CANCELLED;
+      default:
+        return ORDER_STATUSES.PENDING;
+    }
+  };
+
+  // Fixed getStatusVariant function to use valid Badge variants
+  const getStatusVariant = (status: Order["status"]) => {
+    switch (status) {
+      case "pending":
+        return "secondary";
+      case "processing":
+        return "default";
+      case "completed":
+        return "default";
+      case "cancelled":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
+
+  // Alternative approach: Create a custom className for success state
+  const getStatusClassName = (status: Order["status"]) => {
+    const baseClasses = "flex items-center gap-1 w-fit";
+    switch (status) {
+      case "pending":
+        return baseClasses;
+      case "processing":
+        return baseClasses;
+      case "completed":
+        return `${baseClasses} bg-green-100 text-green-800 hover:bg-green-100`;
+      case "cancelled":
+        return baseClasses;
+      default:
+        return baseClasses;
+    }
+  };
+
+  const companyOptions = useMemo(() => {
+    return companiesResponse.map((company) => ({
+      value: company.id.toString(),
+      label: company.name,
     }));
-  }, [orders]);
+  }, [companiesResponse]);
+
+  // Efecto para seleccionar automáticamente la primera compañía
+  useEffect(() => {
+    if (companiesResponse.length > 0 && !selectedCompanyId) {
+      const firstCompany = companiesResponse[0];
+      console.log(
+        "🟢 Seleccionando primera compañía automáticamente:",
+        firstCompany
+      );
+      setSelectedCompanyId(firstCompany.id);
+    }
+  }, [companiesResponse, selectedCompanyId]);
 
   const clients = useMemo(() => {
     const uniqueClients = Array.from(
@@ -261,12 +284,21 @@ const OrdersPage = () => {
     }));
   }, [orders]);
 
+  const operationTypes = useMemo(() => {
+    const uniqueTypes = Array.from(
+      new Set(orders.map((order) => order.operation_type))
+    );
+    return uniqueTypes.map((type, index) => ({
+      id: (index + 1).toString(),
+      name: type,
+    }));
+  }, [orders]);
+
   const statusOptions = [
     { value: "all", label: "Todos los estados" },
     { value: "pending", label: "Pendiente" },
     { value: "processing", label: "En proceso" },
-    { value: "shipped", label: "Enviado" },
-    { value: "delivered", label: "Entregado" },
+    { value: "completed", label: "Completado" },
     { value: "cancelled", label: "Cancelado" },
   ];
 
@@ -282,10 +314,6 @@ const OrdersPage = () => {
         order.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.operation_type.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Filtrar por vendedor (si no es "todos")
-      const matchesSeller =
-        sellerFilter === "all" || order.seller === sellerFilter;
 
       // Filtrar por cliente (si no es "todos")
       const matchesClient =
@@ -309,7 +337,6 @@ const OrdersPage = () => {
 
       return (
         matchesSearch &&
-        matchesSeller &&
         matchesClient &&
         matchesStatus &&
         matchesOperationType &&
@@ -319,7 +346,6 @@ const OrdersPage = () => {
   }, [
     orders,
     searchTerm,
-    sellerFilter,
     clientFilter,
     statusFilter,
     operationTypeFilter,
@@ -331,18 +357,30 @@ const OrdersPage = () => {
     setIsViewDialogOpen(true);
   };
 
-  const handleUpdateOrderStatus = (
+  const handleViewDocument = (order: Order) => {
+    setSelectedDocumentId(order.id);
+    setIsDocumentModalOpen(true);
+  };
+
+  const handleUpdateOrderStatus = async (
     orderId: string,
     newStatus: Order["status"]
   ) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-    toast.success(
-      `Estado del pedido actualizado a ${getStatusLabel(newStatus)}`
-    );
+    try {
+      const apiStatus = mapLocalStatusToApiStatus(newStatus);
+      const result = await updateOrderStatus(orderId, apiStatus as any);
+
+      if (result) {
+        toast.success(
+          `Estado del pedido actualizado a ${getStatusLabel(newStatus)}`
+        );
+      } else {
+        toast.error("Error al actualizar el estado del pedido");
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast.error("Error al actualizar el estado del pedido");
+    }
   };
 
   const handleViewClientOrders = (client: string) => {
@@ -368,9 +406,7 @@ const OrdersPage = () => {
         return <Clock className="h-4 w-4" />;
       case "processing":
         return <Package className="h-4 w-4" />;
-      case "shipped":
-        return <Truck className="h-4 w-4" />;
-      case "delivered":
+      case "completed":
         return <CheckCircle className="h-4 w-4" />;
       case "cancelled":
         return <XCircle className="h-4 w-4" />;
@@ -385,31 +421,12 @@ const OrdersPage = () => {
         return "Pendiente";
       case "processing":
         return "En proceso";
-      case "shipped":
-        return "Enviado";
-      case "delivered":
-        return "Entregado";
+      case "completed":
+        return "Completado";
       case "cancelled":
         return "Cancelado";
       default:
         return "Pendiente";
-    }
-  };
-
-  const getStatusVariant = (status: Order["status"]) => {
-    switch (status) {
-      case "pending":
-        return "secondary";
-      case "processing":
-        return "default";
-      case "shipped":
-        return "outline";
-      case "delivered":
-        return "default";
-      case "cancelled":
-        return "destructive";
-      default:
-        return "secondary";
     }
   };
 
@@ -420,17 +437,17 @@ const OrdersPage = () => {
       cell: ({ row }) => (
         <div className="font-medium">
           <div>{row.getValue("client")}</div>
-          <div className="text-xs text-gray_m">{row.original.seller}</div>
+          <div className="text-xs text-gray-500">{row.original.seller}</div>
         </div>
       ),
     },
     {
       accessorKey: "order_number",
-      header: "Correlativo",
+      header: "Número de Pedido",
       cell: ({ row }) => (
         <div className="font-medium">
           <div>{row.getValue("order_number")}</div>
-          <div className="text-xs text-gray_m">
+          <div className="text-xs text-gray-500">
             {formatDate(row.original.order_date)}
           </div>
         </div>
@@ -438,7 +455,7 @@ const OrdersPage = () => {
     },
     {
       accessorKey: "operation_type",
-      header: "Tipo Operación",
+      header: "Tipo de Operación",
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("operation_type")}</div>
       ),
@@ -451,11 +468,19 @@ const OrdersPage = () => {
       ),
     },
     {
-      accessorKey: "order_date",
-      header: "Emitido",
+      accessorKey: "status",
+      header: "Estado",
       cell: ({ row }) => {
-        const date = row.getValue("order_date") as Date;
-        return <div className="font-medium">{formatDate(date)}</div>;
+        const status = row.getValue("status") as Order["status"];
+        return (
+          <Badge
+            variant={getStatusVariant(status)}
+            className={getStatusClassName(status)}
+          >
+            {getStatusIcon(status)}
+            {getStatusLabel(status)}
+          </Badge>
+        );
       },
     },
     {
@@ -487,6 +512,13 @@ const OrdersPage = () => {
                 >
                   <Eye className="h-4 w-4" />
                   <span>Ver Detalles</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleViewDocument(order)}
+                  className="cursor-pointer flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Ver Documento</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleViewClientOrders(order.client)}
@@ -531,31 +563,39 @@ const OrdersPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-green-50 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+        <main className="bg-gradient-to-br from-gray-50 to-gray-100 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
               Pedidos
             </h1>
+            {/* 🔴 AGREGAR INFO DE DEBUG */}
+            <div className="text-sm text-gray-500">
+              {selectedCompanyId
+                ? `Compañía: ${selectedCompanyId} | `
+                : "Todas las compañías | "}
+              Pedidos: {orders.length} | Cargando: {ordersLoading ? "Sí" : "No"}
+              {ordersError && ` | Error: ${ordersError}`}
+            </div>
           </div>
 
+          {/* Filtros y selección de empresa */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar por cliente, número de pedido o tipo de operación..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -572,28 +612,29 @@ const OrdersPage = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[18rem]">
                     <div className="px-2 py-1.5">
-                      <Label htmlFor="seller-filter">Vendedor</Label>
+                      <Label htmlFor="status-filter">Estado</Label>
                       <Select
-                        value={sellerFilter}
-                        onValueChange={setSellerFilter}
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
                       >
-                        <SelectTrigger id="seller-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los vendedores" />
+                        <SelectTrigger id="status-filter" className="mt-1">
+                          <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            Todos los vendedores
-                          </SelectItem>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.name}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="all">Todos los estados</SelectItem>
+                          {statusOptions
+                            .filter((opt) => opt.value !== "all")
+                            .map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <DropdownMenuSeparator />
 
                     <div className="px-2 py-1.5">
                       <Label htmlFor="client-filter">Cliente</Label>
@@ -611,6 +652,31 @@ const OrdersPage = () => {
                           {clients.map((client) => (
                             <SelectItem key={client.id} value={client.name}>
                               {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="px-2 py-1.5">
+                      <Label htmlFor="operation-type-filter">
+                        Tipo de Operación
+                      </Label>
+                      <Select
+                        value={operationTypeFilter}
+                        onValueChange={setOperationTypeFilter}
+                      >
+                        <SelectTrigger
+                          id="operation-type-filter"
+                          className="mt-1"
+                        >
+                          <SelectValue placeholder="Todos los tipos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los tipos</SelectItem>
+                          {operationTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -645,19 +711,78 @@ const OrdersPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="company-selector" className="text-sm font-medium">
+                Empresa:
+              </Label>
+              <div className="flex items-center gap-2">
+                <SelectSearchable
+                  value={selectedCompanyId?.toString() || ""}
+                  onValueChange={(value) => {
+                    const companyId = value ? Number(value) : null;
+                    console.log("🟢 Usuario seleccionó compañía:", companyId);
+                    setSelectedCompanyId(companyId);
+                  }}
+                  placeholder="Buscar empresa..."
+                  options={companyOptions}
+                  emptyMessage="No se encontraron empresas."
+                  searchPlaceholder="Buscar empresa por nombre..."
+                  className="w-full md:w-64"
+                />
+                {/* 🔴 BOTÓN PARA MOSTRAR TODAS LAS EMPRESAS */}
+                {selectedCompanyId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      console.log("🟢 Mostrando todas las compañías");
+                      setSelectedCompanyId(null);
+                    }}
+                  >
+                    Todas
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
-          <DataTable<Order, Order>
-            columns={columns}
-            data={filteredOrders}
-            noResultsText="No se encontraron pedidos"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredOrders.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
-          />
+          {/* 🔴 TABLA DE PEDIDOS ACTUALIZADA */}
+          {ordersLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">Cargando pedidos...</p>
+            </div>
+          ) : ordersError ? (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-4">Error: {ordersError}</div>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-4 text-sm text-gray-600">
+                {selectedCompanyId
+                  ? `Mostrando ${filteredOrders.length} pedidos de la compañía seleccionada`
+                  : `Mostrando ${filteredOrders.length} pedidos de todas las compañías`}
+              </div>
+              <DataTable<Order, Order>
+                columns={columns}
+                data={filteredOrders}
+                noResultsText="No se encontraron pedidos"
+                page={1}
+                setPage={() => {}}
+                totalPage={1}
+                total={filteredOrders.length}
+                itemsPerPage={10}
+                setItemsPerPage={() => {}}
+              />
+            </div>
+          )}
         </main>
       </div>
 
@@ -675,7 +800,8 @@ const OrdersPage = () => {
 
           {selectedOrder && (
             <div className="grid gap-4 py-4">
-              <div className="flex items-center justify-between border-b gap-4">
+              {/* Información del cliente y estado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <h3 className="font-semibold mb-2">
                     Información del Cliente
@@ -687,21 +813,10 @@ const OrdersPage = () => {
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Información de Entrega</h3>
-                  <p className="text-sm">
-                    <span className="font-medium">Ubicación:</span>{" "}
-                    {selectedOrder.location}
-                  </p>
-                  <p className="text-sm mt-1">
-                    <span className="font-medium">Fecha de entrega:</span>{" "}
-                    {formatDate(selectedOrder.delivery_date)}
-                  </p>
-                </div>
-                <div>
                   <h3 className="font-semibold mb-2">Estado del Pedido</h3>
                   <Badge
                     variant={getStatusVariant(selectedOrder.status)}
-                    className="flex items-center gap-1 w-fit"
+                    className={getStatusClassName(selectedOrder.status)}
                   >
                     {getStatusIcon(selectedOrder.status)}
                     {getStatusLabel(selectedOrder.status)}
@@ -709,7 +824,8 @@ const OrdersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Información básica */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <h3 className="font-semibold mb-2">Número de Pedido</h3>
                   <p className="text-sm">{selectedOrder.order_number}</p>
@@ -726,45 +842,67 @@ const OrdersPage = () => {
                 </div>
               </div>
 
-              <div>
-                <h3 className="font-semibold mb-2">Productos</h3>
-                <div className="border border-green_m rounded-md overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-green_m text-white">
-                      <tr>
-                        <th className="text-left p-3">Producto</th>
-                        <th className="text-center p-3">Cantidad</th>
-                        <th className="text-right p-3">Precio Unitario</th>
-                        <th className="text-right p-3">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedOrder.items.map((item) => (
-                        <tr key={item.id} className="border-t">
-                          <td className="p-3">{item.product_name}</td>
-                          <td className="p-3 text-center">{item.quantity}</td>
-                          <td className="p-3 text-right">
-                            {formatCurrency(item.unit_price)}
-                          </td>
-                          <td className="p-3 text-right">
-                            {formatCurrency(item.total)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Ubicación y entrega */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Ubicación</h3>
+                  <p className="text-sm">{selectedOrder.location}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Fecha de Entrega</h3>
+                  <p className="text-sm">
+                    {formatDate(selectedOrder.delivery_date)}
+                  </p>
                 </div>
               </div>
 
+              {/* Productos */}
+              {selectedOrder.items.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Productos</h3>
+                  <div className="border border-gray-200 rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="text-left p-3">Producto</th>
+                          <th className="text-center p-3">Cantidad</th>
+                          <th className="text-right p-3">Precio Unitario</th>
+                          <th className="text-right p-3">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedOrder.items.map((item) => (
+                          <tr
+                            key={item.id}
+                            className="border-t border-gray-200"
+                          >
+                            <td className="p-3">{item.product_name}</td>
+                            <td className="p-3 text-center">{item.quantity}</td>
+                            <td className="p-3 text-right">
+                              {formatCurrency(item.unit_price)}
+                            </td>
+                            <td className="p-3 text-right">
+                              {formatCurrency(item.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Notas */}
               {selectedOrder.notes && (
                 <div>
                   <h3 className="font-semibold mb-2">Notas</h3>
-                  <p className="text-sm bg-gray_xxl p-3 rounded-md">
+                  <p className="text-sm bg-yellow-50 p-3 rounded-md">
                     {selectedOrder.notes}
                   </p>
                 </div>
               )}
 
+              {/* Total */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/3">
                   <div className="flex justify-between py-2 border-t">
@@ -785,6 +923,17 @@ const OrdersPage = () => {
               onClick={() => setIsViewDialogOpen(false)}
             >
               Cerrar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                handleViewDocument(selectedOrder!);
+                setIsViewDialogOpen(false);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Ver Documento
             </Button>
           </div>
         </DialogContent>
@@ -808,43 +957,43 @@ const OrdersPage = () => {
           {selectedClient && (
             <div className="grid gap-4 py-4">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-green_m">
+                <table className="w-full border-collapse border border-gray-200">
                   <thead>
-                    <tr className="bg-green_m text-white">
-                      <th className=" px-4 py-2 text-left">Correlativo</th>
-                      <th className=" px-4 py-2 text-left">Tipo Operación</th>
+                    <tr className="bg-gray-100">
+                      <th className="px-4 py-2 text-left">Número</th>
+                      <th className="px-4 py-2 text-left">Tipo Operación</th>
                       <th className="px-4 py-2 text-left">Fecha</th>
                       <th className="px-4 py-2 text-left">Total</th>
-                      <th className=" px-4 py-2 text-left">Estado</th>
-                      <th className=" px-4 py-2 text-center">Acciones</th>
+                      <th className="px-4 py-2 text-left">Estado</th>
+                      <th className="px-4 py-2 text-center">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {getClientOrders(selectedClient).map((order) => (
                       <tr key={order.id}>
-                        <td className="border border-gray_xl px-4 py-2">
+                        <td className="border border-gray-200 px-4 py-2">
                           {order.order_number}
                         </td>
-                        <td className="border border-gray_xl px-4 py-2">
+                        <td className="border border-gray-200 px-4 py-2">
                           {order.operation_type}
                         </td>
-                        <td className="border border-gray_xl px-4 py-2">
+                        <td className="border border-gray-200 px-4 py-2">
                           {formatDate(order.order_date)}
                         </td>
-                        <td className="border border-gray_xl px-4 py-2">
+                        <td className="border border-gray-200 px-4 py-2">
                           {formatCurrency(order.total)}
                         </td>
-                        <td className="border border-gray_xl px-4 py-2">
+                        <td className="border border-gray-200 px-4 py-2">
                           <Badge
                             variant={getStatusVariant(order.status)}
-                            className="flex items-center gap-1 w-fit"
+                            className={getStatusClassName(order.status)}
                           >
                             {getStatusIcon(order.status)}
                             {getStatusLabel(order.status)}
                           </Badge>
                         </td>
-                        <td className="border border-gray_xl px-4 py-2">
-                          <div className="flex justify-center">
+                        <td className="border border-gray-200 px-4 py-2">
+                          <div className="flex justify-center gap-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -853,6 +1002,15 @@ const OrdersPage = () => {
                             >
                               <Eye className="h-4 w-4" />
                               <span>Ver</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDocument(order)}
+                              className="flex items-center gap-1"
+                            >
+                              <FileText className="h-4 w-4" />
+                              <span>Documento</span>
                             </Button>
                           </div>
                         </td>
@@ -875,6 +1033,16 @@ const OrdersPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Documento */}
+      <DocumentDetailsModal
+        documentId={selectedDocumentId}
+        isOpen={isDocumentModalOpen}
+        onClose={() => {
+          setIsDocumentModalOpen(false);
+          setSelectedDocumentId(null);
+        }}
+      />
     </div>
   );
 };

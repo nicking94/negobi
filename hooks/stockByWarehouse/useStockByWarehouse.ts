@@ -36,7 +36,7 @@ export const useStockByWarehouse = (
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
 
       console.log(
@@ -387,7 +387,7 @@ export const useStockByWarehouseId = (warehouseId?: number) => {
       const warehouseStocks = await stockByWarehouseService.getStockByWarehouse(
         {
           warehouseId: targetWarehouseId, // ✅ Now correctly passed as object
-          itemsPerPage: 1000,
+          itemsPerPage: 10,
         }
       );
       setStocks(warehouseStocks);

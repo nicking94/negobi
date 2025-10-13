@@ -204,7 +204,7 @@ export const paymentService = {
     return paymentService.getPayments({
       clientId,
       payment_type: "client_payment",
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -212,7 +212,7 @@ export const paymentService = {
     return paymentService.getPayments({
       supplierId,
       payment_type: "supplier_payment",
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -223,7 +223,7 @@ export const paymentService = {
   ): Promise<Payment[]> => {
     const params: GetPaymentsParams = {
       payment_date: `${startDate},${endDate}`,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     };
 
     if (paymentType) {
@@ -236,7 +236,7 @@ export const paymentService = {
   getPaymentsByInvoice: async (invoiceId: number): Promise<Payment[]> => {
     return paymentService.getPayments({
       invoice_id: invoiceId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 };

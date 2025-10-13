@@ -200,7 +200,7 @@ export const pendingAccountService = {
   ): Promise<PendingAccount[]> => {
     const params: GetPendingAccountsParams = {
       account_type: "receivable",
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     };
     if (companyId) {
       params.companyId = companyId;
@@ -211,7 +211,7 @@ export const pendingAccountService = {
   getPayableAccounts: async (companyId?: number): Promise<PendingAccount[]> => {
     const params: GetPendingAccountsParams = {
       account_type: "payable",
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     };
     if (companyId) {
       params.companyId = companyId;
@@ -222,7 +222,7 @@ export const pendingAccountService = {
   getOverdueAccounts: async (companyId?: number): Promise<PendingAccount[]> => {
     const allAccounts = await pendingAccountService.getPendingAccounts({
       companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
 
     const today = new Date();
@@ -235,7 +235,7 @@ export const pendingAccountService = {
   getAccountsByClient: async (clientId: number): Promise<PendingAccount[]> => {
     return pendingAccountService.getPendingAccounts({
       clientId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -244,7 +244,7 @@ export const pendingAccountService = {
   ): Promise<PendingAccount[]> => {
     return pendingAccountService.getPendingAccounts({
       supplierId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -255,7 +255,7 @@ export const pendingAccountService = {
   ): Promise<PendingAccount[]> => {
     const allAccounts = await pendingAccountService.getPendingAccounts({
       companyId,
-      itemsPerPage: 10000,
+      itemsPerPage: 100,
     });
 
     return allAccounts.filter((account) => {
@@ -277,7 +277,7 @@ export const pendingAccountService = {
   }> => {
     const allAccounts = await pendingAccountService.getPendingAccounts({
       companyId,
-      itemsPerPage: 10000,
+      itemsPerPage: 100,
     });
 
     const today = new Date();

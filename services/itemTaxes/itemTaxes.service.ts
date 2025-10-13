@@ -137,14 +137,14 @@ export const itemTaxService = {
   getItemTaxesByItem: async (itemId: number): Promise<ItemTax[]> => {
     return itemTaxService.getItemTaxes({
       itemId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getItemTaxesByTaxType: async (taxTypeId: number): Promise<ItemTax[]> => {
     return itemTaxService.getItemTaxes({
       taxTypeId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

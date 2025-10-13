@@ -191,13 +191,13 @@ export const taxTypeService = {
   getActiveTaxTypes: async (): Promise<TaxType[]> => {
     return taxTypeService.getTaxTypes({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getSalesTaxTypes: async (): Promise<TaxType[]> => {
     const allTaxTypes = await taxTypeService.getTaxTypes({
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return allTaxTypes.filter(
       (taxType) => taxType.applies_to_sales && taxType.is_active
@@ -206,7 +206,7 @@ export const taxTypeService = {
 
   getPurchaseTaxTypes: async (): Promise<TaxType[]> => {
     const allTaxTypes = await taxTypeService.getTaxTypes({
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return allTaxTypes.filter(
       (taxType) => taxType.applies_to_purchase && taxType.is_active

@@ -249,7 +249,7 @@ export const documentItemService = {
   ): Promise<DocumentItem[]> => {
     return documentItemService.getDocumentItems({
       documentId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -258,7 +258,7 @@ export const documentItemService = {
   ): Promise<DocumentItem[]> => {
     return documentItemService.getDocumentItems({
       product_id: productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

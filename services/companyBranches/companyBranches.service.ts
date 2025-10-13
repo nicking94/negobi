@@ -16,6 +16,8 @@ export interface GetCompanyBranchesParams {
   code?: string;
 }
 
+// services/companyBranches/companyBranches.service.ts
+
 export interface CompanyBranch {
   // Campos del response (GET)
   id: number;
@@ -26,8 +28,7 @@ export interface CompanyBranch {
   physical_address: string;
   is_active: boolean;
   is_central: boolean;
-
-  // Campos de sistema
+  companyId: number;
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -86,7 +87,12 @@ export const companyBranchService = {
     branchData: CreateCompanyBranchData
   ): Promise<CompanyBranch> => {
     const response = await api.post(PostCompanyBranch, branchData);
-    return response.data.data;
+    const branch = response.data.data;
+    // Asegurar que companyId esté presente
+    return {
+      ...branch,
+      companyId: branchData.companyId,
+    };
   },
 
   // Obtener todas las sucursales
@@ -118,7 +124,12 @@ export const companyBranchService = {
     }
 
     const response = await api.get(`${GetCompanyBranches}?${queryParams}`);
-    return response.data.data;
+    const branches = response.data.data;
+
+    return branches.map((branch: any) => ({
+      ...branch,
+      companyId: params.companyId, // Usar el companyId del filtro
+    }));
   },
 
   // Actualizar una sucursal

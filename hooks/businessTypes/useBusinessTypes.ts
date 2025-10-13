@@ -33,7 +33,7 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
 
       console.log(
@@ -114,7 +114,7 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
       // Si se actualiza el nombre, verificar que no exista
       if (updates.name) {
         const existingBusinessTypes =
-          await businessTypeService.getBusinessTypes({ itemsPerPage: 1000 });
+          await businessTypeService.getBusinessTypes({ itemsPerPage: 10 });
         const nameExists = existingBusinessTypes.some(
           (businessType) =>
             businessType.name === updates.name &&

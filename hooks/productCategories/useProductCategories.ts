@@ -43,7 +43,7 @@ export const useProductCategories = (
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000, // Más grande para categorías
+        itemsPerPage: 10, // Más grande para categorías
       };
 
       console.log("🔵 Enviando parámetros para categorías:", combinedFilters);

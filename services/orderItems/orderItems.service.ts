@@ -253,14 +253,14 @@ export const orderItemService = {
   getOrderItemsByOrder: async (orderId: number): Promise<OrderItem[]> => {
     return orderItemService.getOrderItems({
       order_id: orderId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getOrderItemsByProduct: async (productId: number): Promise<OrderItem[]> => {
     return orderItemService.getOrderItems({
       product_id: productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -269,7 +269,7 @@ export const orderItemService = {
   ): Promise<OrderItem[]> => {
     return orderItemService.getOrderItems({
       warehouse_id: warehouseId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -309,7 +309,7 @@ export const orderItemService = {
   // Obtener items con alto valor
   getHighValueItems: async (minAmount: number = 1000): Promise<OrderItem[]> => {
     const allItems = await orderItemService.getOrderItems({
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
     return allItems.filter((item) => item.total_amount >= minAmount);
   },

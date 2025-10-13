@@ -128,14 +128,14 @@ export const brandService = {
   getActiveBrands: async (): Promise<Brand[]> => {
     return brandService.getBrands({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getInactiveBrands: async (): Promise<Brand[]> => {
     return brandService.getBrands({
       is_active: false,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -143,7 +143,7 @@ export const brandService = {
   searchBrandsByName: async (searchTerm: string): Promise<Brand[]> => {
     return brandService.getBrands({
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -151,7 +151,7 @@ export const brandService = {
   searchBrandsByDescription: async (description: string): Promise<Brand[]> => {
     return brandService.getBrands({
       description: description,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -225,7 +225,7 @@ export const brandService = {
   }> => {
     try {
       const [allBrands, activeBrands] = await Promise.all([
-        brandService.getBrands({ itemsPerPage: 1000 }),
+        brandService.getBrands({ itemsPerPage: 10 }),
         brandService.getActiveBrands(),
       ]);
 

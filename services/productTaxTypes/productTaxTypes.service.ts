@@ -174,7 +174,7 @@ export const productTaxTypeService = {
   ): Promise<ProductTaxType[]> => {
     return productTaxTypeService.getProductTaxTypes({
       productId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -183,7 +183,7 @@ export const productTaxTypeService = {
   ): Promise<ProductTaxType[]> => {
     return productTaxTypeService.getProductTaxTypes({
       taxTypeId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

@@ -163,7 +163,7 @@ export const exchangeRateService = {
   getActiveExchangeRates: async (): Promise<ExchangeRate[]> => {
     return exchangeRateService.getExchangeRates({
       is_active: true,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -174,7 +174,7 @@ export const exchangeRateService = {
     return exchangeRateService.getExchangeRates({
       baseCurrencyId,
       targetCurrencyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -200,7 +200,7 @@ export const exchangeRateService = {
   getExchangeRatesByDate: async (date: string): Promise<ExchangeRate[]> => {
     return exchangeRateService.getExchangeRates({
       rate_date: date,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -211,7 +211,7 @@ export const exchangeRateService = {
     // Nota: Esto podría requerir un endpoint específico en la API
     // Por ahora, obtenemos todos y filtramos por fecha
     const allRates = await exchangeRateService.getExchangeRates({
-      itemsPerPage: 10000,
+      itemsPerPage: 100,
     });
 
     return allRates.filter((rate) => {

@@ -35,7 +35,7 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       };
 
       console.log(

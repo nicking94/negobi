@@ -240,49 +240,49 @@ export const goalService = {
     const now = new Date().toISOString();
     return goalService.getGoals({
       end_date_to: now,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByType: async (goalType: GoalType): Promise<Goal[]> => {
     return goalService.getGoals({
       goal_type: goalType,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByStatus: async (status: GoalStatus): Promise<Goal[]> => {
     return goalService.getGoals({
       status: status,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByPeriod: async (periodType: PeriodType): Promise<Goal[]> => {
     return goalService.getGoals({
       period_type: periodType,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByCompany: async (companyId: number): Promise<Goal[]> => {
     return goalService.getGoals({
       companyId: companyId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByUser: async (userId: number): Promise<Goal[]> => {
     return goalService.getGoals({
       userId: userId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   getGoalsByZone: async (zoneId: number): Promise<Goal[]> => {
     return goalService.getGoals({
       zoneId: zoneId,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -302,7 +302,7 @@ export const goalService = {
     return goalService.getGoals({
       start_date_from: startOfMonth,
       end_date_to: endOfMonth,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 

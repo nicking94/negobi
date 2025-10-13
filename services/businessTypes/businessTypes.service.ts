@@ -146,14 +146,14 @@ export const businessTypeService = {
   getBusinessTypesByName: async (name: string): Promise<BusinessType[]> => {
     return businessTypeService.getBusinessTypes({
       name,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
   searchBusinessTypes: async (searchTerm: string): Promise<BusinessType[]> => {
     return businessTypeService.getBusinessTypes({
       search: searchTerm,
-      itemsPerPage: 1000,
+      itemsPerPage: 10,
     });
   },
 
@@ -177,7 +177,7 @@ export const businessTypeService = {
   > => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
       return businessTypes.map((businessType) => ({
         value: businessType.id,
@@ -195,7 +195,7 @@ export const businessTypeService = {
   > => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
       return businessTypes.map((businessType) => ({
         value: businessType.id,
@@ -217,7 +217,7 @@ export const businessTypeService = {
   ): Promise<BusinessType[]> => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
 
       // Ordenar por nombre alfabéticamente como placeholder
@@ -272,7 +272,7 @@ export const businessTypeService = {
   }> => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
 
       const totalNameLength = businessTypes.reduce(
@@ -378,7 +378,7 @@ export const businessTypeService = {
   ): Promise<BusinessType[]> => {
     try {
       const allTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
 
       // Simple algoritmo de similitud (en una implementación real podrías usar librerías como string-similarity)
@@ -426,7 +426,7 @@ export const businessTypeService = {
   > => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
-        itemsPerPage: 1000,
+        itemsPerPage: 10,
       });
 
       // Categorías simuladas basadas en palabras clave en la descripción
