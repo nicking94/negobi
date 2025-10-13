@@ -2,7 +2,7 @@
 import { Client } from "@/app/dashboard/masters/clients/page";
 import * as ClientsRoute from "./clients.routes";
 import api from "@/utils/api";
-import { ClientTypesResponse, ClientType } from "@/types"; // Asegúrate de importar los tipos
+import { ClientTypesResponse, ClientType } from "@/types";
 
 interface ClientsQueryType {
   search?: string;
@@ -11,6 +11,7 @@ interface ClientsQueryType {
   companyId?: number;
   order?: string;
   legal_name?: string;
+  salespersonUserId?: string;
 }
 
 export class ClientsService {
@@ -29,9 +30,13 @@ export class ClientsService {
       }
     });
 
-    console.log("Clean query parameters:", cleanQuery);
+    console.log("🚀 DEBUG - API Request params:", cleanQuery);
 
-    return await api.get(ClientsRoute.GetClients, { params: cleanQuery });
+    const response = await api.get(ClientsRoute.GetClients, {
+      params: cleanQuery,
+    });
+
+    return response;
   }
 
   static async getClient(id: string) {

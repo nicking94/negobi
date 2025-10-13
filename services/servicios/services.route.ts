@@ -1,4 +1,5 @@
-export const addService = "/services"
-export const getServices = "/services"
-export const patchService = "/services"
-export const deleteService = "/services"
+export const PostService = "/services";
+export const GetServices = "/services";
+export const GetServiceById = "/services";
+export const PatchService = "/services";
+export const DeleteService = "/services";

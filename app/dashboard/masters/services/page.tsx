@@ -52,9 +52,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import { ServiceService } from "@/services/servicios/services.service";
+
 import useGetInstances from "@/hooks/instances/useGetInstance";
-import useGetService from "@/hooks/services/useGetServices";
 
 type Category = {
   id: number;
@@ -94,16 +93,6 @@ const ServicesPage = () => {
   const [syncFilter, setSyncFilter] = useState<string>("all");
   const [instanceFilter, setInstanceFilter] = useState<string>("all");
   const { instancesResponse } = useGetInstances();
-  const {
-    servicesResponse,
-    page,
-    setItemsPerPage,
-    itemsPerPage,
-    setPage,
-    total,
-    totalPage,
-    setModified,
-  } = useGetService();
 
   const [categories, setCategories] = useState([
     { id: 1, name: "Consultoría" },
@@ -134,10 +123,8 @@ const ServicesPage = () => {
     try {
       if (editingService && typeof editingService.id === "number") {
         toast.success("Servicio actualizado exitosamente");
-        setModified((prev) => !prev);
       } else {
         toast.success("Servicio creado exitosamente");
-        setModified((prev) => !prev);
       }
 
       resetForm();
@@ -157,9 +144,8 @@ const ServicesPage = () => {
             toast.error("ID de servicio no válido");
             return;
           }
-          await ServiceService.deleteService(service.id);
+
           toast.success("Servicio eliminado exitosamente");
-          setModified((prev) => !prev);
         },
       },
       cancel: {
@@ -397,18 +383,6 @@ const ServicesPage = () => {
               </Button>
             </div>
           </div>
-
-          <DataTable<Service, Service>
-            columns={columns}
-            data={servicesResponse || []}
-            noResultsText="No se encontraron servicios"
-            page={page}
-            setPage={setPage}
-            totalPage={totalPage}
-            total={total}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-          />
         </main>
       </div>
 

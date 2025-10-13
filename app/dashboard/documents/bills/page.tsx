@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,6 +9,7 @@ import {
   Search,
   Filter,
   FileText,
+  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +44,11 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useDocuments } from "@/hooks/documents/useDocuments";
+import { Document } from "@/services/documents/documents.service";
+import useGetCompanies from "@/hooks/companies/useGetCompanies"; // Importar el hook de empresas
 
+// Tipo Bill basado en Document
 export type Bill = {
   id: string;
   client: string;
@@ -69,33 +74,70 @@ const BillsPage = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    null
+  );
 
-  // Datos de ejemplo
-  const [bills, setBills] = useState<Bill[]>([
-    {
-      id: "1",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "NE053044",
-      operation_type: "DÓLARES",
-      location: "Sucursal Principal",
-      issued_date: new Date("2025-09-02T12:24:00"),
-      total: 815.08,
-      seller: "Juan Pérez",
-      status: "paid",
-    },
-    {
-      id: "2",
-      client: "DISTRIBUIDORA LA ECONOMÍA, C.A.",
-      correlative: "NE053045",
-      operation_type: "BOLÍVARES",
-      location: "Sucursal Norte",
-      issued_date: new Date("2025-09-01T10:15:00"),
-      total: 1250.5,
-      seller: "María González",
-      status: "pending",
-    },
-  ]);
+  // Obtener las empresas
+  const { companiesResponse, loading: companiesLoading } = useGetCompanies();
 
+  // Seleccionar la primera empresa por defecto cuando se cargan las empresas
+  useEffect(() => {
+    if (companiesResponse.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(companiesResponse[0].id);
+    }
+  }, [companiesResponse, selectedCompanyId]);
+
+  // Usar el hook con filtro para facturas - incluir companyId
+  const {
+    documents,
+    loading: documentsLoading,
+    error,
+  } = useDocuments({
+    document_type: "invoice",
+    companyId: selectedCompanyId!,
+  });
+
+  // En BillsPage.tsx - actualiza el useMemo de bills
+  const bills: Bill[] = useMemo(() => {
+    // Verificar que documents sea un array antes de usar map
+    if (!documents || !Array.isArray(documents)) {
+      console.warn("⚠️ documents no es un array o está vacío:", documents);
+      return [];
+    }
+
+    return documents.map((doc: Document) => ({
+      id: doc.id.toString(),
+      client: doc.clientId?.toString() || "Cliente no especificado",
+      correlative: doc.document_number,
+      operation_type: doc.operationTypeId?.toString() || doc.document_type,
+      location: doc.sourceWarehouseId?.toString() || "No especificado",
+      issued_date: new Date(doc.document_date),
+      total: doc.total_amount,
+      seller:
+        doc.responsibleUserId?.toString() || doc.salesperson_external_code,
+      status: mapDocumentStatusToBillStatus(doc.status),
+    }));
+  }, [documents]);
+
+  // Función para mapear el estado del documento al estado de la factura
+  const mapDocumentStatusToBillStatus = (
+    docStatus: string
+  ): "pending" | "paid" | "cancelled" => {
+    switch (docStatus) {
+      case "completed":
+      case "approved":
+        return "paid";
+      case "cancelled":
+        return "cancelled";
+      case "draft":
+      case "pending":
+      default:
+        return "pending";
+    }
+  };
+
+  // Resto del código permanece igual...
   const sellers = useMemo(() => {
     const uniqueSellers = Array.from(
       new Set(bills.map((bill) => bill.seller || "").filter(Boolean))
@@ -148,6 +190,7 @@ const BillsPage = () => {
     });
   }, [bills, searchTerm, sellerFilter, clientFilter, dateRange]);
 
+  // Resto del código permanece igual...
   const handleViewOrder = (bill: Bill) => {
     setSelectedBill(bill);
     setIsViewDialogOpen(true);
@@ -266,12 +309,6 @@ const BillsPage = () => {
         />
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Facturas
-            </h1>
-          </div>
-
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -294,30 +331,6 @@ const BillsPage = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[18rem]">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="seller-filter">Vendedor</Label>
-                      <Select
-                        value={sellerFilter}
-                        onValueChange={setSellerFilter}
-                      >
-                        <SelectTrigger id="seller-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los vendedores" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todos los vendedores
-                          </SelectItem>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.name}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
                     <div className="px-2 py-1.5">
                       <Label htmlFor="client-filter">Cliente</Label>
                       <Select
@@ -368,19 +381,63 @@ const BillsPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+            {/* Selector de compañía */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="company-selector">Seleccionar Empresa:</Label>
+              <Select
+                value={selectedCompanyId?.toString() || ""}
+                onValueChange={(value) => setSelectedCompanyId(Number(value))}
+              >
+                <SelectTrigger id="company-selector" className="w-full md:w-64">
+                  <Building className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Selecciona una compañía" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companiesLoading ? (
+                    <SelectItem value="loading" disabled>
+                      Cargando compañías...
+                    </SelectItem>
+                  ) : companiesResponse.length === 0 ? (
+                    <SelectItem value="empty" disabled>
+                      No hay compañías disponibles
+                    </SelectItem>
+                  ) : (
+                    companiesResponse.map((company) => (
+                      <SelectItem
+                        key={company.id}
+                        value={company.id.toString()}
+                      >
+                        {company.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {!selectedCompanyId && companiesResponse.length > 0 && (
+                <p className="text-sm text-red-500 mt-1">
+                  Por favor selecciona una compañía para ver las facturas
+                </p>
+              )}
+            </div>
           </div>
 
-          <DataTable<Bill, Bill>
-            columns={columns}
-            data={filteredBills}
-            noResultsText="No se encontraron facturas"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredBills.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
-          />
+          {selectedCompanyId ? (
+            <DataTable<Bill, Bill>
+              columns={columns}
+              data={filteredBills}
+              noResultsText="No se encontraron facturas"
+              page={1}
+              setPage={() => {}}
+              totalPage={1}
+              total={filteredBills.length}
+              itemsPerPage={10}
+              setItemsPerPage={() => {}}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Selecciona una compañía para ver las facturas
+            </div>
+          )}
         </main>
       </div>
 

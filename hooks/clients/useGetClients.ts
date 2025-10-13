@@ -1,5 +1,7 @@
-import { ClientsService } from "@/services/clients/clients.service";
+// hooks/clients/useGetClients.ts
 import { useEffect, useState, useCallback } from "react";
+import { ClientsService } from "@/services/clients/clients.service";
+import { Client } from "@/app/dashboard/masters/clients/page"; // Importa el tipo Client
 
 interface UseGetClientsParams {
   search?: string;
@@ -11,7 +13,7 @@ interface UseGetClientsParams {
 
 const useGetClients = (params: UseGetClientsParams = {}) => {
   const [loading, setLoading] = useState(false);
-  const [clientsResponse, setClientsResponse] = useState([]);
+  const [clientsResponse, setClientsResponse] = useState<Client[]>([]); // ✅ Especifica el tipo Client[]
   const [modified, setModified] = useState(false);
   const [page, setPage] = useState(params.page || 1);
   const [totalPage, setTotalPage] = useState(0);
@@ -21,18 +23,48 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
   const getClients = useCallback(async () => {
     try {
       setLoading(true);
-      const queryParams = {
+      const queryParams: Record<string, any> = {
         search: params.search || "",
         page,
         itemsPerPage,
-        // Solo incluir parámetros que la API realmente acepta
-        legal_name: params.search || "", // Si quieres buscar por nombre legal
+        legal_name: params.search || "",
       };
 
-      console.log("Fetching clients with params:", queryParams);
+      // ✅ Solo incluye salespersonUserId si tiene valor y no es "all"
+      if (params.salespersonUserId && params.salespersonUserId !== "all") {
+        queryParams.salespersonUserId = params.salespersonUserId;
+      }
+
+      // ✅ Solo incluye companyId si tiene valor
+      if (params.companyId) {
+        queryParams.companyId = params.companyId;
+      }
+
+      console.log("🔍 DEBUG - Fetching clients with params:", queryParams);
 
       const { data } = await ClientsService.getClients(queryParams);
-      setClientsResponse(data.data.data);
+
+      console.log("📋 DEBUG - API Response:", {
+        dataStructure: data,
+        firstClient: data.data?.data?.[0],
+      });
+
+      // ✅ Mapeo mejorado con tipo explícito Client
+      const mappedClients: Client[] = data.data.data.map((client: any) => ({
+        ...client,
+        payment_term_id: client.payment_term_id || client.paymentTermId,
+        // ✅ Asegúrate de mapear correctamente el vendedor
+        salespersonUserId:
+          client.salespersonUserId || client.salesperson_user_id,
+      }));
+
+      console.log("🔄 DEBUG - Clientes mapeados:", mappedClients);
+      console.log(
+        "👤 DEBUG - Vendedor del primer cliente:",
+        mappedClients[0]?.salespersonUserId
+      );
+
+      setClientsResponse(mappedClients);
       setTotalPage(data.data.totalPages);
       setTotal(data.data.total);
     } catch (e) {
@@ -41,11 +73,17 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [params.search, page, itemsPerPage]);
+  }, [
+    params.search,
+    page,
+    itemsPerPage,
+    params.salespersonUserId,
+    params.companyId,
+  ]);
 
   useEffect(() => {
     getClients();
-  }, [getClients, modified]); // Agrega modified como dependencia
+  }, [getClients, modified]);
 
   return {
     setModified,

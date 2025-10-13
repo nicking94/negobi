@@ -62,6 +62,7 @@ import { PaymentTermType, ClientType } from "@/types";
 import { useGetSellers } from "@/hooks/users/useGetSellsers";
 import { useClientTypes } from "@/hooks/clients/useClientTypes";
 import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
+import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
 
 export type Client = {
   id?: string;
@@ -112,9 +113,10 @@ export type Client = {
   last_payment_number?: string;
   last_payment_amount?: number;
   is_active?: boolean;
+  paymentTermId?: number;
 };
 
-// Schema con tipos específicos en lugar de 'any'
+// Schema actualizado - eliminamos is_special_taxpayer ya que viene del client_type
 const clientSchema = z.object({
   businessTypeId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   salespersonUserId: z
@@ -132,7 +134,7 @@ const clientSchema = z.object({
     .string()
     .min(1, "El número de documento fiscal es requerido"),
   client_type: z.string().min(1, "El tipo de cliente es requerido"),
-  is_special_taxpayer: z.boolean().optional(),
+  // Eliminamos is_special_taxpayer del schema
   fiscal_country_id: z
     .union([z.number(), z.string(), z.undefined()])
     .optional(),
@@ -279,7 +281,14 @@ const ClientsPage = () => {
   });
 
   const activePaymentTerms = paymentTerms.filter((term) => term.is_active);
+  useEffect(() => {
+    const formattedTypes = TAX_DOCUMENT_TYPES.map((type) => ({
+      value: type,
+      name: type.toUpperCase(),
+    }));
 
+    setTaxDocumentTypes(formattedTypes);
+  }, []);
   useEffect(() => {
     if (paymentTermsError) {
       console.error("Error loading payment terms:", paymentTermsError);
@@ -292,27 +301,17 @@ const ClientsPage = () => {
       toast.error("Error al cargar los tipos de cliente");
     }
   }, [clientTypesError]);
-
-  // En tu componente, agrega este useEffect para debuggear
   useEffect(() => {
-    console.log("🔍 DEBUG - Client Types State:", {
-      clientTypesLoading,
-      clientTypesError,
-      totalClientTypes: clientTypes.length,
-      clientTypes: clientTypes.map((type) => ({
-        id: type.id,
-        name: type.name,
-        description: type.description,
-        is_active: type.is_active,
-      })),
-      // Verificar si los nombres coinciden con las traducciones
-      translationCheck: clientTypes.map((type) => ({
-        name: type.name,
-        translated: clientTypeTranslations[type.name],
-        existsInTranslations: !!clientTypeTranslations[type.name],
-      })),
+    console.log("🔍 DEBUG - Estado actual de clientsResponse:", {
+      clientsResponse,
+      selectedSeller,
+      filteredCount: clientsResponse.filter(
+        (client) =>
+          selectedSeller === "all" ||
+          client.salespersonUserId?.toString() === selectedSeller
+      ).length,
     });
-  }, [clientTypes, clientTypesLoading, clientTypesError]);
+  }, [clientsResponse, selectedSeller]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -325,7 +324,6 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
-      is_special_taxpayer: false,
       fiscal_country_id: undefined,
       fiscal_state_id: undefined,
       fiscal_city_id: undefined,
@@ -371,6 +369,8 @@ const ClientsPage = () => {
     console.log("Form submitted with values:", values);
 
     try {
+      const isSpecialTaxpayer = values.client_type === "special_taxpayer";
+
       // Limpiar datos antes de enviar
       const cleanData: Record<string, unknown> = {
         client_code: values.client_code,
@@ -378,7 +378,7 @@ const ClientsPage = () => {
         tax_document_type: values.tax_document_type,
         tax_document_number: values.tax_document_number,
         client_type: values.client_type,
-        is_special_taxpayer: values.is_special_taxpayer ?? false,
+        is_special_taxpayer: isSpecialTaxpayer,
         has_credit: values.has_credit ?? false,
         is_active: values.is_active ?? true,
       };
@@ -500,7 +500,6 @@ const ClientsPage = () => {
       tax_document_type: client.tax_document_type,
       tax_document_number: client.tax_document_number,
       client_type: client.client_type,
-      is_special_taxpayer: client.is_special_taxpayer || false,
       fiscal_country_id: cleanValueForForm(client.fiscal_country_id) as
         | number
         | undefined,
@@ -578,7 +577,6 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
-      is_special_taxpayer: false,
       fiscal_country_id: undefined,
       fiscal_state_id: undefined,
       fiscal_city_id: undefined,
@@ -737,14 +735,6 @@ const ClientsPage = () => {
 
   const isSubmitting = isCreating || isUpdating;
 
-  // También para ver cambios en los campos
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      console.log(`Field ${name} changed:`, value);
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -857,13 +847,9 @@ const ClientsPage = () => {
           <Form {...form}>
             <form
               onSubmit={async (e) => {
-                console.log("Form submit event triggered");
                 e.preventDefault();
 
                 try {
-                  console.log("Manually validating form...");
-
-                  // Validación manual directa
                   const isValid = await form.trigger();
                   console.log("Form validation result:", isValid);
 
@@ -1101,32 +1087,11 @@ const ClientsPage = () => {
                         </FormItem>
                       )}
                     />
-                    {/* En la sección de Información Fiscal, después del campo client_type */}
-                    <FormField
-                      control={form.control}
-                      name="is_special_taxpayer"
-                      render={({ field }) => (
-                        <FormItem className="bg-white flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>¿Contribuyente especial?</FormLabel>
-                            <FormDescription className="text-xs sm:text-sm">
-                              Marcar si el cliente es un contribuyente especial
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
+                    {/* ELIMINADO: El checkbox de contribuyente especial ya no es necesario */}
                   </div>
                 </div>
 
-                <div className=" grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className=" grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   {/* Información de contacto */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información de Contacto</h3>
