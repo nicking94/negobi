@@ -48,11 +48,13 @@ import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Badge } from "@/components/ui/badge";
-import { useOrders } from "@/hooks/orders/useOrders";
 import {
-  Order as ApiOrder,
-  ORDER_STATUSES,
-} from "@/services/orders/orders.service";
+  Document as ApiDocument,
+  DOCUMENT_STATUSES,
+  DocumentStatus,
+} from "@/services/documents/documents.service";
+import { useDocuments } from "@/hooks/documents/useDocuments";
+
 import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
@@ -114,92 +116,60 @@ const OrdersPage = () => {
   // Obtener las empresas
   const { companies: companiesResponse } = useGetAllCompanies();
 
-  // 🔴 USAR EL HOOK SIN FILTRO company_id
+  // Usar el hook useDocuments correctamente
   const {
-    orders: apiOrders,
-    loading: ordersLoading,
-    error: ordersError,
-    updateOrderStatus,
-  } = useOrders(); // Sin filtros
+    documents: documentsData,
+    loading: documentsLoading, // Cambiado de ordersLoading a documentsLoading
+    error: documentsError, // Cambiado de ordersError a documentsError
+    updateDocumentStatus,
+  } = useDocuments({
+    companyId: selectedCompanyId || 0,
+    document_type: "order",
+  });
 
-  // Mapear los pedidos de la API al formato local CON FILTRADO POR COMPAÑÍA
+  // Mapear documentos a órdenes
   const orders: Order[] = useMemo(() => {
-    if (!apiOrders || !Array.isArray(apiOrders)) {
-      console.warn("⚠️ apiOrders no es un array o está vacío:", apiOrders);
+    if (!documentsData || !Array.isArray(documentsData)) {
       return [];
     }
 
-    console.log("🟡 Pedidos recibidos de la API:", apiOrders.length);
-    console.log("🟡 Company ID seleccionado:", selectedCompanyId);
+    return documentsData.map((doc) => ({
+      id: doc.id.toString(),
+      order_number: doc.document_number,
+      client: doc.client?.legal_name || `Cliente ${doc.clientId}`,
+      client_id: doc.clientId,
+      order_date: new Date(doc.document_date),
+      delivery_date: doc.due_date ? new Date(doc.due_date) : null,
+      operation_type: doc.operationTypeId
+        ? `Operación ${doc.operationTypeId}`
+        : "Venta",
+      operation_type_id: doc.operationTypeId,
+      items: [], // Los items vendrían en otro endpoint
+      total: doc.total_amount,
+      total_amount: doc.total_amount,
+      status: mapApiStatusToLocalStatus(doc.status),
+      seller: doc.salesperson_external_code || "No especificado",
+      salesperson_id: doc.salespersonId,
+      location: doc.sourceWarehouseId
+        ? `Almacén ${doc.sourceWarehouseId}`
+        : "Ubicación no especificada",
+      warehouse_id: doc.sourceWarehouseId,
+      notes: doc.notes || "Sin notas",
+      company_id: doc.companyId,
+    }));
+  }, [documentsData]);
 
-    // 🔴 FILTRAR POR COMPAÑÍA EN EL FRONTEND
-    const filteredByCompany = selectedCompanyId
-      ? apiOrders.filter(
-          (order: ApiOrder) => order.company_id === selectedCompanyId
-        )
-      : apiOrders;
-
-    console.log("🟢 Pedidos después del filtro:", filteredByCompany.length);
-
-    return filteredByCompany.map((order: ApiOrder) => {
-      // Para datos de ejemplo mientras se resuelve la estructura real de la API
-      const isSampleData = !order.client_id && !order.salesperson_id;
-
-      return {
-        id: order.id.toString(),
-        order_number: order.order_number || `ORD-${order.id}`,
-        client: isSampleData
-          ? `Cliente ${order.id}`
-          : `Cliente ${order.client_id}` || "Cliente no especificado",
-        client_id: order.client_id,
-        order_date: new Date(order.order_date || new Date()),
-        delivery_date: order.transaction_date
-          ? new Date(order.transaction_date)
-          : null,
-        operation_type: order.order_type || "Venta",
-        operation_type_id: order.operation_type_id,
-        items: order.items?.map((item, index) => ({
-          id: item.id?.toString() || `item-${order.id}-${index}`,
-          product_name: item.description || `Producto ${index + 1}`,
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          total: item.total_amount || 0,
-        })) || [
-          {
-            id: `item-${order.id}-1`,
-            product_name: "Producto de ejemplo",
-            quantity: 1,
-            unit_price: order.total_amount || 100,
-            total: order.total_amount || 100,
-          },
-        ],
-        total: order.total_amount || 0,
-        total_amount: order.total_amount || 0,
-        status: mapApiStatusToLocalStatus(order.status),
-        seller: isSampleData
-          ? `Vendedor ${order.id}`
-          : `Vendedor ${order.salesperson_id}` || "No especificado",
-        salesperson_id: order.salesperson_id,
-        location:
-          `Almacén ${order.warehouse_id || order.id}` ||
-          "Ubicación no especificada",
-        warehouse_id: order.warehouse_id,
-        notes: order.notes || "Sin notas",
-        company_id: order.company_id,
-      };
-    });
-  }, [apiOrders, selectedCompanyId]); // 🔴 AGREGAR selectedCompanyId COMO DEPENDENCIA
-
-  // Mapear estados de la API a estados locales
+  // Actualizar el mapeo de estados
   const mapApiStatusToLocalStatus = (apiStatus: string): Order["status"] => {
     switch (apiStatus) {
-      case ORDER_STATUSES.PENDING:
+      case DOCUMENT_STATUSES.DRAFT:
+      case DOCUMENT_STATUSES.PENDING:
         return "pending";
-      case ORDER_STATUSES.PROCESSED:
+      case DOCUMENT_STATUSES.APPROVED:
         return "processing";
-      case ORDER_STATUSES.COMPLETED:
+      case DOCUMENT_STATUSES.COMPLETED:
         return "completed";
-      case ORDER_STATUSES.CANCELLED:
+      case DOCUMENT_STATUSES.CANCELLED:
         return "cancelled";
       default:
         return "pending";
@@ -207,22 +177,23 @@ const OrdersPage = () => {
   };
 
   // Mapear estados locales a estados de la API
-  const mapLocalStatusToApiStatus = (localStatus: Order["status"]): string => {
+  const mapLocalStatusToApiStatus = (
+    localStatus: Order["status"]
+  ): DocumentStatus => {
     switch (localStatus) {
       case "pending":
-        return ORDER_STATUSES.PENDING;
+        return DOCUMENT_STATUSES.PENDING;
       case "processing":
-        return ORDER_STATUSES.PROCESSED;
+        return DOCUMENT_STATUSES.APPROVED;
       case "completed":
-        return ORDER_STATUSES.COMPLETED;
+        return DOCUMENT_STATUSES.COMPLETED;
       case "cancelled":
-        return ORDER_STATUSES.CANCELLED;
+        return DOCUMENT_STATUSES.CANCELLED;
       default:
-        return ORDER_STATUSES.PENDING;
+        return DOCUMENT_STATUSES.PENDING;
     }
   };
 
-  // Fixed getStatusVariant function to use valid Badge variants
   const getStatusVariant = (status: Order["status"]) => {
     switch (status) {
       case "pending":
@@ -238,7 +209,6 @@ const OrdersPage = () => {
     }
   };
 
-  // Alternative approach: Create a custom className for success state
   const getStatusClassName = (status: Order["status"]) => {
     const baseClasses = "flex items-center gap-1 w-fit";
     switch (status) {
@@ -368,7 +338,7 @@ const OrdersPage = () => {
   ) => {
     try {
       const apiStatus = mapLocalStatusToApiStatus(newStatus);
-      const result = await updateOrderStatus(orderId, apiStatus as any);
+      const result = await updateDocumentStatus(orderId, apiStatus);
 
       if (result) {
         toast.success(
@@ -578,14 +548,6 @@ const OrdersPage = () => {
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
               Pedidos
             </h1>
-            {/* 🔴 AGREGAR INFO DE DEBUG */}
-            <div className="text-sm text-gray-500">
-              {selectedCompanyId
-                ? `Compañía: ${selectedCompanyId} | `
-                : "Todas las compañías | "}
-              Pedidos: {orders.length} | Cargando: {ordersLoading ? "Sí" : "No"}
-              {ordersError && ` | Error: ${ordersError}`}
-            </div>
           </div>
 
           {/* Filtros y selección de empresa */}
@@ -730,7 +692,6 @@ const OrdersPage = () => {
                   searchPlaceholder="Buscar empresa por nombre..."
                   className="w-full md:w-64"
                 />
-                {/* 🔴 BOTÓN PARA MOSTRAR TODAS LAS EMPRESAS */}
                 {selectedCompanyId && (
                   <Button
                     variant="outline"
@@ -747,15 +708,15 @@ const OrdersPage = () => {
             </div>
           </div>
 
-          {/* 🔴 TABLA DE PEDIDOS ACTUALIZADA */}
-          {ordersLoading ? (
+          {/* TABLA DE PEDIDOS ACTUALIZADA - CORREGIDO */}
+          {documentsLoading ? ( // Cambiado de ordersLoading a documentsLoading
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Cargando pedidos...</p>
             </div>
-          ) : ordersError ? (
+          ) : documentsError ? ( // Cambiado de ordersError a documentsError
             <div className="text-center py-8">
-              <div className="text-red-600 mb-4">Error: {ordersError}</div>
+              <div className="text-red-600 mb-4">Error: {documentsError}</div>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"

@@ -114,6 +114,7 @@ export type Client = {
   last_payment_amount?: number;
   is_active?: boolean;
   paymentTermId?: number;
+  tax_id?: string;
 };
 
 // Schema actualizado - eliminamos is_special_taxpayer ya que viene del client_type
@@ -450,6 +451,12 @@ const ClientsPage = () => {
   };
 
   const handleDelete = (client: Client) => {
+    // Verificar que el cliente tenga un ID antes de proceder
+    if (!client.id) {
+      toast.error("No se puede eliminar: Cliente sin ID válido");
+      return;
+    }
+
     toast.error(`¿Eliminar el cliente "${client.legal_name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {

@@ -1,9 +1,12 @@
+// services/documents/documents.service.ts
 import api from "../../utils/api";
 import {
   PostDocument,
   GetDocuments,
+  GetDocumentById,
   PatchDocument,
   DeleteDocument,
+  GetAllDocuments,
 } from "../documents/documents.route";
 
 export interface GetDocumentsParams {
@@ -11,10 +14,11 @@ export interface GetDocumentsParams {
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId?: number;
+  companyId: number; // Ahora es requerido
   document_type?: DocumentType;
   document_number?: string;
-  document_date?: string;
+  startDate?: string;
+  endDate?: string;
   clientId?: number;
   supplierId?: number;
   sourceWarehouseId?: number;
@@ -23,8 +27,9 @@ export interface GetDocumentsParams {
   status?: DocumentStatus;
 }
 
-// Tipos para los valores enumerados
+// Tipos para documentos (reemplazan orders)
 export type DocumentType =
+  | "order"
   | "quote"
   | "invoice"
   | "delivery_note"
@@ -46,8 +51,10 @@ export type DocumentStatus =
   | "cancelled"
   | "closed";
 
+// services/documents/documents.service.ts
+
 export interface Document {
-  // Campos del response (GET)
+  // Campos principales
   id: number;
   document_type: DocumentType;
   document_number: string;
@@ -85,20 +92,13 @@ export interface Document {
   due_date: string;
   purchase_invoice_date: string;
   dispatch_status?: string;
-  company?: {
-    id: number;
-    name: string;
-  };
-  client?: {
-    id: number;
-    legal_name: string;
-  };
-  currency?: {
-    id: number;
-    currency_name: string;
-  };
+
+  // Campos de relación (IDs)
+  companyId?: number;
+  clientId?: number;
   supplierId?: number;
   operationTypeId?: number;
+  currencyId?: number;
   paymentTermId?: number;
   sourceWarehouseId?: number;
   destinationWarehouseId?: number;
@@ -106,22 +106,68 @@ export interface Document {
   sourceDocumentId?: number;
   salespersonId?: number;
 
+  // Campos extendidos (actualizados según la documentación de la API)
+  company?: {
+    id: number;
+    name: string;
+  };
+  client?: {
+    id: number;
+    legal_name: string;
+    tax_id?: string; // ✅ Añadir esta propiedad
+    contact?: string;
+    email?: string;
+    address?: string;
+    phone?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  supplier?: {
+    id: number;
+    name: string;
+  };
+  currency?: {
+    id: number;
+    currency_name: string;
+  };
+
   // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+
+  // Observaciones
+  observations?: Array<{
+    campo: string;
+    valor: string;
+  }>;
+
+  // Campos adicionales de la API
+  is_correlative?: boolean;
+  sign?: boolean;
+  reference_amount?: number;
+  address_1?: string;
+  address_2?: string;
+  phone?: string;
+  is_delivery_note?: boolean;
+  coordinates?: string;
+  erp_code_order_number?: string;
+  erp_code_order_type?: string;
+  server_code?: string;
+  delivery_date?: string;
 }
 
+// Datos para crear un documento
 export interface CreateDocumentData {
-  // Campos requeridos para crear un documento
   document_type: DocumentType;
   document_number: string;
   document_date: string;
   companyId: number;
 
-  // Campos opcionales para creación
+  // Campos opcionales
   clientId?: number;
   supplierId?: number;
   operationTypeId?: number;
@@ -165,10 +211,14 @@ export interface CreateDocumentData {
   due_date?: string;
   purchase_invoice_date?: string;
   dispatch_status?: string;
+  observations?: Array<{
+    campo: string;
+    valor: string;
+  }>;
 }
 
+// Datos para actualizar un documento
 export interface UpdateDocumentData {
-  // Todos los campos son opcionales para actualización
   document_type?: DocumentType;
   document_number?: string;
   document_date?: string;
@@ -216,9 +266,13 @@ export interface UpdateDocumentData {
   due_date?: string;
   purchase_invoice_date?: string;
   dispatch_status?: string;
+  observations?: Array<{
+    campo: string;
+    valor: string;
+  }>;
 }
 
-// Response interfaces
+// Interfaces de respuesta
 export interface DocumentResponse {
   success: boolean;
   data: Document;
@@ -238,6 +292,28 @@ export interface PaginatedDocumentsResponse {
   };
 }
 
+// Constantes para órdenes (para mantener compatibilidad)
+export const DOCUMENT_TYPES = {
+  ORDER: "order",
+  QUOTE: "quote",
+  INVOICE: "invoice",
+} as const;
+
+export const DOCUMENT_STATUSES = {
+  DRAFT: "draft",
+  PENDING: "pending",
+  APPROVED: "approved",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+  CLOSED: "closed",
+} as const;
+
+// Alias para mantener compatibilidad con código existente
+export type OrderType = DocumentType;
+export type OrderStatus = DocumentStatus;
+export const ORDER_TYPES = DOCUMENT_TYPES;
+export const ORDER_STATUSES = DOCUMENT_STATUSES;
+
 export const documentService = {
   // Crear un nuevo documento
   createDocument: async (
@@ -247,85 +323,101 @@ export const documentService = {
     return response.data.data;
   },
 
-  // Obtener todos los documentos
-  getDocuments: async (params?: GetDocumentsParams): Promise<Document[]> => {
+  // Obtener documentos paginados
+  getDocuments: async (params: GetDocumentsParams): Promise<Document[]> => {
     const queryParams = new URLSearchParams();
 
     // Parámetros requeridos
-    queryParams.append("page", params?.page?.toString() || "1");
-    queryParams.append(
-      "itemsPerPage",
-      params?.itemsPerPage?.toString() || "10"
-    );
-
-    if (params?.companyId) {
-      queryParams.append("companyId", params.companyId.toString());
-    }
+    queryParams.append("page", params.page?.toString() || "1");
+    queryParams.append("itemsPerPage", params.itemsPerPage?.toString() || "10");
+    queryParams.append("companyId", params.companyId.toString());
 
     // Parámetros opcionales
-    if (params?.document_type) {
+    if (params.document_type) {
       queryParams.append("document_type", params.document_type);
     }
-    if (params?.search) {
+    if (params.search) {
       queryParams.append("search", params.search);
     }
-    if (params?.order) {
+    if (params.order) {
       queryParams.append("order", params.order);
     }
-    if (params?.document_number) {
+    if (params.document_number) {
       queryParams.append("document_number", params.document_number);
     }
-    if (params?.document_date) {
-      queryParams.append("document_date", params.document_date);
+    if (params.startDate) {
+      queryParams.append("startDate", params.startDate);
     }
-    if (params?.clientId) {
+    if (params.endDate) {
+      queryParams.append("endDate", params.endDate);
+    }
+    if (params.clientId) {
       queryParams.append("clientId", params.clientId.toString());
     }
-    if (params?.supplierId) {
+    if (params.supplierId) {
       queryParams.append("supplierId", params.supplierId.toString());
     }
-    if (params?.sourceWarehouseId) {
+    if (params.sourceWarehouseId) {
       queryParams.append(
         "sourceWarehouseId",
         params.sourceWarehouseId.toString()
       );
     }
-    if (params?.destinationWarehouseId) {
+    if (params.destinationWarehouseId) {
       queryParams.append(
         "destinationWarehouseId",
         params.destinationWarehouseId.toString()
       );
     }
-    if (params?.responsibleUserId) {
+    if (params.responsibleUserId) {
       queryParams.append(
         "responsibleUserId",
         params.responsibleUserId.toString()
       );
     }
-    if (params?.status) {
+    if (params.status) {
       queryParams.append("status", params.status);
     }
 
-    const response = await api.get(`/documents?${queryParams}`);
+    const response = await api.get(`${GetDocuments}?${queryParams}`);
 
-    // La respuesta tiene estructura { success: boolean, data: { data: Document[], ... } }
-    console.log("🔵 Estructura completa de respuesta:", response.data);
-
-    // Asegúrate de acceder a data.data
+    // Manejar diferentes estructuras de respuesta
     if (
       response.data &&
       response.data.data &&
-      Array.isArray(response.data.data.data)
+      Array.isArray(response.data.data)
     ) {
-      return response.data.data.data; // Estructura anidada
-    } else if (Array.isArray(response.data.data)) {
-      return response.data.data; // Estructura plana
-    } else if (Array.isArray(response.data)) {
-      return response.data; // Otra posible estructura
+      return response.data.data;
+    } else if (response.data && Array.isArray(response.data)) {
+      return response.data;
     } else {
-      console.warn("⚠️ Estructura de respuesta inesperada:", response.data);
+      console.warn("Estructura de respuesta inesperada:", response.data);
       return [];
     }
+  },
+
+  // Obtener todos los documentos sin paginación (para reportes)
+  getAllDocuments: async (
+    companyId: number,
+    startDate?: string,
+    endDate?: string,
+    document_type?: DocumentType
+  ): Promise<any[]> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("companyId", companyId.toString());
+
+    if (startDate) queryParams.append("startDate", startDate);
+    if (endDate) queryParams.append("endDate", endDate);
+    if (document_type) queryParams.append("document_type", document_type);
+
+    const response = await api.get(`${GetAllDocuments}?${queryParams}`);
+    return response.data.data || [];
+  },
+
+  // Obtener un documento por ID
+  getDocumentById: async (id: string): Promise<Document> => {
+    const response = await api.get(`${GetDocumentById}/${id}`);
+    return response.data.data;
   },
 
   // Actualizar un documento
@@ -342,9 +434,69 @@ export const documentService = {
     await api.delete(`${DeleteDocument}/${id}`);
   },
 
-  // Obtener un documento por ID
-  getDocumentById: async (id: string): Promise<Document> => {
-    const response = await api.get(`${GetDocuments}/${id}`);
-    return response.data.data;
+  // Métodos específicos para órdenes (para mantener compatibilidad)
+  getOrders: async (
+    params: GetDocumentsParams & { document_type?: "order" }
+  ): Promise<Document[]> => {
+    return documentService.getDocuments({
+      ...params,
+      document_type: "order",
+    });
+  },
+
+  createOrder: async (orderData: CreateDocumentData): Promise<Document> => {
+    return documentService.createDocument({
+      ...orderData,
+      document_type: "order",
+    });
+  },
+
+  updateOrder: async (
+    id: string,
+    updates: UpdateDocumentData
+  ): Promise<Document> => {
+    return documentService.updateDocument(id, updates);
+  },
+
+  // Métodos utilitarios
+  generateDocumentNumber: (prefix: string = "DOC"): string => {
+    const timestamp = new Date().getTime();
+    const random = Math.floor(Math.random() * 1000);
+    return `${prefix}-${timestamp}-${random}`;
+  },
+
+  // Validar datos del documento
+  validateDocumentData: (
+    documentData: CreateDocumentData
+  ): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!documentData.document_type) {
+      errors.push("El tipo de documento es requerido");
+    }
+
+    if (
+      !documentData.document_number ||
+      documentData.document_number.trim().length === 0
+    ) {
+      errors.push("El número de documento es requerido");
+    }
+
+    if (!documentData.document_date) {
+      errors.push("La fecha del documento es requerida");
+    }
+
+    if (!documentData.companyId) {
+      errors.push("La compañía es requerida");
+    }
+
+    if (documentData.total_amount && documentData.total_amount < 0) {
+      errors.push("El monto total no puede ser negativo");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
   },
 };

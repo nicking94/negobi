@@ -145,7 +145,7 @@ export const productCategoryService = {
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
+    // Parámetros opcionales - asegurar que los booleanos sean strings
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -164,9 +164,7 @@ export const productCategoryService = {
     if (params?.category_code) {
       queryParams.append("category_code", params.category_code);
     }
-    if (params?.companyId) {
-      queryParams.append("companyId", params.companyId.toString());
-    }
+    // REMOVER companyId ya que no es soportado
     if (params?.is_active !== undefined) {
       queryParams.append("is_active", params.is_active.toString());
     }
@@ -182,6 +180,8 @@ export const productCategoryService = {
         params.show_in_sales_app.toString()
       );
     }
+
+    console.log("📡 URL final:", `${GetProductCategories}?${queryParams}`);
 
     const response = await api.get(`${GetProductCategories}?${queryParams}`);
     return response.data.data;

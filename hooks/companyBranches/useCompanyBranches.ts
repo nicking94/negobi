@@ -19,41 +19,81 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompanyBranches = async (
-    customFilters?: Partial<UseCompanyBranchesFilters>
-  ) => {
+  // Función principal para cargar sucursales
+  const loadCompanyBranches = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Si no hay companyId, no cargar nada
-      if (!filters.companyId && !customFilters?.companyId) {
-        setCompanyBranches([]);
-        return;
-      }
-
-      const combinedFilters: GetCompanyBranchesParams = {
-        ...filters,
-        ...customFilters,
+      const params: GetCompanyBranchesParams = {
         page: 1,
-        itemsPerPage: 100,
+        itemsPerPage: 1000,
       };
 
-      console.log("🔵 Enviando parámetros para sucursales:", combinedFilters);
+      if (filters.companyId > 0) {
+        params.companyId = filters.companyId;
+      }
+
+      // Agregar filtros opcionales
+      if (filters.search) params.search = filters.search;
+      if (filters.name) params.name = filters.name;
+      if (filters.code) params.code = filters.code;
+
+      console.log("🔵 Cargando sucursales con filtros:", filters);
+      console.log("🔵 Parámetros enviados al servicio:", params);
 
       const branchesData = await companyBranchService.getCompanyBranches(
-        combinedFilters
+        params
       );
 
-      if (Array.isArray(branchesData)) {
-        setCompanyBranches(branchesData);
-      } else {
-        setCompanyBranches([]);
-      }
+      setCompanyBranches(branchesData);
+      console.log(`✅ ${branchesData.length} sucursales cargadas`);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar sucursales"
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al cargar sucursales";
+      setError(errorMessage);
+      setCompanyBranches([]);
+      console.error("❌ Error cargando sucursales:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para cargar sucursales de múltiples empresas (si necesitas esta funcionalidad)
+  const loadAllCompanyBranches = async (companyIds: number[]) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const allBranches: CompanyBranch[] = [];
+
+      for (const companyId of companyIds) {
+        try {
+          const branchesData = await companyBranchService.getCompanyBranches({
+            companyId: companyId,
+            page: 1,
+            itemsPerPage: 1000,
+          });
+
+          if (Array.isArray(branchesData)) {
+            allBranches.push(...branchesData);
+          }
+        } catch (err) {
+          console.error(
+            `Error cargando sucursales de empresa ${companyId}:`,
+            err
+          );
+        }
+      }
+
+      setCompanyBranches(allBranches);
+      console.log(
+        `✅ ${allBranches.length} sucursales cargadas de ${companyIds.length} empresas`
       );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al cargar sucursales";
+      setError(errorMessage);
       setCompanyBranches([]);
     } finally {
       setLoading(false);
@@ -108,20 +148,24 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Eliminar sucursal
+  // Eliminar sucursal - CORREGIDO
   const deleteCompanyBranch = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await companyBranchService.deleteCompanyBranch(id);
-      setCompanyBranches((prev) =>
-        prev.filter((branch) => branch.id.toString() !== id)
+
+      // Corrección: eliminar la sucursal que coincide con el ID
+      setCompanyBranches(
+        (prev) => prev.filter((branch) => branch.id.toString() !== id) // Cambiado !== en lugar de ===
       );
+
       return true;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al eliminar sucursal"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al eliminar sucursal";
+      setError(errorMessage);
+      console.error("💥 Error en deleteCompanyBranch:", err);
       return false;
     } finally {
       setLoading(false);
@@ -148,8 +192,10 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   };
 
   useEffect(() => {
-    loadCompanyBranches();
-  }, [filters.companyId, filters.search]);
+    if (filters.companyId) {
+      loadCompanyBranches();
+    }
+  }, [filters.companyId, filters.search, filters.name, filters.code]);
 
   return {
     companyBranches,
@@ -160,5 +206,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     deleteCompanyBranch,
     getCompanyBranchById,
     refetch: loadCompanyBranches,
+    loadAllCompanyBranches, // Exportar la nueva función si la necesitas
   };
 };

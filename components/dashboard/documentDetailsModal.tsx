@@ -14,18 +14,7 @@ import { useDocumentDetails } from "@/hooks/documents/useDocumentDetails";
 import { Document } from "@/services/documents/documents.service";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/formatDate";
-import {
-  FileText,
-  Building,
-  User,
-  Calendar,
-  Hash,
-  CreditCard,
-  DollarSign,
-  Tag,
-  Send,
-  MessageSquare,
-} from "lucide-react";
+import { FileText, Calendar, Hash, Send } from "lucide-react";
 
 interface DocumentDetailsModalProps {
   documentId: string | null;
@@ -96,17 +85,15 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
   const InfoRow = ({
     label,
     value,
-    icon: Icon,
     valueClass = "",
   }: {
     label: string;
     value: string | number;
-    icon?: any;
+
     valueClass?: string;
   }) => (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-2 text-sm text-gray-600">
-        {Icon && <Icon className="h-4 w-4" />}
         <span>{label}</span>
       </div>
       <span className={`text-sm font-medium ${valueClass}`}>{value}</span>
@@ -115,19 +102,18 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
   const InfoCard = ({
     title,
-    icon: Icon,
+
     children,
     className = "",
   }: {
     title: string;
-    icon: any;
+
     children: React.ReactNode;
     className?: string;
   }) => (
     <Card className={`border border-gray-200 ${className}`}>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Icon className="h-4 w-4 text-green-600" />
           <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
         </div>
         {children}
@@ -247,7 +233,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
             {/* Cliente y Empresa */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <InfoCard title="Información del Cliente" icon={User}>
+              <InfoCard title="Información del Cliente">
                 {document.client ? (
                   <div className="space-y-2">
                     <InfoRow
@@ -267,7 +253,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                 )}
               </InfoCard>
 
-              <InfoCard title="Información de la Empresa" icon={Building}>
+              <InfoCard title="Información de la Empresa">
                 {document.company ? (
                   <div className="space-y-2">
                     <InfoRow label="Nombre" value={document.company.name} />
@@ -287,7 +273,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
             {/* Notas */}
             {document.notes && (
-              <InfoCard title="Notas" icon={MessageSquare}>
+              <InfoCard title="Notas">
                 <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-md border border-yellow-200">
                   {document.notes}
                 </p>
@@ -295,11 +281,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
             )}
 
             {/* Resumen Financiero - Simplificado */}
-            <InfoCard
-              title="Resumen Financiero"
-              icon={DollarSign}
-              className="bg-gray-50"
-            >
+            <InfoCard title="Resumen Financiero" className="bg-gray-50">
               <div className="space-y-3">
                 {/* Subtotal y Descuentos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -314,7 +296,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                         value={formatCurrency(
                           parseFloat(document.discount_1?.toString() || "0")
                         )}
-                        icon={Tag}
                         valueClass="text-red-600"
                       />
                     )}
@@ -379,7 +360,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
             {/* Métodos de Pago - Solo si hay valores */}
             {(parseFloat(document.credit_amount?.toString() || "0") > 0 ||
               parseFloat(document.cash_amount?.toString() || "0") > 0) && (
-              <InfoCard title="Métodos de Pago" icon={CreditCard}>
+              <InfoCard title="Métodos de Pago">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {parseFloat(document.credit_amount?.toString() || "0") >
                     0 && (

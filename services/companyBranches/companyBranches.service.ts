@@ -11,15 +11,12 @@ export interface GetCompanyBranchesParams {
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId: number; // Obligatorio según el swagger
+  companyId?: number;
   name?: string;
   code?: string;
 }
 
-// services/companyBranches/companyBranches.service.ts
-
 export interface CompanyBranch {
-  // Campos del response (GET)
   id: number;
   name: string;
   code: string;
@@ -82,73 +79,111 @@ export interface PaginatedCompanyBranchesResponse {
 }
 
 export const companyBranchService = {
-  // Crear una nueva sucursal
+  getCompanyBranches: async (
+    params: GetCompanyBranchesParams
+  ): Promise<CompanyBranch[]> => {
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Parámetros básicos
+      queryParams.append("page", params?.page?.toString() || "1");
+      queryParams.append(
+        "itemsPerPage",
+        params?.itemsPerPage?.toString() || "1000"
+      );
+
+      // SOLUCIÓN: Solo agregar companyId si está definido y es mayor que 0
+      if (params.companyId && params.companyId > 0) {
+        queryParams.append("companyId", params.companyId.toString());
+      } else {
+        console.log("🔵 Solicitando TODAS las sucursales (sin companyId)");
+      }
+
+      // Parámetros opcionales
+      if (params?.search) {
+        queryParams.append("search", params.search);
+      }
+      if (params?.order) {
+        queryParams.append("order", params.order);
+      }
+      if (params?.name) {
+        queryParams.append("name", params.name);
+      }
+      if (params?.code) {
+        queryParams.append("code", params.code);
+      }
+
+      console.log(
+        "🔵 Solicitando sucursales con params:",
+        Object.fromEntries(queryParams)
+      );
+
+      const response = await api.get(`${GetCompanyBranches}?${queryParams}`);
+      const responseData = response.data;
+
+      console.log("📦 Respuesta completa del servidor:", responseData);
+
+      if (responseData.success) {
+        const branches = responseData.data?.data || responseData.data || [];
+
+        console.log(`✅ ${branches.length} sucursales cargadas`);
+        return branches;
+      } else {
+        console.warn("⚠️ Respuesta no exitosa:", responseData);
+        return [];
+      }
+    } catch (error) {
+      console.error("❌ Error en getCompanyBranches:", error);
+      throw error;
+    }
+  },
+
+  // Crear una nueva sucursal - CORREGIDO
   createCompanyBranch: async (
     branchData: CreateCompanyBranchData
   ): Promise<CompanyBranch> => {
     const response = await api.post(PostCompanyBranch, branchData);
-    const branch = response.data.data;
-    // Asegurar que companyId esté presente
-    return {
-      ...branch,
-      companyId: branchData.companyId,
-    };
+    const responseData = response.data;
+
+    if (responseData.success) {
+      return responseData.data;
+    } else {
+      throw new Error(responseData.message || "Error al crear sucursal");
+    }
   },
 
-  // Obtener todas las sucursales
-  getCompanyBranches: async (
-    params: GetCompanyBranchesParams
-  ): Promise<CompanyBranch[]> => {
-    const queryParams = new URLSearchParams();
-
-    // Parámetros requeridos
-    queryParams.append("page", params?.page?.toString() || "1");
-    queryParams.append(
-      "itemsPerPage",
-      params?.itemsPerPage?.toString() || "10"
-    );
-    queryParams.append("companyId", params.companyId.toString());
-
-    // Parámetros opcionales
-    if (params?.search) {
-      queryParams.append("search", params.search);
-    }
-    if (params?.order) {
-      queryParams.append("order", params.order);
-    }
-    if (params?.name) {
-      queryParams.append("name", params.name);
-    }
-    if (params?.code) {
-      queryParams.append("code", params.code);
-    }
-
-    const response = await api.get(`${GetCompanyBranches}?${queryParams}`);
-    const branches = response.data.data;
-
-    return branches.map((branch: any) => ({
-      ...branch,
-      companyId: params.companyId, // Usar el companyId del filtro
-    }));
-  },
-
-  // Actualizar una sucursal
+  // Actualizar una sucursal - CORREGIDO
   updateCompanyBranch: async (
     id: string,
     updates: UpdateCompanyBranchData
   ): Promise<CompanyBranch> => {
     const response = await api.patch(`${PatchCompanyBranch}/${id}`, updates);
-    return response.data.data;
+    const responseData = response.data;
+
+    if (responseData.success) {
+      return responseData.data;
+    } else {
+      throw new Error(responseData.message || "Error al actualizar sucursal");
+    }
   },
 
-  // Eliminar una sucursal
-  deleteCompanyBranch: async (id: string): Promise<void> => {
-    await api.delete(`${DeleteCompanyBranch}/${id}`);
-  },
-
-  // Obtener una sucursal por ID
+  // Obtener una sucursal por ID - CORREGIDO
   getCompanyBranchById: async (id: string): Promise<CompanyBranch> => {
     const response = await api.get(`${GetCompanyBranches}/${id}`);
-    return response.data.data;
+    const responseData = response.data;
+
+    if (responseData.success) {
+      return responseData.data;
+    } else {
+      throw new Error(responseData.message || "Error al obtener sucursal");
+    }
+  },
+  deleteCompanyBranch: async (id: string): Promise<void> => {
+    const response = await api.delete(`${DeleteCompanyBranch}/${id}`);
+    const responseData = response.data;
+
+    if (!responseData.success) {
+      throw new Error(responseData.message || "Error al eliminar sucursal");
+    }
   },
 };

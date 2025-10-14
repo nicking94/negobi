@@ -11,6 +11,7 @@ import {
   GoalProgress,
   GOAL_STATUSES,
 } from "../../services/goals/goals.service";
+import { toast } from "sonner";
 
 // Definir el tipo para los filtros del hook
 export interface UseGoalsFilters {
@@ -35,9 +36,17 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    itemsPerPage: 10,
+    totalPages: 1,
+    total: 0,
+  });
 
-  // Cargar todos los objetivos con filtros
-  const loadGoals = async (customFilters?: Partial<UseGoalsFilters>) => {
+  const loadGoals = async (
+    customFilters?: Partial<UseGoalsFilters>,
+    newPage?: number
+  ) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,19 +55,25 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
       const combinedFilters: GetGoalsParams = {
         ...filters,
         ...customFilters,
-        page: 1,
-        itemsPerPage: 10,
+        page: newPage || pagination.page,
+        itemsPerPage: pagination.itemsPerPage,
       };
 
       console.log("🔵 Enviando parámetros para objetivos:", combinedFilters);
 
-      const goalsData = await goalService.getGoals(combinedFilters);
-      console.log("🟢 Datos de objetivos recibidos:", goalsData);
+      const response = await goalService.getGoals(combinedFilters);
+      console.log("🟢 Datos de objetivos recibidos:", response);
 
-      if (Array.isArray(goalsData)) {
-        setGoals(goalsData);
+      if (response && Array.isArray(response.data)) {
+        setGoals(response.data);
+        setPagination((prev) => ({
+          ...prev,
+          totalPages: response.totalPages,
+          total: response.total,
+          page: newPage || prev.page,
+        }));
       } else {
-        console.warn("⚠️ Estructura inesperada:", goalsData);
+        console.warn("⚠️ Estructura inesperada:", response);
         setGoals([]);
       }
     } catch (err) {
@@ -71,25 +86,47 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Crear objetivo
+  // Cambiar página
+  const setPage = (page: number) => {
+    loadGoals(undefined, page);
+  };
+
+  // Cambiar items por página
+  const setItemsPerPage = (itemsPerPage: number) => {
+    setPagination((prev) => ({ ...prev, itemsPerPage, page: 1 }));
+  };
+
   const createGoal = async (goalData: CreateGoalData): Promise<Goal | null> => {
     try {
       setLoading(true);
       setError(null);
 
-      // Validar fechas
-      if (
-        !goalService.validateGoalDates(goalData.start_date, goalData.end_date)
-      ) {
-        setError("La fecha de inicio debe ser anterior a la fecha de fin");
+      // Validar datos antes de enviar
+      const validation = goalService.validateCreateGoalData(goalData);
+      if (!validation.isValid) {
+        const errorMsg = `Datos inválidos: ${validation.errors.join(", ")}`;
+        setError(errorMsg);
+        toast.error(errorMsg);
         return null;
       }
 
+      console.log("🎯 Creando objetivo con datos:", goalData);
+
       const newGoal = await goalService.createGoal(goalData);
-      setGoals((prev) => [...prev, newGoal]);
-      return newGoal;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear objetivo");
+
+      if (newGoal) {
+        // Recargar la lista después de crear
+        await loadGoals();
+        toast.success("Meta creada exitosamente");
+        return newGoal;
+      } else {
+        throw new Error("No se pudo crear la meta");
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || "Error al crear objetivo";
+      console.error("❌ Error detallado:", err);
+      setError(errorMessage);
+      toast.error(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -234,6 +271,7 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     goals,
     loading,
     error,
+    pagination,
     createGoal,
     updateGoal,
     deleteGoal,
@@ -244,6 +282,8 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     calculateGoalProgress,
     validateGoalDates,
     refetch: loadGoals,
+    setPage,
+    setItemsPerPage,
   };
 };
 

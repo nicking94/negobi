@@ -47,200 +47,223 @@ import { format } from "date-fns";
 import { DataTable } from "@/components/ui/dataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import {
+  useGoals,
+  UseGoalsFilters,
+  useGoalsForSelect,
+} from "@/hooks/goals/useGoals";
+
+import {
+  CreateGoalData,
+  UpdateGoalData,
+  GoalType,
+  PeriodType,
+  GoalStatus,
+  GOAL_TYPES,
+  PERIOD_TYPES,
+  GOAL_STATUSES,
+} from "@/services/goals/goals.service";
+
 // Importar React Date Picker
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-export type Goal = {
-  id: string;
-  goal_type: "company" | "sales_person" | "zone" | "supervisor";
-  period_type: "monthly" | "weekly";
+// Tipo basado en la API real
+type Goal = {
+  id: number;
+  goal_type: GoalType;
+  period_type: PeriodType;
   target_amount: number;
   target_quantity: number;
-  start_date: Date;
-  end_date: Date;
-  status: "not_reached" | "reached" | "exceeded";
-  assigned_to?: string;
-  current_amount?: number;
-  current_quantity?: number;
-  progress?: number;
+  start_date: string;
+  end_date: string;
+  status: GoalStatus;
+  companyId?: number;
+  userId?: number;
+  zoneId?: number;
+  external_code?: string;
+  sync_with_erp: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
 };
 
 const GoalsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const [goals, setGoals] = useState<Goal[]>([]);
+
+  // Estado para filtros
+  const [filters, setFilters] = useState({
+    search: "",
+    goal_type: "" as GoalType | "",
+    status: "" as GoalStatus | "",
+    start_date_from: "",
+    start_date_to: "",
+    end_date_from: "",
+    end_date_to: "",
+  });
+  const cleanFilters = useMemo((): UseGoalsFilters => {
+    const clean: UseGoalsFilters = {};
+
+    if (filters.search) clean.search = filters.search;
+    if (filters.goal_type) clean.goal_type = filters.goal_type;
+    if (filters.status) clean.status = filters.status;
+    if (filters.start_date_from)
+      clean.start_date_from = filters.start_date_from;
+    if (filters.start_date_to) clean.start_date_to = filters.start_date_to;
+    if (filters.end_date_from) clean.end_date_from = filters.end_date_from;
+    if (filters.end_date_to) clean.end_date_to = filters.end_date_to;
+
+    return clean;
+  }, [filters]);
+
+  const {
+    goals,
+    loading,
+    error,
+    pagination,
+    createGoal,
+    updateGoal,
+    deleteGoal,
+    setPage,
+    setItemsPerPage,
+  } = useGoals(cleanFilters);
+
+  const { options: goalOptions } = useGoalsForSelect();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
-  const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
-  const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Datos de ejemplo
-  useEffect(() => {
-    setGoals([
-      {
-        id: "1",
-        goal_type: "company",
-        period_type: "monthly",
-        target_amount: 100000,
-        target_quantity: 500,
-        start_date: new Date("2024-01-01"),
-        end_date: new Date("2024-12-31"),
-        status: "reached",
-        current_amount: 105000,
-        current_quantity: 520,
-        progress: 105,
-      },
-      {
-        id: "2",
-        goal_type: "sales_person",
-        period_type: "weekly",
-        target_amount: 5000,
-        target_quantity: 25,
-        start_date: new Date("2024-09-01"),
-        end_date: new Date("2024-09-07"),
-        status: "not_reached",
-        assigned_to: "Juan Pérez",
-        current_amount: 3500,
-        current_quantity: 18,
-        progress: 70,
-      },
-    ]);
-  }, []);
-
-  const [formData, setFormData] = useState({
-    goal_type: "company" as Goal["goal_type"],
-    period_type: "monthly" as Goal["period_type"],
+  const [formData, setFormData] = useState<CreateGoalData>({
+    goal_type: GOAL_TYPES.COMPANY,
+    period_type: PERIOD_TYPES.MONTHLY,
     target_amount: 0,
     target_quantity: 0,
-    start_date: new Date(),
-    end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-    assigned_to: "",
+    start_date: new Date().toISOString(),
+    end_date: new Date(
+      new Date().setMonth(new Date().getMonth() + 1)
+    ).toISOString(),
+    status: GOAL_STATUSES.NOT_REACHED,
+    companyId: 1, // Esto debería venir del contexto de la empresa
   });
 
   // Opciones para los selects
   const goalTypes = [
-    { value: "company", label: "Empresa" },
-    { value: "sales_person", label: "Vendedor" },
-    { value: "zone", label: "Zona" },
-    { value: "supervisor", label: "Supervisor" },
+    { value: GOAL_TYPES.COMPANY, label: "Empresa" },
+    { value: GOAL_TYPES.SALES_PERSON, label: "Vendedor" },
+    { value: GOAL_TYPES.ZONE, label: "Zona" },
+    { value: GOAL_TYPES.SUPERVISOR, label: "Supervisor" },
   ];
 
   const periodTypes = [
-    { value: "monthly", label: "Mensual" },
-    { value: "weekly", label: "Semanal" },
+    { value: PERIOD_TYPES.MONTHLY, label: "Mensual" },
+    { value: PERIOD_TYPES.WEEKLY, label: "Semanal" },
   ];
 
   const statusOptions = [
-    { value: "all", label: "Todos" },
-    { value: "not_reached", label: "No alcanzado" },
-    { value: "reached", label: "Alcanzado" },
-    { value: "exceeded", label: "Excedido" },
+    { value: "", label: "Todos" },
+    { value: GOAL_STATUSES.NOT_REACHED, label: "No alcanzado" },
+    { value: GOAL_STATUSES.REACHED, label: "Alcanzado" },
   ];
 
-  // Lista de vendedores, zonas y supervisores (datos de ejemplo)
-  const salesPeople = [
-    { id: "1", name: "Juan Pérez" },
-    { id: "2", name: "María González" },
-    { id: "3", name: "Carlos Rodríguez" },
-    { id: "4", name: "Luis Hernández" },
-  ];
+  const handleCreateGoal = async () => {
+    try {
+      console.log("📝 Intentando crear meta con:", formData);
 
-  const zones = [
-    { id: "1", name: "Zona Norte" },
-    { id: "2", name: "Zona Sur" },
-    { id: "3", name: "Zona Este" },
-    { id: "4", name: "Zona Oeste" },
-  ];
+      // Preparar datos según el tipo de objetivo
+      const goalData: CreateGoalData = {
+        goal_type: formData.goal_type,
+        period_type: formData.period_type,
+        target_amount: formData.target_amount,
+        target_quantity: formData.target_quantity,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        status: formData.status,
+        companyId: formData.companyId || 1,
+        // Solo incluir userId y zoneId si son necesarios según el tipo
+        ...(formData.goal_type === GOAL_TYPES.SALES_PERSON &&
+          formData.userId && {
+            userId: formData.userId,
+          }),
+        ...(formData.goal_type === GOAL_TYPES.ZONE &&
+          formData.zoneId && {
+            zoneId: formData.zoneId,
+          }),
+        // No enviar external_code si es null o undefined
+        ...(formData.external_code && {
+          external_code: formData.external_code,
+        }),
+      };
 
-  const supervisors = [
-    { id: "1", name: "Ana Martínez" },
-    { id: "2", name: "Luis Hernández" },
-  ];
+      console.log("🎯 Datos completos para crear:", goalData);
 
-  const filteredGoals = useMemo(() => {
-    return goals.filter((goal) => {
-      const matchesSearch =
-        goal.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        goal.goal_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        searchTerm === "";
-
-      const matchesType = typeFilter === "all" || goal.goal_type === typeFilter;
-      const matchesStatus =
-        statusFilter === "all" || goal.status === statusFilter;
-
-      const matchesDateRange =
-        (!startDateFilter || goal.start_date >= startDateFilter) &&
-        (!endDateFilter || goal.end_date <= endDateFilter);
-
-      return matchesSearch && matchesType && matchesStatus && matchesDateRange;
-    });
-  }, [
-    goals,
-    searchTerm,
-    typeFilter,
-    statusFilter,
-    startDateFilter,
-    endDateFilter,
-  ]);
-
-  // Calcular paginación
-  const totalPage = Math.ceil(filteredGoals.length / itemsPerPage);
-  const paginatedGoals = useMemo(() => {
-    const startIndex = (page - 1) * itemsPerPage;
-    return filteredGoals.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredGoals, page, itemsPerPage]);
-
-  const handleCreateGoal = () => {
-    const newGoal: Goal = {
-      id: (goals.length + 1).toString(),
-      ...formData,
-      status: "not_reached",
-      current_amount: 0,
-      current_quantity: 0,
-      progress: 0,
-    };
-
-    setGoals([...goals, newGoal]);
-    setIsCreateDialogOpen(false);
-    resetForm();
-    toast.success("Meta creada exitosamente");
+      const result = await createGoal(goalData);
+      if (result) {
+        setIsCreateDialogOpen(false);
+        resetForm();
+        console.log("✅ Meta creada exitosamente:", result);
+      }
+    } catch (error) {
+      console.error("❌ Error en handleCreateGoal:", error);
+      // El toast ya se maneja en el hook
+    }
   };
 
-  const handleEditGoal = () => {
+  // Manejar actualización de meta
+  const handleEditGoal = async () => {
     if (!selectedGoal) return;
 
-    const updatedGoals = goals.map((goal) =>
-      goal.id === selectedGoal.id ? { ...goal, ...formData } : goal
-    );
+    try {
+      const updateData: UpdateGoalData = {
+        goal_type: formData.goal_type,
+        period_type: formData.period_type,
+        target_amount: formData.target_amount,
+        target_quantity: formData.target_quantity,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        status: formData.status,
+        companyId: formData.companyId,
+      };
 
-    setGoals(updatedGoals);
-    setIsEditDialogOpen(false);
-    setSelectedGoal(null);
-    resetForm();
-    toast.success("Meta actualizada exitosamente");
+      const result = await updateGoal(selectedGoal.id.toString(), updateData);
+      if (result) {
+        setIsEditDialogOpen(false);
+        setSelectedGoal(null);
+        resetForm();
+        toast.success("Meta actualizada exitosamente");
+      } else {
+        toast.error("Error al actualizar la meta");
+      }
+    } catch (error) {
+      toast.error("Error al actualizar la meta");
+    }
   };
 
-  const handleDeleteGoal = (goal: Goal) => {
-    const updatedGoals = goals.filter((g) => g.id !== goal.id);
-    setGoals(updatedGoals);
-    toast.success("Meta eliminada exitosamente");
+  // Manejar eliminación de meta
+  const handleDeleteGoal = async (goal: Goal) => {
+    try {
+      const success = await deleteGoal(goal.id.toString());
+      if (success) {
+        toast.success("Meta eliminada exitosamente");
+      } else {
+        toast.error("Error al eliminar la meta");
+      }
+    } catch (error) {
+      toast.error("Error al eliminar la meta");
+    }
   };
-
   const resetForm = () => {
     setFormData({
-      goal_type: "company",
-      period_type: "monthly",
+      goal_type: GOAL_TYPES.COMPANY,
+      period_type: PERIOD_TYPES.MONTHLY,
       target_amount: 0,
       target_quantity: 0,
-      start_date: new Date(),
-      end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-      assigned_to: "",
+      start_date: new Date().toISOString(),
+      end_date: new Date(
+        new Date().setMonth(new Date().getMonth() + 1)
+      ).toISOString(),
+      status: GOAL_STATUSES.NOT_REACHED,
+      companyId: 1,
     });
   };
 
@@ -253,11 +276,15 @@ const GoalsPage = () => {
       target_quantity: goal.target_quantity,
       start_date: goal.start_date,
       end_date: goal.end_date,
-      assigned_to: goal.assigned_to || "",
+      status: goal.status,
+      companyId: goal.companyId,
+      userId: goal.userId,
+      zoneId: goal.zoneId,
     });
     setIsEditDialogOpen(true);
   };
 
+  // Funciones de formato
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-VE", {
       style: "currency",
@@ -265,42 +292,32 @@ const GoalsPage = () => {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
-    return format(date, "dd/MM/yyyy");
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy");
   };
 
-  const getAssignedOptions = () => {
-    switch (formData.goal_type) {
-      case "sales_person":
-        return salesPeople;
-      case "zone":
-        return zones;
-      case "supervisor":
-        return supervisors;
-      default:
-        return [];
-    }
-  };
-
-  const getGoalTypeLabel = (type: string) => {
+  const getGoalTypeLabel = (type: GoalType) => {
     return goalTypes.find((t) => t.value === type)?.label || type;
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: GoalStatus) => {
     return statusOptions.find((s) => s.value === status)?.label || status;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: GoalStatus) => {
     switch (status) {
-      case "not_reached":
+      case GOAL_STATUSES.NOT_REACHED:
         return "bg-yellow-100 text-yellow-800";
-      case "reached":
+      case GOAL_STATUSES.REACHED:
         return "bg-green_xxl text-green_b";
-      case "exceeded":
-        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  // Manejar cambios en los filtros
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   // Columnas para la DataTable
@@ -315,20 +332,13 @@ const GoalsPage = () => {
       ),
     },
     {
-      accessorKey: "assigned_to",
-      header: "Asignado a",
-      cell: ({ row }) => (
-        <div className="font-medium">
-          {row.original.assigned_to || "Empresa"}
-        </div>
-      ),
-    },
-    {
       accessorKey: "period_type",
       header: "Período",
       cell: ({ row }) => (
         <div className="font-medium">
-          {row.getValue("period_type") === "monthly" ? "Mensual" : "Semanal"}
+          {row.getValue("period_type") === PERIOD_TYPES.MONTHLY
+            ? "Mensual"
+            : "Semanal"}
         </div>
       ),
     },
@@ -349,34 +359,10 @@ const GoalsPage = () => {
       ),
     },
     {
-      id: "progress",
-      header: "Progreso",
-      cell: ({ row }) => {
-        const goal = row.original;
-        return (
-          <div className="w-full">
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className={`h-2.5 rounded-full ${
-                  (goal.progress || 0) >= 100
-                    ? "bg-green_b"
-                    : (goal.progress || 0) >= 70
-                    ? "bg-yellow-500"
-                    : "bg-red_m"
-                }`}
-                style={{ width: `${Math.min(goal.progress || 0, 100)}%` }}
-              ></div>
-            </div>
-            <span className="text-xs">{goal.progress}%</span>
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "status",
       header: "Estado",
       cell: ({ row }) => {
-        const status = row.getValue("status") as string;
+        const status = row.getValue("status") as GoalStatus;
         return (
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
@@ -392,7 +378,7 @@ const GoalsPage = () => {
       accessorKey: "start_date",
       header: "Fecha Inicio",
       cell: ({ row }) => {
-        const date = row.getValue("start_date") as Date;
+        const date = row.getValue("start_date") as string;
         return <div className="font-medium">{formatDate(date)}</div>;
       },
     },
@@ -400,7 +386,7 @@ const GoalsPage = () => {
       accessorKey: "end_date",
       header: "Fecha Fin",
       cell: ({ row }) => {
-        const date = row.getValue("end_date") as Date;
+        const date = row.getValue("end_date") as string;
         return <div className="font-medium">{formatDate(date)}</div>;
       },
     },
@@ -460,6 +446,7 @@ const GoalsPage = () => {
             </h1>
           </div>
 
+          {/* Filtros */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -468,8 +455,8 @@ const GoalsPage = () => {
                   type="search"
                   placeholder="Buscar..."
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                 />
               </div>
 
@@ -484,17 +471,19 @@ const GoalsPage = () => {
                   <DropdownMenuContent align="end" className="w-[18rem]">
                     <div className="px-2 py-1.5">
                       <Label htmlFor="type-filter">Tipo de Meta</Label>
-                      <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <Select
+                        value={filters.goal_type}
+                        onValueChange={(value: GoalType | "") =>
+                          handleFilterChange("goal_type", value)
+                        }
+                      >
                         <SelectTrigger id="type-filter" className="mt-1">
                           <SelectValue placeholder="Todos los tipos" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Todos los tipos</SelectItem>
+                          <SelectItem value="">Todos los tipos</SelectItem>
                           {goalTypes.map((type) => (
-                            <SelectItem
-                              key={type.value || ""}
-                              value={type.value || ""}
-                            >
+                            <SelectItem key={type.value} value={type.value}>
                               {type.label}
                             </SelectItem>
                           ))}
@@ -505,8 +494,10 @@ const GoalsPage = () => {
                     <div className="px-2 py-1.5">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        value={filters.status}
+                        onValueChange={(value: GoalStatus | "") =>
+                          handleFilterChange("status", value)
+                        }
                       >
                         <SelectTrigger id="status-filter" className="mt-1">
                           <SelectValue placeholder="Todos los estados" />
@@ -520,40 +511,6 @@ const GoalsPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="date-range">Período</Label>
-                      <div className="space-y-2 mt-1">
-                        <div className="flex items-center">
-                          <Label className="w-16 text-xs">Desde:</Label>
-                          <DatePicker
-                            selected={startDateFilter}
-                            onChange={(date) => setStartDateFilter(date)}
-                            selectsStart
-                            startDate={startDateFilter}
-                            endDate={endDateFilter}
-                            minDate={new Date()}
-                            dateFormat="dd/MM/yyyy"
-                            className="w-full p-2 border rounded-md text-sm"
-                            placeholderText="Seleccionar fecha"
-                          />
-                        </div>
-                        <div className="flex items-center">
-                          <Label className="w-16 text-xs">Hasta:</Label>
-                          <DatePicker
-                            selected={endDateFilter}
-                            onChange={(date) => setEndDateFilter(date)}
-                            selectsEnd
-                            startDate={startDateFilter}
-                            endDate={endDateFilter}
-                            minDate={formData.start_date}
-                            dateFormat="dd/MM/yyyy"
-                            className="w-full p-2 border rounded-md text-sm"
-                            placeholderText="Seleccionar fecha"
-                          />
-                        </div>
-                      </div>
-                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -564,15 +521,22 @@ const GoalsPage = () => {
             </Button>
           </div>
 
+          {/* Tabla de metas */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+
           <DataTable<Goal, Goal>
             columns={columns}
-            data={paginatedGoals}
+            data={goals}
             noResultsText="No se encontraron metas"
-            page={page}
+            page={pagination.page}
             setPage={setPage}
-            totalPage={totalPage}
-            total={filteredGoals.length}
-            itemsPerPage={itemsPerPage}
+            totalPage={pagination.totalPages}
+            total={pagination.total}
+            itemsPerPage={pagination.itemsPerPage}
             setItemsPerPage={setItemsPerPage}
           />
         </main>
@@ -639,11 +603,10 @@ const GoalsPage = () => {
                   <CardContent>
                     <Select
                       value={formData.goal_type}
-                      onValueChange={(value: Goal["goal_type"]) =>
+                      onValueChange={(value: GoalType) =>
                         setFormData({
                           ...formData,
                           goal_type: value,
-                          assigned_to: "",
                         })
                       }
                     >
@@ -651,60 +614,17 @@ const GoalsPage = () => {
                         <SelectValue placeholder="Seleccionar tipo de meta" />
                       </SelectTrigger>
                       <SelectContent>
-                        {goalTypes.map((type) => {
-                          return (
-                            <SelectItem key={type.value} value={type.value}>
-                              <div className="flex items-center gap-2">
-                                {type.label}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
+                        {goalTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <div className="flex items-center gap-2">
+                              {type.label}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </CardContent>
                 </Card>
-
-                {formData.goal_type !== "company" && (
-                  <Card className="bg-gray-50/50">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium">
-                        {formData.goal_type === "sales_person"
-                          ? "Vendedor Asignado"
-                          : formData.goal_type === "zone"
-                          ? "Zona Asignada"
-                          : "Supervisor Asignado"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Select
-                        value={formData.assigned_to}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, assigned_to: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={`Seleccionar ${
-                              formData.goal_type === "sales_person"
-                                ? "vendedor"
-                                : formData.goal_type === "zone"
-                                ? "zona"
-                                : "supervisor"
-                            }`}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAssignedOptions().map((option) => (
-                            <SelectItem key={option.id} value={option.name}>
-                              {option.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </CardContent>
-                  </Card>
-                )}
 
                 <Card className="bg-gray-50/50">
                   <CardHeader className="pb-3">
@@ -714,11 +634,11 @@ const GoalsPage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
+                    <div className="w-full bg-red-500">
                       <Label className="text-sm">Tipo de Período</Label>
                       <Select
                         value={formData.period_type}
-                        onValueChange={(value: Goal["period_type"]) =>
+                        onValueChange={(value: PeriodType) =>
                           setFormData({ ...formData, period_type: value })
                         }
                       >
@@ -739,10 +659,13 @@ const GoalsPage = () => {
                       <div>
                         <Label className="text-sm">Fecha de Inicio</Label>
                         <DatePicker
-                          selected={formData.start_date}
+                          selected={new Date(formData.start_date)}
                           onChange={(date) =>
                             date &&
-                            setFormData({ ...formData, start_date: date })
+                            setFormData({
+                              ...formData,
+                              start_date: date.toISOString(),
+                            })
                           }
                           minDate={new Date()}
                           dateFormat="dd/MM/yyyy"
@@ -753,13 +676,17 @@ const GoalsPage = () => {
                       <div>
                         <Label className="text-sm">Fecha de Fin</Label>
                         <DatePicker
-                          selected={formData.end_date}
+                          selected={new Date(formData.end_date)}
                           onChange={(date) =>
-                            date && setFormData({ ...formData, end_date: date })
+                            date &&
+                            setFormData({
+                              ...formData,
+                              end_date: date.toISOString(),
+                            })
                           }
                           dateFormat="dd/MM/yyyy"
                           className="w-full p-2 border rounded-md text-sm mt-1"
-                          minDate={formData.start_date}
+                          minDate={new Date(formData.start_date)}
                         />
                       </div>
                     </div>
@@ -833,9 +760,10 @@ const GoalsPage = () => {
                   type="button"
                   onClick={handleCreateGoal}
                   className="flex-1 sm:flex-none"
+                  disabled={loading}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Crear Meta
+                  {loading ? "Creando..." : "Crear Meta"}
                 </Button>
               </DialogFooter>
             </div>
@@ -861,11 +789,10 @@ const GoalsPage = () => {
               <Label htmlFor="edit_goal_type">Tipo de Meta</Label>
               <Select
                 value={formData.goal_type}
-                onValueChange={(value: Goal["goal_type"]) =>
+                onValueChange={(value: GoalType) =>
                   setFormData({
                     ...formData,
                     goal_type: value,
-                    assigned_to: "",
                   })
                 }
               >
@@ -874,7 +801,7 @@ const GoalsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {goalTypes.map((type) => (
-                    <SelectItem key={type.value || ""} value={type.value || ""}>
+                    <SelectItem key={type.value} value={type.value}>
                       {type.label}
                     </SelectItem>
                   ))}
@@ -882,48 +809,11 @@ const GoalsPage = () => {
               </Select>
             </div>
 
-            {formData.goal_type !== "company" && (
-              <div className="grid gap-2">
-                <Label htmlFor="edit_assigned_to">
-                  {formData.goal_type === "sales_person"
-                    ? "Vendedor"
-                    : formData.goal_type === "zone"
-                    ? "Zona"
-                    : "Supervisor"}
-                </Label>
-                <Select
-                  value={formData.assigned_to}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, assigned_to: value })
-                  }
-                >
-                  <SelectTrigger id="edit_assigned_to">
-                    <SelectValue
-                      placeholder={`Seleccionar ${
-                        formData.goal_type === "sales_person"
-                          ? "vendedor"
-                          : formData.goal_type === "zone"
-                          ? "zona"
-                          : "supervisor"
-                      }`}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAssignedOptions().map((option) => (
-                      <SelectItem key={option.id} value={option.name}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             <div className="grid gap-2">
               <Label htmlFor="edit_period_type">Tipo de Período</Label>
               <Select
                 value={formData.period_type}
-                onValueChange={(value: Goal["period_type"]) =>
+                onValueChange={(value: PeriodType) =>
                   setFormData({ ...formData, period_type: value })
                 }
               >
@@ -971,13 +861,18 @@ const GoalsPage = () => {
                 />
               </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit_start_date">Fecha de Inicio</Label>
                 <DatePicker
-                  selected={formData.start_date}
+                  selected={new Date(formData.start_date)}
                   onChange={(date) =>
-                    date && setFormData({ ...formData, start_date: date })
+                    date &&
+                    setFormData({
+                      ...formData,
+                      start_date: date.toISOString(),
+                    })
                   }
                   dateFormat="dd/MM/yyyy"
                   className="w-full p-2 border rounded-md text-sm"
@@ -988,15 +883,45 @@ const GoalsPage = () => {
               <div className="grid gap-2">
                 <Label htmlFor="edit_end_date">Fecha de Fin</Label>
                 <DatePicker
-                  selected={formData.end_date}
+                  selected={new Date(formData.end_date)}
                   onChange={(date) =>
-                    date && setFormData({ ...formData, end_date: date })
+                    date &&
+                    setFormData({
+                      ...formData,
+                      end_date: date.toISOString(),
+                    })
                   }
                   dateFormat="dd/MM/yyyy"
                   className="w-full p-2 border rounded-md text-sm"
-                  minDate={formData.start_date}
+                  minDate={new Date(formData.start_date)}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit_status">Estado</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: GoalStatus) =>
+                  setFormData({ ...formData, status: value })
+                }
+              >
+                <SelectTrigger id="edit_status">
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions
+                    .filter((opt) => opt.value !== "")
+                    .map((status) => (
+                      <SelectItem
+                        key={status.value}
+                        value={status.value as GoalStatus}
+                      >
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -1008,8 +933,8 @@ const GoalsPage = () => {
             >
               Cancelar
             </Button>
-            <Button type="button" onClick={handleEditGoal}>
-              Guardar Cambios
+            <Button type="button" onClick={handleEditGoal} disabled={loading}>
+              {loading ? "Guardando..." : "Guardar Cambios"}
             </Button>
           </DialogFooter>
         </DialogContent>

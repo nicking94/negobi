@@ -26,145 +26,259 @@ import { DataTable } from "@/components/ui/dataTable";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { InstanceType } from "@/services/instances/types";
-import { InstancesServices } from "@/services/instances/instance.service";
-import useGetInstances from "@/hooks/instances/useGetInstance";
 import { toast, Toaster } from "sonner";
+import {
+  ProductCategory,
+  CreateProductCategoryData,
+  UpdateProductCategoryData,
+} from "@/services/productCategories/productCategories.service";
+import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
 
-const instanceSchema = z.object({
+const categorySchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
   category_name: z.string().min(1, "El nombre es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   prefix: z.string().min(1, "El prefijo es requerido"),
-  correlative_length: z.number().optional(),
+  correlative_length: z.string().min(1, "La longitud es requerida"),
+  is_active: z.boolean(),
+  show_in_ecommerce: z.boolean(),
+  show_in_sales_app: z.boolean(),
 });
 
-type InstanceFormValues = z.infer<typeof instanceSchema>;
-
 const InstancesPage = () => {
-  const {
-    instancesResponse,
-    page,
-    setItemsPerPage,
-    itemsPerPage,
-    setPage,
-    total,
-    totalPage,
-    setModified,
-  } = useGetInstances();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [instances, setInstances] = useState<InstanceType[]>([]);
+  const [editingCategory, setEditingCategory] =
+    useState<ProductCategory | null>(null);
 
-  const [editingInstance, setEditingInstance] = useState<InstanceType | null>(
-    null
-  );
+  const {
+    productCategories,
+    loading,
+    error,
+    createProductCategory,
+    updateProductCategory,
+    deleteProductCategory,
+    page,
+    itemsPerPage,
+    total,
+    totalPage,
+    setPage,
+    setItemsPerPage,
+    setModified,
+  } = useProductCategories({
+    is_active: true,
+    page: 1,
+    itemsPerPage: 10,
+  });
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     reset,
-  } = useForm<InstanceFormValues>({
-    resolver: zodResolver(instanceSchema),
+    watch,
+    setValue,
+  } = useForm<CategoryFormInputs>({
+    resolver: zodResolver(categorySchema),
     defaultValues: {
       category_code: "",
       category_name: "",
       description: "",
       prefix: "",
-      correlative_length: 0,
+      correlative_length: "5",
+      is_active: true,
+      show_in_ecommerce: true,
+      show_in_sales_app: true,
     },
   });
 
-  useEffect(() => {
-    if (editingInstance) {
-      reset(editingInstance);
-    } else {
-      reset({
-        category_code: "",
-        category_name: "",
-        description: "",
-        prefix: "",
-        correlative_length: 0,
-      });
-    }
-  }, [editingInstance, reset]);
+  const isActive = watch("is_active");
+  const showInEcommerce = watch("show_in_ecommerce");
+  const showInSalesApp = watch("show_in_sales_app");
 
-  const onSubmit = async (data: InstanceFormValues) => {
-    const newInstance: InstanceType = {
-      companyId: 4,
-      category_code: data.category_code,
-      category_name: data.category_name,
-      description: data.description,
-      prefix: data.prefix,
-      correlative_length: data.correlative_length || 5,
-    };
-    if (editingInstance) {
-      // Editar
-      const result = await InstancesServices.PatchInstance(
-        editingInstance.id || "",
-        newInstance
-      );
-      if (result.status === 200) {
-        setModified(true);
-        toast.success("Instancia modificada con éxito");
-      } else {
-        toast.error("Error modificando la instancia");
-        return;
-      }
-      reset({
-        category_code: "",
-        category_name: "",
-        description: "",
-        prefix: "",
-        correlative_length: 0,
-      });
-    } else {
-      // Crear
+  type CategoryFormInputs = z.infer<typeof categorySchema>;
 
-      const result = await InstancesServices.AddInstance(newInstance);
-      if (result.status === 201) {
-        setModified(true);
-        toast.success("Instancia creada con éxito");
-      } else {
-        toast.error("Error creando la instancia");
-        return;
-      }
-      reset({
-        category_code: "",
-        category_name: "",
-        description: "",
-        prefix: "",
-        correlative_length: 0,
-      });
-    }
-
-    setIsModalOpen(false);
-    setEditingInstance(null);
+  // Tipo para los datos procesados
+  type CategoryFormValues = {
+    category_code: string;
+    category_name: string;
+    description: string;
+    prefix: string;
+    correlative_length: number;
+    is_active: boolean;
+    show_in_ecommerce: boolean;
+    show_in_sales_app: boolean;
   };
 
-  const columns: ColumnDef<InstanceType>[] = [
+  const onSubmit = async (formData: CategoryFormInputs) => {
+    try {
+      // Convertir correlative_length a número
+      const processedData: CategoryFormValues = {
+        ...formData,
+        correlative_length: Number(formData.correlative_length),
+      };
+
+      if (editingCategory) {
+        // Editar categoría existente
+        const updateData: UpdateProductCategoryData = {
+          category_name: processedData.category_name,
+          category_code: processedData.category_code,
+          description: processedData.description,
+          prefix: processedData.prefix,
+          correlative_length: processedData.correlative_length,
+          is_active: processedData.is_active,
+          show_in_ecommerce: processedData.show_in_ecommerce,
+          show_in_sales_app: processedData.show_in_sales_app,
+        };
+
+        const result = await updateProductCategory(
+          editingCategory.id.toString(),
+          updateData
+        );
+
+        if (result) {
+          toast.success("Categoría actualizada exitosamente");
+          setModified((prev) => !prev);
+        } else {
+          toast.error("Error al actualizar la categoría");
+          return;
+        }
+      } else {
+        // Crear nueva categoría
+        const createData: CreateProductCategoryData = {
+          companyId: 4,
+          category_name: processedData.category_name,
+          category_code: processedData.category_code,
+          description: processedData.description,
+          prefix: processedData.prefix,
+          correlative_length: processedData.correlative_length,
+          is_active: processedData.is_active,
+          show_in_ecommerce: processedData.show_in_ecommerce,
+          show_in_sales_app: processedData.show_in_sales_app,
+        };
+
+        const result = await createProductCategory(createData);
+
+        if (result) {
+          toast.success("Categoría creada exitosamente");
+          setModified((prev) => !prev);
+        } else {
+          toast.error("Error al crear la categoría");
+          return;
+        }
+      }
+
+      resetForm();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error al guardar categoría:", error);
+      toast.error("Error al guardar la categoría");
+    }
+  };
+
+  const handleDelete = async (category: ProductCategory) => {
+    if (!category.id) {
+      toast.error("Categoría no encontrada");
+      return;
+    }
+
+    toast.error(`¿Eliminar la categoría "${category.category_name}"?`, {
+      description: "Esta acción no se puede deshacer.",
+      action: {
+        label: "Eliminar",
+        onClick: async () => {
+          const success = await deleteProductCategory(category.id.toString());
+          if (success) {
+            toast.success("Categoría eliminada exitosamente");
+            setModified((prev) => !prev); // Trigger refetch como en clients
+          } else {
+            toast.error("Error al eliminar la categoría");
+          }
+        },
+      },
+      cancel: {
+        label: "Cancelar",
+        onClick: () => {
+          toast.info("Eliminación cancelada");
+        },
+      },
+    });
+  };
+
+  const resetForm = () => {
+    reset({
+      category_code: "",
+      category_name: "",
+      description: "",
+      prefix: "",
+      correlative_length: "5",
+      is_active: true,
+      show_in_ecommerce: true,
+      show_in_sales_app: true,
+    });
+    setEditingCategory(null);
+  };
+  // Función para manejar cambios en checkboxes
+  const handleCheckboxChange = (
+    field: keyof CategoryFormValues,
+    checked: boolean
+  ) => {
+    setValue(field, checked, { shouldValidate: true });
+  };
+
+  const columns: ColumnDef<ProductCategory>[] = [
     {
       accessorKey: "category_code",
       header: "Código",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("category_code")}</div>
+      ),
     },
     {
       accessorKey: "category_name",
       header: "Nombre",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("category_name")}</div>
+      ),
     },
     {
       accessorKey: "description",
       header: "Descripción",
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-600 max-w-[200px] truncate">
+          {row.getValue("description")}
+        </div>
+      ),
     },
     {
-      accessorKey: "products",
-      header: "Productos",
+      accessorKey: "prefix",
+      header: "Prefijo",
+      cell: ({ row }) => (
+        <div className="font-mono text-sm">{row.getValue("prefix")}</div>
+      ),
+    },
+    {
+      accessorKey: "correlative_length",
+      header: "Long. Correlativo",
+      cell: ({ row }) => (
+        <div className="text-center">{row.getValue("correlative_length")}</div>
+      ),
+    },
+    {
+      accessorKey: "is_active",
+      header: "Estado",
       cell: ({ row }) => {
-        const productCount = (row.getValue("products") as number) || 0;
+        const isActive = row.getValue("is_active") as boolean;
         return (
-          <span className="text-xs bg-green_xxl px-3 py-1 rounded-full font-medium">
-            {productCount} productos
-          </span>
+          <div
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              isActive
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {isActive ? "Activo" : "Inactivo"}
+          </div>
         );
       },
     },
@@ -172,7 +286,7 @@ const InstancesPage = () => {
       id: "actions",
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
-        const instance = row.original;
+        const category = row.original;
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -186,7 +300,7 @@ const InstancesPage = () => {
                 <DropdownMenuItem
                   className="cursor-pointer flex items-center gap-2"
                   onClick={() => {
-                    setEditingInstance(instance);
+                    setEditingCategory(category);
                     setIsModalOpen(true);
                   }}
                 >
@@ -194,15 +308,10 @@ const InstancesPage = () => {
                   <span>Editar</span>
                 </DropdownMenuItem>
 
+                {/* Eliminar */}
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center gap-2 text-red_m"
-                  onClick={() => {
-                    setInstances((prev) =>
-                      prev.filter(
-                        (item) => item.category_code !== instance.category_code
-                      )
-                    );
-                  }}
+                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  onClick={() => handleDelete(category)}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -214,6 +323,52 @@ const InstancesPage = () => {
       },
     },
   ];
+
+  // Mostrar estados de carga y error
+  if (loading && productCategories.length === 0) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Cargando categorías...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center text-red-600">
+              <p>Error: {error}</p>
+              <Button
+                onClick={() => setModified((prev) => !prev)}
+                className="mt-4"
+              >
+                Reintentar
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -230,113 +385,202 @@ const InstancesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Instancias
+              Categorías de Productos{" "}
+              {productCategories.length > 0 && `(${productCategories.length})`}
             </h1>
             <Button
               onClick={() => {
-                setEditingInstance(null);
+                resetForm();
                 setIsModalOpen(true);
               }}
               className="gap-2 w-full sm:w-auto"
+              disabled={loading}
             >
               <Plus className="h-4 w-4" />
-              <span>Nueva instancia</span>
+              <span>Nueva categoría</span>
             </Button>
           </div>
 
-          <DataTable<InstanceType, InstanceType>
-            columns={columns}
-            data={instancesResponse}
-            noResultsText="No hay instancias registradas"
-            page={page}
-            setPage={setPage}
-            totalPage={totalPage}
-            total={total}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-          />
+          {/* Tabla de categorías CON PAGINACIÓN - SIGUIENDO EL PATRÓN DE CLIENTS */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <DataTable<ProductCategory, ColumnDef<ProductCategory>[]>
+              columns={columns}
+              data={productCategories}
+              noResultsText="No hay categorías registradas"
+              page={page}
+              setPage={setPage}
+              totalPage={totalPage}
+              total={total}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+            />
+          </div>
         </main>
       </div>
 
+      {/* Modal para crear/editar categoría */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-[95%] sm:max-w-[425px]">
+        <DialogContent className="w-[95%] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingInstance ? "Editar instancia" : "Nueva instancia"}
+              {editingCategory ? "Editar categoría" : "Nueva categoría"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="category_code" className="sm:text-right">
-                  Código
-                </Label>
-                <div className="col-span-1 sm:col-span-3">
-                  <Input
-                    id="category_code"
-                    placeholder="Ej: INST-001"
-                    {...register("category_code")}
-                    disabled={!!editingInstance}
-                  />
-                  {errors.category_code && (
-                    <p className="text-red_m text-sm mt-1">
-                      {errors.category_code.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
+              {/* Nombre de la categoría */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_name" className="sm:text-right">
-                  Nombre
+                  Nombre *
                 </Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="category_name"
-                    placeholder="Nombre de la instancia"
+                    placeholder="Nombre de la categoría"
                     {...register("category_name")}
                   />
                   {errors.category_name && (
-                    <p className="text-red_m text-sm mt-1">
+                    <p className="text-red-600 text-sm mt-1">
                       {errors.category_name.message}
                     </p>
                   )}
                 </div>
               </div>
 
+              {/* Código de la categoría */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="sm:text-right">
-                  Descripción
+                <Label htmlFor="category_code" className="sm:text-right">
+                  Código *
                 </Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
+                    id="category_code"
+                    placeholder="Código único"
+                    {...register("category_code")}
+                    disabled={!!editingCategory}
+                  />
+                  {errors.category_code && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.category_code.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="sm:text-right">
+                  Descripción *
+                </Label>
+                <div className="col-span-1 sm:col-span-3">
+                  <textarea
                     id="description"
-                    placeholder="Descripción de la instancia"
+                    placeholder="Descripción de la categoría"
                     {...register("description")}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    rows={3}
                   />
                   {errors.description && (
-                    <p className="text-red_m text-sm mt-1">
+                    <p className="text-red-600 text-sm mt-1">
                       {errors.description.message}
                     </p>
                   )}
                 </div>
               </div>
 
+              {/* Prefijo */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="prefix" className="sm:text-right">
-                  Prefijo
+                  Prefijo *
                 </Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="prefix"
-                    placeholder="Prefijo"
+                    placeholder="Prefijo para códigos"
                     {...register("prefix")}
                   />
                   {errors.prefix && (
-                    <p className="text-red_m text-sm mt-1">
+                    <p className="text-red-600 text-sm mt-1">
                       {errors.prefix.message}
                     </p>
                   )}
+                </div>
+              </div>
+              {/* Longitud correlativa */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label htmlFor="correlative_length" className="sm:text-right">
+                  Long. Correlativo *
+                </Label>
+                <div className="col-span-1 sm:col-span-3">
+                  <Input
+                    id="correlative_length"
+                    type="number"
+                    min="1"
+                    max="10"
+                    {...register("correlative_length", { valueAsNumber: true })}
+                  />
+                  {errors.correlative_length && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.correlative_length.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Checkboxes para opciones */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
+                <Label className="sm:text-right pt-2">Opciones</Label>
+                <div className="col-span-1 sm:col-span-3 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={isActive}
+                      onChange={(e) =>
+                        handleCheckboxChange("is_active", e.target.checked)
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="is_active" className="text-sm">
+                      Categoría activa
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="show_in_ecommerce"
+                      checked={showInEcommerce}
+                      onChange={(e) =>
+                        handleCheckboxChange(
+                          "show_in_ecommerce",
+                          e.target.checked
+                        )
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="show_in_ecommerce" className="text-sm">
+                      Mostrar en e-commerce
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="show_in_sales_app"
+                      checked={showInSalesApp}
+                      onChange={(e) =>
+                        handleCheckboxChange(
+                          "show_in_sales_app",
+                          e.target.checked
+                        )
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="show_in_sales_app" className="text-sm">
+                      Mostrar en app de ventas
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -347,12 +591,19 @@ const InstancesPage = () => {
                 variant="outline"
                 onClick={() => {
                   setIsModalOpen(false);
-                  setEditingInstance(null);
+                  resetForm();
                 }}
+                disabled={isSubmitting}
               >
                 Cerrar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Guardando..."
+                  : editingCategory
+                  ? "Actualizar"
+                  : "Guardar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

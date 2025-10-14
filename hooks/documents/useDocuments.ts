@@ -1,3 +1,4 @@
+// hooks/documents/useDocuments.ts
 import { useState, useEffect } from "react";
 import {
   documentService,
@@ -9,12 +10,14 @@ import {
   DocumentStatus,
 } from "../../services/documents/documents.service";
 
-// Definir el tipo para los filtros del hook - companyId es obligatorio
+// Definir el tipo para los filtros del hook
 export interface UseDocumentsFilters {
   document_type?: DocumentType;
-  companyId: number;
+  companyId: number; // Ahora es requerido
   search?: string;
   status?: DocumentStatus;
+  startDate?: string;
+  endDate?: string;
 }
 
 export const useDocuments = (filters: UseDocumentsFilters) => {
@@ -29,10 +32,9 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       setLoading(true);
       setError(null);
 
-      // MODIFICACIÓN: No lanzar error, simplemente no hacer la petición
       const currentCompanyId = customFilters?.companyId || filters.companyId;
       if (!currentCompanyId) {
-        console.log("🟡 companyId no proporcionado, omitiendo carga");
+        console.log("companyId no proporcionado, omitiendo carga");
         setDocuments([]);
         return;
       }
@@ -42,32 +44,21 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
         ...customFilters,
         page: 1,
         itemsPerPage: 100,
-        companyId: currentCompanyId, // Usar el valor validado
+        companyId: currentCompanyId,
       };
 
-      console.log("🔵 Enviando parámetros:", combinedFilters);
+      console.log("Cargando documentos con parámetros:", combinedFilters);
 
       const documentsData = await documentService.getDocuments(combinedFilters);
-      console.log("🟢 Response completo:", documentsData);
-      console.log(
-        "📝 Número de documentos recibidos:",
-        documentsData?.length || 0
-      );
-      console.log("🏢 Documentos por companyId:", combinedFilters.companyId);
 
       if (Array.isArray(documentsData)) {
-        console.log("👤 Primer documento (ejemplo):", documentsData[0]);
-        console.log(
-          "👤 Cliente del primer documento:",
-          documentsData[0]?.client
-        );
         setDocuments(documentsData);
       } else {
-        console.warn("⚠️ Estructura inesperada:", documentsData);
+        console.warn("Estructura inesperada:", documentsData);
         setDocuments([]);
       }
     } catch (err) {
-      console.error("🔴 Error al cargar documentos:", err);
+      console.error("Error al cargar documentos:", err);
       setError(
         err instanceof Error ? err.message : "Error al cargar documentos"
       );
@@ -76,6 +67,7 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       setLoading(false);
     }
   };
+
   // Crear documento
   const createDocument = async (
     documentData: CreateDocumentData
@@ -83,6 +75,14 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     try {
       setLoading(true);
       setError(null);
+
+      // Validar datos
+      const validation = documentService.validateDocumentData(documentData);
+      if (!validation.isValid) {
+        setError(validation.errors.join(", "));
+        return null;
+      }
+
       const newDocument = await documentService.createDocument(documentData);
       setDocuments((prev) => [...prev, newDocument]);
       return newDocument;
@@ -135,14 +135,20 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     }
   };
 
+  const updateDocumentStatus = async (
+    id: string,
+    status: DocumentStatus // Especificar el tipo correcto
+  ): Promise<Document | null> => {
+    return updateDocument(id, { status });
+  };
+
   useEffect(() => {
     if (filters.companyId) {
       loadDocuments();
     } else {
-      // Si no hay companyId, limpiar los documentos
       setDocuments([]);
     }
-  }, [filters.companyId, filters.document_type]);
+  }, [filters.companyId, filters.document_type, filters.status]);
 
   return {
     documents,
@@ -151,6 +157,32 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     createDocument,
     updateDocument,
     deleteDocument,
+    updateDocumentStatus,
     refetch: loadDocuments,
+  };
+};
+
+// Hook especializado para órdenes (mantener compatibilidad)
+export const useOrders = (
+  filters: Omit<UseDocumentsFilters, "document_type">
+) => {
+  const documentsHook = useDocuments({
+    ...filters,
+    document_type: "order",
+  });
+
+  // Mapear documentos a formato de orden para compatibilidad
+  const orders = documentsHook.documents.map((doc) => ({
+    ...doc,
+    // Mantener compatibilidad con propiedades antiguas de orden
+    order_number: doc.document_number,
+    order_date: doc.document_date,
+    order_type: doc.document_type,
+  }));
+
+  return {
+    ...documentsHook,
+    orders,
+    documents: documentsHook.documents, // Mantener ambos por si acaso
   };
 };

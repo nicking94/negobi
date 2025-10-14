@@ -16,7 +16,7 @@ export const useDocumentDetails = () => {
       const document = await documentService.getDocumentById(id);
       return document;
     } catch (err) {
-      console.error("🔴 Error al cargar detalles del documento:", err);
+      console.error("Error al cargar detalles del documento:", err);
       setError(
         err instanceof Error
           ? err.message

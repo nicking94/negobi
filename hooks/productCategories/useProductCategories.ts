@@ -1,3 +1,4 @@
+// hooks/productCategories/useProductCategories.ts
 import { useState, useEffect } from "react";
 import {
   productCategoryService,
@@ -5,13 +6,9 @@ import {
   CreateProductCategoryData,
   UpdateProductCategoryData,
   GetProductCategoriesParams,
-  SyncProductCategoriesPayload,
-  SyncResponse,
 } from "../../services/productCategories/productCategories.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseProductCategoriesFilters {
-  companyId?: number;
   parentCategoryId?: number;
   search?: string;
   category_name?: string;
@@ -19,6 +16,8 @@ export interface UseProductCategoriesFilters {
   is_active?: boolean;
   show_in_ecommerce?: boolean;
   show_in_sales_app?: boolean;
+  page?: number;
+  itemsPerPage?: number;
 }
 
 export const useProductCategories = (
@@ -29,6 +28,11 @@ export const useProductCategories = (
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(filters.page || 1);
+  const [itemsPerPage, setItemsPerPage] = useState(filters.itemsPerPage || 10);
+  const [total, setTotal] = useState(0);
+  const [totalPage, setTotalPage] = useState(0);
+  const [modified, setModified] = useState(false);
 
   // Cargar todas las categorías con filtros
   const loadProductCategories = async (
@@ -38,13 +42,33 @@ export const useProductCategories = (
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
+      // Combinar filtros - REMOVER companyId ya que no es soportado por la API
       const combinedFilters: GetProductCategoriesParams = {
-        ...filters,
+        page,
+        itemsPerPage,
+        // Solo incluir parámetros válidos
+        ...(filters.search && { search: filters.search }),
+        ...(filters.category_name && { category_name: filters.category_name }),
+        ...(filters.category_code && { category_code: filters.category_code }),
+        ...(filters.parentCategoryId && {
+          parentCategoryId: filters.parentCategoryId,
+        }),
+        ...(filters.is_active !== undefined && {
+          is_active: filters.is_active,
+        }),
+        ...(filters.show_in_ecommerce !== undefined && {
+          show_in_ecommerce: filters.show_in_ecommerce,
+        }),
+        ...(filters.show_in_sales_app !== undefined && {
+          show_in_sales_app: filters.show_in_sales_app,
+        }),
         ...customFilters,
-        page: 1,
-        itemsPerPage: 10, // Más grande para categorías
       };
+
+      // Asegurarse de que is_active sea booleano
+      if (combinedFilters.is_active !== undefined) {
+        combinedFilters.is_active = Boolean(combinedFilters.is_active);
+      }
 
       console.log("🔵 Enviando parámetros para categorías:", combinedFilters);
 
@@ -55,15 +79,21 @@ export const useProductCategories = (
 
       if (Array.isArray(categoriesData)) {
         setProductCategories(categoriesData);
+        setTotal(categoriesData.length);
+        setTotalPage(Math.ceil(categoriesData.length / itemsPerPage));
       } else {
         console.warn("⚠️ Estructura inesperada:", categoriesData);
         setProductCategories([]);
+        setTotal(0);
+        setTotalPage(0);
       }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al cargar categorías"
       );
       setProductCategories([]);
+      setTotal(0);
+      setTotalPage(0);
     } finally {
       setLoading(false);
     }
@@ -79,7 +109,7 @@ export const useProductCategories = (
       const newCategory = await productCategoryService.createProductCategory(
         categoryData
       );
-      setProductCategories((prev) => [...prev, newCategory]);
+      setModified((prev) => !prev); // Trigger refetch
       return newCategory;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear categoría");
@@ -99,11 +129,7 @@ export const useProductCategories = (
       setError(null);
       const updatedCategory =
         await productCategoryService.updateProductCategory(id, updates);
-      setProductCategories((prev) =>
-        prev.map((category) =>
-          category.id.toString() === id ? updatedCategory : category
-        )
-      );
+      setModified((prev) => !prev); // Trigger refetch
       return updatedCategory;
     } catch (err) {
       setError(
@@ -121,9 +147,7 @@ export const useProductCategories = (
       setLoading(true);
       setError(null);
       await productCategoryService.deleteProductCategory(id);
-      setProductCategories((prev) =>
-        prev.filter((category) => category.id.toString() !== id)
-      );
+      setModified((prev) => !prev); // Trigger refetch
       return true;
     } catch (err) {
       setError(
@@ -135,53 +159,10 @@ export const useProductCategories = (
     }
   };
 
-  // Obtener categoría por ID
-  const getProductCategoryById = async (
-    id: string
-  ): Promise<ProductCategory | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const category = await productCategoryService.getProductCategoryById(id);
-      return category;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al obtener categoría"
-      );
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sincronizar categorías desde ERP
-  const syncProductCategories = async (
-    syncData: SyncProductCategoriesPayload
-  ): Promise<SyncResponse | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await productCategoryService.syncProductCategories(
-        syncData
-      );
-      // Recargar categorías después de sincronizar
-      await loadProductCategories();
-      return response;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al sincronizar categorías"
-      );
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Cargar categorías al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadProductCategories();
   }, [
-    filters.companyId,
     filters.parentCategoryId,
     filters.search,
     filters.category_name,
@@ -189,6 +170,9 @@ export const useProductCategories = (
     filters.is_active,
     filters.show_in_ecommerce,
     filters.show_in_sales_app,
+    page,
+    itemsPerPage,
+    modified,
   ]);
 
   return {
@@ -198,106 +182,13 @@ export const useProductCategories = (
     createProductCategory,
     updateProductCategory,
     deleteProductCategory,
-    getProductCategoryById,
-    syncProductCategories,
+    page,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    total,
+    totalPage,
+    setModified,
     refetch: loadProductCategories,
-  };
-};
-
-// Hook especializado para categorías por empresa
-export const useProductCategoriesByCompany = (companyId?: number) => {
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadCategories = async (id?: number) => {
-    const targetCompanyId = id || companyId;
-    if (!targetCompanyId) {
-      setError("companyId es requerido");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const companyCategories =
-        await productCategoryService.getCategoriesByCompany(targetCompanyId);
-      setCategories(companyCategories);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar categorías"
-      );
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Obtener árbol de categorías
-  const getCategoriesTree = (): ProductCategory[] => {
-    const buildTree = (parentId?: number): ProductCategory[] => {
-      return categories
-        .filter((category) => category.parentCategoryId === parentId)
-        .map((category) => ({
-          ...category,
-          children: buildTree(category.id),
-        }));
-    };
-
-    return buildTree();
-  };
-
-  useEffect(() => {
-    if (companyId) {
-      loadCategories();
-    }
-  }, [companyId]);
-
-  return {
-    categories,
-    categoriesTree: getCategoriesTree(),
-    loading,
-    error,
-    refetch: loadCategories,
-  };
-};
-
-// Hook para categorías activas
-export const useActiveProductCategories = (companyId?: number) => {
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadActiveCategories = async (id?: number) => {
-    const targetCompanyId = id || companyId;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const activeCategories = await productCategoryService.getActiveCategories(
-        targetCompanyId
-      );
-      setCategories(activeCategories);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Error al cargar categorías activas"
-      );
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadActiveCategories();
-  }, [companyId]);
-
-  return {
-    activeCategories: categories,
-    loading,
-    error,
-    refetch: loadActiveCategories,
   };
 };

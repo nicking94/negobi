@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -10,6 +10,7 @@ import {
   Filter,
   FileText,
   Truck,
+  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,7 @@ import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
-
+import useGetClients from "@/hooks/clients/useGetClients";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -72,119 +73,134 @@ const DeliveryNotesPage = () => {
   const [isClientDeliveryNotesDialogOpen, setIsClientDeliveryNotesDialogOpen] =
     useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sellerFilter, setSellerFilter] = useState<string>("all");
-  const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [clientFilter, setClientFilter] = useState<string>("all");
 
-  // Datos de ejemplo para notas de entrega
-  const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([
-    {
-      id: "1",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "NE053044",
-      operation_type: "DÓLARES",
-      location: "Sucursal Principal",
-      issued_date: new Date("2025-09-02T12:24:00"),
-      total: 2150.08,
-      seller: "Juan Pérez",
-      status: "delivered",
-      bill_reference: "FV053044",
-      delivery_address: "Av. Principal #123, Centro",
-      contact_person: "Carlos Rodríguez",
-      contact_phone: "+584141234567",
-      notes: "Entregar en recepción, preguntar por María",
-    },
-    {
-      id: "2",
-      client: "DISTRIBUIDORA LA ECONOMÍA, C.A.",
-      correlative: "NE053045",
-      operation_type: "BOLÍVARES",
-      location: "Sucursal Norte",
-      issued_date: new Date("2025-09-01T10:15:00"),
-      total: 4500.5,
-      seller: "María González",
-      status: "in_transit",
-      delivery_address: "Calle Comercio #456, Zona Industrial",
-      contact_person: "Roberto Mendoza",
-      contact_phone: "+584148765432",
-      notes: "El cliente solicita entrega en horario de 2pm a 4pm",
-    },
-  ]);
+  // Obtener clientes reales desde la API
+  const {
+    clientsResponse,
+    loading: clientsLoading,
+    setModified,
+  } = useGetClients({
+    search: searchTerm,
+  });
 
-  const sellers = useMemo(() => {
-    const uniqueSellers = Array.from(
-      new Set(deliveryNotes.map((note) => note.seller || "").filter(Boolean))
-    );
-    return uniqueSellers.map((seller, index) => ({
-      id: (index + 1).toString(),
-      name: seller,
-    }));
-  }, [deliveryNotes]);
+  // Datos de ejemplo para notas de entrega - ahora conectados con clientes reales
+  const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
 
+  // Actualizar las notas de entrega cuando cambian los clientes
+  useEffect(() => {
+    if (clientsResponse && clientsResponse.length > 0) {
+      // Crear notas de entrega mock basadas en los clientes reales
+      const mockNotes: DeliveryNote[] = clientsResponse.flatMap(
+        (client, index) => {
+          const notesForClient = [];
+
+          // Cada cliente tendrá entre 1-3 notas de entrega
+          const noteCount = Math.floor(Math.random() * 3) + 1;
+
+          for (let i = 0; i < noteCount; i++) {
+            const statuses: Array<
+              "pending" | "delivered" | "cancelled" | "in_transit"
+            > = ["pending", "delivered", "in_transit", "cancelled"];
+            const randomStatus =
+              statuses[Math.floor(Math.random() * statuses.length)];
+
+            notesForClient.push({
+              id: `${client.id}-${i + 1}`,
+              client: client.legal_name, // Usar el nombre legal del cliente real
+              correlative: `NE${String(clientsResponse.length + index).padStart(
+                5,
+                "0"
+              )}${i + 1}`,
+              operation_type: Math.random() > 0.5 ? "DÓLARES" : "BOLÍVARES",
+              location: [
+                "Sucursal Principal",
+                "Sucursal Norte",
+                "Sucursal Sur",
+              ][i % 3],
+              issued_date: new Date(
+                new Date().setDate(
+                  new Date().getDate() - Math.floor(Math.random() * 30)
+                )
+              ),
+              total: Math.random() * 5000 + 1000,
+              seller: client.contact_person || "Vendedor Principal",
+              status: randomStatus,
+              bill_reference: `FV${String(
+                clientsResponse.length + index
+              ).padStart(5, "0")}${i + 1}`,
+              delivery_address:
+                client.delivery_address || "Dirección no especificada",
+              contact_person: client.contact_person || "Contacto Principal",
+              contact_phone:
+                client.contact_phone || client.main_phone || "Sin teléfono",
+              notes: `Nota de entrega para ${client.legal_name}`,
+            });
+          }
+
+          return notesForClient;
+        }
+      );
+
+      setDeliveryNotes(mockNotes);
+    }
+  }, [clientsResponse]);
+
+  // Obtener lista de clientes únicos desde los clientes reales
   const clients = useMemo(() => {
-    const uniqueClients = Array.from(
-      new Set(deliveryNotes.map((note) => note.client))
-    );
-    return uniqueClients.map((client, index) => ({
-      id: (index + 1).toString(),
-      name: client,
+    if (!clientsResponse || clientsResponse.length === 0) {
+      return [];
+    }
+
+    return clientsResponse.map((client) => ({
+      id: client.id || `temp-${client.client_code}`,
+      name: client.legal_name,
+      originalClient: client,
     }));
-  }, [deliveryNotes]);
+  }, [clientsResponse]);
+
+  // Filtrar notas de entrega según los criterios
+  const filteredDeliveryNotes = useMemo(() => {
+    let filteredNotes = deliveryNotes;
+
+    // Filtrar por cliente seleccionado
+    if (clientFilter !== "all") {
+      const selectedClientName = clients.find(
+        (c) => c.id === clientFilter
+      )?.name;
+      filteredNotes = filteredNotes.filter(
+        (note) => note.client === selectedClientName
+      );
+    }
+
+    // Filtrar por estado (si no es "todos")
+    if (statusFilter !== "all") {
+      filteredNotes = filteredNotes.filter(
+        (note) => note.status === statusFilter
+      );
+    }
+
+    // Filtrar por rango de fechas
+    if (dateRange?.from && dateRange?.to) {
+      filteredNotes = filteredNotes.filter(
+        (note) =>
+          note.issued_date >= dateRange.from! &&
+          note.issued_date <= dateRange.to!
+      );
+    }
+
+    return filteredNotes;
+  }, [deliveryNotes, clientFilter, statusFilter, dateRange, clients]);
 
   // Obtener notas de entrega de un cliente específico
   const getClientDeliveryNotes = (clientName: string) => {
     return deliveryNotes.filter((note) => note.client === clientName);
   };
-
-  // Filtrar notas de entrega según los criterios
-  const filteredDeliveryNotes = useMemo(() => {
-    return deliveryNotes.filter((note) => {
-      const matchesSearch =
-        note.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        note.correlative.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        note.operation_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (note.bill_reference &&
-          note.bill_reference.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      // Filtrar por vendedor (si no es "todos")
-      const matchesSeller =
-        sellerFilter === "all" || note.seller === sellerFilter;
-
-      // Filtrar por cliente (si no es "todos")
-      const matchesClient =
-        clientFilter === "all" || note.client === clientFilter;
-
-      // Filtrar por estado (si no es "todos")
-      const matchesStatus =
-        statusFilter === "all" || note.status === statusFilter;
-
-      // Filtrar por rango de fechas
-      const matchesDateRange =
-        !dateRange?.from ||
-        !dateRange?.to ||
-        (note.issued_date >= dateRange.from &&
-          note.issued_date <= dateRange.to);
-
-      return (
-        matchesSearch &&
-        matchesSeller &&
-        matchesClient &&
-        matchesStatus &&
-        matchesDateRange
-      );
-    });
-  }, [
-    deliveryNotes,
-    searchTerm,
-    sellerFilter,
-    clientFilter,
-    statusFilter,
-    dateRange,
-  ]);
 
   const handleViewDeliveryNote = (note: DeliveryNote) => {
     setSelectedDeliveryNote(note);
@@ -241,6 +257,13 @@ const DeliveryNotesPage = () => {
     );
   };
 
+  // Obtener el nombre del cliente seleccionado
+  const selectedClientName = useMemo(() => {
+    if (clientFilter === "all") return null;
+    return clients.find((c) => c.id === clientFilter)?.name || null;
+  }, [clientFilter, clients]);
+
+  // Configuración de columnas para la tabla
   const columns: ColumnDef<DeliveryNote>[] = [
     {
       accessorKey: "client",
@@ -290,6 +313,14 @@ const DeliveryNotesPage = () => {
       },
     },
     {
+      accessorKey: "status",
+      header: "Estado",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string;
+        return <div className="font-medium">{getStatusBadge(status)}</div>;
+      },
+    },
+    {
       id: "actions",
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
@@ -305,12 +336,13 @@ const DeliveryNotesPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => handleViewClientDeliveryNotes(note.client)}
+                  onClick={() => handleViewDeliveryNote(note)}
                   className="cursor-pointer flex items-center gap-2"
                 >
-                  <FileText className="h-4 w-4" />
-                  <span>Ver Notas del Cliente</span>
+                  <Eye className="h-4 w-4" />
+                  <span>Ver Detalles</span>
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => handleResendDeliveryNote(note)}
@@ -346,13 +378,14 @@ const DeliveryNotesPage = () => {
             </h1>
           </div>
 
+          {/* Búsqueda y Filtros - REORGANIZADO como en sucursales */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar notas de entrega..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -369,47 +402,22 @@ const DeliveryNotesPage = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[18rem]">
                     <div className="px-2 py-1.5">
-                      <Label htmlFor="seller-filter">Vendedor</Label>
+                      <Label htmlFor="status-filter">Estado</Label>
                       <Select
-                        value={sellerFilter}
-                        onValueChange={setSellerFilter}
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
                       >
-                        <SelectTrigger id="seller-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los vendedores" />
+                        <SelectTrigger id="status-filter" className="mt-1">
+                          <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            Todos los vendedores
+                          <SelectItem value="all">Todos los estados</SelectItem>
+                          <SelectItem value="pending">Pendiente</SelectItem>
+                          <SelectItem value="in_transit">
+                            En tránsito
                           </SelectItem>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.name}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="client-filter">Cliente</Label>
-                      <Select
-                        value={clientFilter}
-                        onValueChange={setClientFilter}
-                      >
-                        <SelectTrigger id="client-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los clientes" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todos los clientes
-                          </SelectItem>
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.name}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="delivered">Entregado</SelectItem>
+                          <SelectItem value="cancelled">Cancelado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -442,22 +450,77 @@ const DeliveryNotesPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+
+            {/* Selector de Cliente a la DERECHA como en sucursales */}
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="client-selector"
+                  className="text-sm font-medium whitespace-nowrap"
+                >
+                  Filtrar por Cliente:
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={clientFilter}
+                    onValueChange={setClientFilter}
+                    disabled={clientsLoading}
+                  >
+                    <SelectTrigger
+                      id="client-selector"
+                      className="w-full md:w-64"
+                    >
+                      <Building className="h-4 w-4 mr-2" />
+                      <SelectValue
+                        placeholder={
+                          clientsLoading
+                            ? "Cargando clientes..."
+                            : "Todos los clientes"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los clientes</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <DataTable<DeliveryNote, DeliveryNote>
-            columns={columns}
-            data={filteredDeliveryNotes}
-            noResultsText="No se encontraron notas de entrega"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredDeliveryNotes.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
-          />
+          {/* Loading state */}
+          {clientsLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green_m mx-auto"></div>
+              <p className="text-gray-600 mt-2">
+                Cargando clientes y notas de entrega...
+              </p>
+            </div>
+          )}
+
+          {/* Tabla de notas de entrega */}
+          {!clientsLoading && (
+            <DataTable<DeliveryNote, DeliveryNote>
+              columns={columns}
+              data={filteredDeliveryNotes}
+              noResultsText="No se encontraron notas de entrega"
+              page={1}
+              setPage={() => {}}
+              totalPage={1}
+              total={filteredDeliveryNotes.length}
+              itemsPerPage={10}
+              setItemsPerPage={() => {}}
+            />
+          )}
         </main>
       </div>
 
+      {/* Modal para ver detalle de nota de entrega */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -609,18 +672,18 @@ const DeliveryNotesPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para ver notas de entrega del cliente */}
+      {/* Modal para ver todas las notas de entrega del cliente */}
       <Dialog
         open={isClientDeliveryNotesDialogOpen}
         onOpenChange={setIsClientDeliveryNotesDialogOpen}
       >
-        <DialogContent className="w-full bg-white  sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Notas de Entrega de {selectedClient}
             </DialogTitle>
             <DialogDescription>
-              Lista de notas de entrega del cliente seleccionado
+              Lista completa de notas de entrega del cliente seleccionado
             </DialogDescription>
           </DialogHeader>
 
@@ -630,13 +693,13 @@ const DeliveryNotesPage = () => {
                 <table className="w-full border-collapse border border-green_m">
                   <thead>
                     <tr className="bg-green_m text-white">
-                      <th className=" px-4 py-2 text-left">Correlativo</th>
-                      <th className=" px-4 py-2 text-left">
+                      <th className="px-4 py-2 text-left">Correlativo</th>
+                      <th className="px-4 py-2 text-left">
                         Factura Referencia
                       </th>
                       <th className="px-4 py-2 text-left">Fecha</th>
                       <th className="px-4 py-2 text-left">Total</th>
-                      <th className=" px-4 py-2 text-left">Estado</th>
+                      <th className="px-4 py-2 text-left">Estado</th>
                       <th className="px-4 py-2 text-center">Acciones</th>
                     </tr>
                   </thead>

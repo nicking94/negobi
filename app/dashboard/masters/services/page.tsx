@@ -53,8 +53,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 
-import useGetInstances from "@/hooks/instances/useGetInstance";
-
 type Category = {
   id: number;
   category_name: string;
@@ -81,9 +79,11 @@ const serviceSchema = z.object({
   price_level_1: z.number().min(0, "El precio no puede ser negativo"),
   price_level_2: z.number().min(0, "El precio no puede ser negativo"),
   price_level_3: z.number().min(0, "El precio no puede ser negativo"),
-  category_id: z.number().min(0, "La categoría es requerida"),
+  category_id: z.number().min(1, "La categoría es requerida"),
   is_active: z.boolean().optional(),
 });
+
+type ServiceFormInputs = z.infer<typeof serviceSchema>;
 
 const ServicesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -92,21 +92,50 @@ const ServicesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [syncFilter, setSyncFilter] = useState<string>("all");
   const [instanceFilter, setInstanceFilter] = useState<string>("all");
-  const { instancesResponse } = useGetInstances();
 
-  const [categories, setCategories] = useState([
+  // Datos de ejemplo - en una app real estos vendrían de una API
+  const [categories] = useState([
     { id: 1, name: "Consultoría" },
     { id: 2, name: "Desarrollo" },
     { id: 3, name: "Soporte" },
   ]);
 
-  const [instances, setInstances] = useState([
+  const [instances] = useState([
     { id: 1, name: "Instancia Principal" },
     { id: 2, name: "Sucursal Norte" },
     { id: 3, name: "Sucursal Sur" },
   ]);
 
-  const form = useForm<z.infer<typeof serviceSchema>>({
+  const [services] = useState<Service[]>([
+    {
+      id: "1",
+      name: "Desarrollo Web",
+      code: "DEV001",
+      description: "Desarrollo de aplicaciones web modernas",
+      price_level_1: 100,
+      price_level_2: 150,
+      price_level_3: 200,
+      category_id: 2,
+      company_id: 1,
+      synced_locations: 3,
+      is_active: true,
+    },
+    {
+      id: "2",
+      name: "Consultoría IT",
+      code: "CON001",
+      description: "Asesoramiento tecnológico",
+      price_level_1: 80,
+      price_level_2: 120,
+      price_level_3: 160,
+      category_id: 1,
+      company_id: 1,
+      synced_locations: 2,
+      is_active: true,
+    },
+  ]);
+
+  const form = useForm<ServiceFormInputs>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       name: "",
@@ -116,10 +145,11 @@ const ServicesPage = () => {
       price_level_2: 0,
       price_level_3: 0,
       category_id: 0,
+      is_active: true,
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: ServiceFormInputs) => {
     try {
       if (editingService && typeof editingService.id === "number") {
         toast.success("Servicio actualizado exitosamente");
@@ -167,12 +197,22 @@ const ServicesPage = () => {
       price_level_2: service.price_level_2,
       price_level_3: service.price_level_3,
       category_id: service.category_id,
+      is_active: service.is_active ?? true,
     });
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
-    form.reset();
+    form.reset({
+      name: "",
+      code: "",
+      description: "",
+      price_level_1: 0,
+      price_level_2: 0,
+      price_level_3: 0,
+      category_id: 0,
+      is_active: true,
+    });
     setEditingService(null);
   };
 
@@ -296,7 +336,7 @@ const ServicesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Servicios
+              Servicios {services.length > 0 && `(${services.length})`}
             </h1>
           </div>
 
@@ -383,6 +423,21 @@ const ServicesPage = () => {
               </Button>
             </div>
           </div>
+
+          {/* Tabla de servicios */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <DataTable<Service, ColumnDef<Service>[]>
+              columns={columns}
+              data={services}
+              noResultsText="No hay servicios registrados"
+              page={1}
+              setPage={() => {}}
+              totalPage={1}
+              total={services.length}
+              itemsPerPage={10}
+              setItemsPerPage={() => {}}
+            />
+          </div>
         </main>
       </div>
 
@@ -403,7 +458,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Nombre
+                        Nombre *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
@@ -421,7 +476,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Código
+                        Código *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
@@ -461,7 +516,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Categoría
+                        Categoría *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <Select
@@ -476,12 +531,12 @@ const ServicesPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {instancesResponse.map((category: Category) => (
+                            {categories.map((category) => (
                               <SelectItem
                                 key={category.id}
                                 value={category.id.toString()}
                               >
-                                {category.category_name}
+                                {category.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -498,7 +553,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Precio Nivel 1
+                        Precio Nivel 1 *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
@@ -524,7 +579,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Precio Nivel 2
+                        Precio Nivel 2 *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
@@ -550,7 +605,7 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Precio Nivel 3
+                        Precio Nivel 3 *
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>

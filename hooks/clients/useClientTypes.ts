@@ -10,8 +10,6 @@ interface UseClientTypesReturn {
   refetch: () => void;
 }
 
-// hooks/useClientTypes.ts
-// hooks/useClientTypes.ts
 export const useClientTypes = (): UseClientTypesReturn => {
   const [clientTypes, setClientTypes] = useState<ClientType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);

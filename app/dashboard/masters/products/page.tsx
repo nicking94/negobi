@@ -55,56 +55,17 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 import Image from "next/image";
-import useGetInstances from "@/hooks/instances/useGetInstance";
-import useGetProducts from "@/hooks/products/useGetProducts";
 
-type Category = {
-  id: number;
-  category_name: string;
-};
+import { useProducts } from "@/hooks/products/useProducts";
+import {
+  Product as ProductType,
+  CreateProductData,
+  UpdateProductData,
+} from "@/services/products/products.service";
+import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
+import { ProductCategory } from "@/services/productCategories/productCategories.service";
 
-export type Product = {
-  id?: number;
-  product_name: string;
-  companyId: number;
-  sku: string;
-  description: string;
-  base_price: number;
-  categoryId: number;
-  brand_id: number;
-  default_warehouse_id: number;
-  current_cost: number;
-  previous_cost: number;
-  average_cost: number;
-  manages_serials: boolean;
-  manages_lots: boolean;
-  uses_decimals_in_quantity: boolean;
-  uses_scale_for_weight: boolean;
-  is_tax_exempt: boolean;
-  min_stock_level: number;
-  max_stock_level: number;
-  weight_value: number;
-  weight_unit: string;
-  volume_value: number;
-  volume_unit: string;
-  length_value: number;
-  width_value: number;
-  height_value: number;
-  dimension_unit: string;
-  show_in_ecommerce: boolean;
-  show_in_sales_app: boolean;
-  price_level_1: number;
-  price_level_2: number;
-  price_level_3: number;
-  price_level_4: number;
-  price_level_5: number;
-  stock_quantity: number;
-  total_quantity_reserved: number;
-  total_quantity_on_order: number;
-  is_active: boolean;
-  image?: string;
-};
-
+// Esquema de validación actualizado
 const productSchema = z.object({
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   sku: z.string().min(1, "El SKU es requerido"),
@@ -125,137 +86,71 @@ const productSchema = z.object({
   is_active: z.boolean(),
 });
 
+type ProductFormData = z.infer<typeof productSchema>;
+
+// Interfaces para datos locales
+type Brand = {
+  id: number;
+  name: string;
+};
+
+type Unit = {
+  id: number;
+  name: string;
+};
+
 const ProductsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductType | null>(
+    null
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [bulkUploadFiles, setBulkUploadFiles] = useState<File[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const { instancesResponse } = useGetInstances();
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  // Asumimos que la primera instancia es la compañía activa
+  const activeCompanyId = 4; // Puedes cambiar esto según tu lógica de compañías
 
   const {
-    productsResponse,
+    products,
+    loading: productsLoading,
+    error: productsError,
+    createProduct,
+    updateProduct,
+    deleteProduct,
     page,
-    setItemsPerPage,
     itemsPerPage,
-    setPage,
     total,
     totalPage,
-    setModified,
-  } = useGetProducts();
+    setPage,
+    setItemsPerPage,
+    refetch: refetchProducts,
+  } = useProducts({
+    companyId: activeCompanyId,
+    search: searchTerm || undefined,
+    category_id:
+      selectedCategory !== "all" ? parseInt(selectedCategory) : undefined, // Enviar category_id al servidor
+    is_active: true,
+  });
 
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
-  const [units, setUnits] = useState<{ id: number; name: string }[]>([]);
+  // Obtener categorías reales usando el hook useProductCategories
+  const {
+    productCategories: categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useProductCategories({
+    is_active: true,
+    page: 1,
+    itemsPerPage: 100, // Obtener más categorías para el dropdown
+  });
 
-  const [products, setProducts] = useState<Product[]>([
-    {
-      product_name: "Producto Ejemplo",
-      companyId: 1,
-      sku: "SKU001",
-      description: "Descripción del producto ejemplo",
-      base_price: 15.99,
-      categoryId: 1,
-      brand_id: 1,
-      default_warehouse_id: 1,
-      current_cost: 10.5,
-      previous_cost: 10.0,
-      average_cost: 10.25,
-      manages_serials: false,
-      manages_lots: false,
-      uses_decimals_in_quantity: false,
-      uses_scale_for_weight: false,
-      is_tax_exempt: false,
-      min_stock_level: 10,
-      max_stock_level: 100,
-      weight_value: 0.5,
-      weight_unit: "kg",
-      volume_value: 0.2,
-      volume_unit: "m3",
-      length_value: 10,
-      width_value: 5,
-      height_value: 3,
-      dimension_unit: "cm",
-      show_in_ecommerce: true,
-      show_in_sales_app: true,
-      price_level_1: 15.99,
-      price_level_2: 14.99,
-      price_level_3: 13.99,
-      price_level_4: 12.99,
-      price_level_5: 11.99,
-      stock_quantity: 100,
-      total_quantity_reserved: 5,
-      total_quantity_on_order: 15,
-      is_active: true,
-    },
-    {
-      product_name: "Otro Producto",
-      companyId: 1,
-      sku: "SKU002",
-      description: "Descripción de otro producto",
-      base_price: 12.99,
-      categoryId: 2,
-      brand_id: 2,
-      default_warehouse_id: 1,
-      current_cost: 8.5,
-      previous_cost: 8.0,
-      average_cost: 8.25,
-      manages_serials: false,
-      manages_lots: false,
-      uses_decimals_in_quantity: false,
-      uses_scale_for_weight: false,
-      is_tax_exempt: false,
-      min_stock_level: 5,
-      max_stock_level: 50,
-      weight_value: 0.3,
-      weight_unit: "kg",
-      volume_value: 0.1,
-      volume_unit: "m3",
-      length_value: 8,
-      width_value: 4,
-      height_value: 2,
-      dimension_unit: "cm",
-      show_in_ecommerce: true,
-      show_in_sales_app: true,
-      price_level_1: 12.99,
-      price_level_2: 11.99,
-      price_level_3: 10.99,
-      price_level_4: 9.99,
-      price_level_5: 8.99,
-      stock_quantity: 0,
-      total_quantity_reserved: 0,
-      total_quantity_on_order: 0,
-      is_active: true,
-    },
-  ]);
-
-  // Simular carga de datos de categorías, marcas y unidades
-  useEffect(() => {
-    setCategories([
-      { id: 1, name: "Electrónicos" },
-      { id: 2, name: "Ropa" },
-      { id: 3, name: "Hogar" },
-    ]);
-
-    setBrands([
-      { id: 1, name: "Marca Ejemplo" },
-      { id: 2, name: "Otra Marca" },
-      { id: 3, name: "Marca Premium" },
-    ]);
-
-    setUnits([
-      { id: 1, name: "Unidad" },
-      { id: 2, name: "Kilogramo" },
-      { id: 3, name: "Litro" },
-    ]);
-  }, []);
-
-  const form = useForm<z.infer<typeof productSchema>>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       product_name: "",
@@ -272,34 +167,124 @@ const ProductsPage = () => {
     },
   });
 
-  const onSubmit = async () => {
+  // Simular carga de datos de marcas y unidades
+  useEffect(() => {
+    // En una implementación real, estos vendrían de APIs
+    setBrands([
+      { id: 1, name: "Samsung" },
+      { id: 2, name: "Apple" },
+      { id: 3, name: "Sony" },
+    ]);
+
+    setUnits([
+      { id: 1, name: "Unidad" },
+      { id: 2, name: "Kilogramo" },
+      { id: 3, name: "Litro" },
+    ]);
+  }, []);
+
+  const displayProducts = products;
+
+  const onSubmit = async (data: ProductFormData) => {
     try {
-      if (editingProduct && typeof editingProduct.id === "number") {
-        toast.success("Producto actualizado exitosamente");
-      } else {
-        toast.success("Producto creado exitosamente");
+      if (!activeCompanyId) {
+        toast.error("No se ha seleccionado una compañía");
+        return;
       }
-      setModified((prev) => !prev);
+
+      if (editingProduct && editingProduct.id) {
+        // Actualizar producto existente
+        const updateData: UpdateProductData = {
+          product_name: data.product_name,
+          sku: data.sku,
+          description: data.description,
+          base_price: data.base_price,
+          categoryId: data.categoryId,
+          brand_id: data.brand_id,
+          current_cost: data.current_cost,
+          price_level_1: data.price_level_1,
+          price_level_2: data.price_level_2,
+          price_level_3: data.price_level_3,
+          is_active: data.is_active,
+        };
+
+        const result = await updateProduct(
+          editingProduct.id.toString(),
+          updateData
+        );
+        if (result) {
+          toast.success("Producto actualizado exitosamente");
+        } else {
+          toast.error("Error al actualizar el producto");
+        }
+      } else {
+        // Crear nuevo producto
+        const createData: CreateProductData = {
+          ...data,
+          companyId: activeCompanyId,
+          // Campos requeridos con valores por defecto
+          code: data.sku, // Usar SKU como código por defecto
+          manages_serials: false,
+          manages_lots: false,
+          uses_decimals_in_quantity: false,
+          uses_scale_for_weight: false,
+          is_tax_exempt: false,
+          weight_value: 0,
+          weight_unit: "kg",
+          volume_value: 0,
+          volume_unit: "m3",
+          length_value: 0,
+          width_value: 0,
+          height_value: 0,
+          dimension_unit: "cm",
+          show_in_ecommerce: true,
+          show_in_sales_app: true,
+          stock_quantity: 0,
+          total_quantity_reserved: 0,
+          total_quantity_on_order: 0,
+          erp_code_inst: "",
+        };
+
+        const result = await createProduct(createData);
+        if (result) {
+          toast.success("Producto creado exitosamente");
+        } else {
+          toast.error("Error al crear el producto");
+        }
+      }
+
       resetForm();
       setIsModalOpen(false);
+      refetchProducts(); // Recargar productos después de guardar
     } catch (error) {
+      console.error("Error al guardar el producto:", error);
       toast.error("Error al guardar el producto");
     }
   };
 
-  const handleDelete = (product: Product) => {
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setPage(1); // Resetear a la primera página cuando cambia el filtro
+  };
+
+  const handleDelete = async (product: ProductType) => {
+    if (!product.id) {
+      toast.error("Producto no encontrado");
+      return;
+    }
+
     toast.error(`¿Eliminar el producto "${product.product_name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          if (!product.id) {
-            toast.error("Producto no encontrado");
-            return;
+          const success = await deleteProduct(product.id!.toString());
+          if (success) {
+            toast.success("Producto eliminado exitosamente");
+            refetchProducts(); // Recargar productos después de eliminar
+          } else {
+            toast.error("Error al eliminar el producto");
           }
-
-          toast.success("Producto eliminado exitosamente");
-          setModified((prev) => !prev);
         },
       },
       cancel: {
@@ -311,27 +296,38 @@ const ProductsPage = () => {
     });
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: ProductType) => {
     setEditingProduct(product);
     form.reset({
       product_name: product.product_name,
       sku: product.sku,
       description: product.description || "",
-      base_price: Math.floor(product.base_price),
-      categoryId: product.categoryId,
-      brand_id: product.brand_id,
-      current_cost: Math.floor(product.current_cost),
-      price_level_1: Math.floor(product.price_level_1),
-      price_level_2: Math.floor(product.price_level_2),
-      price_level_3: Math.floor(product.price_level_3),
+      base_price: product.base_price,
+      categoryId: product.categoryId || 0,
+      brand_id: product.brand_id || 0,
+      current_cost: product.current_cost,
+      price_level_1: product.price_level_1,
+      price_level_2: product.price_level_2,
+      price_level_3: product.price_level_3,
       is_active: product.is_active,
     });
-
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
-    form.reset();
+    form.reset({
+      product_name: "",
+      sku: "",
+      description: "",
+      base_price: 0,
+      categoryId: 0,
+      brand_id: 0,
+      current_cost: 0,
+      price_level_1: 0,
+      price_level_2: 0,
+      price_level_3: 0,
+      is_active: true,
+    });
     setEditingProduct(null);
   };
 
@@ -353,62 +349,21 @@ const ProductsPage = () => {
       return;
     }
 
-    let processedCount = 0;
-    let errorCount = 0;
-
-    bulkUploadFiles.forEach((file) => {
-      const fileName = file.name;
-      const match = fileName.match(/^([A-Za-z0-9]+)-(\d+)\.(jpg|jpeg|png)$/i);
-
-      if (!match) {
-        errorCount++;
-        return;
-      }
-
-      const productSKU = match[1];
-
-      const productIndex = products.findIndex((p) => p.sku === productSKU);
-
-      if (productIndex !== -1) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const imageDataUrl = reader.result as string;
-          setProducts((prev) =>
-            prev.map((p, idx) =>
-              idx === productIndex ? { ...p, image: imageDataUrl } : p
-            )
-          );
-        };
-        reader.readAsDataURL(file);
-        processedCount++;
-      } else {
-        errorCount++;
-      }
-    });
-
-    toast.success(
-      `Carga masiva completada: ${processedCount} imágenes procesadas, ${errorCount} errores`
-    );
+    // Nota: Esta funcionalidad necesitaría ser adaptada para trabajar con los productos reales
+    // Por ahora es solo un esqueleto
+    toast.info("Funcionalidad de carga masiva en desarrollo");
 
     setBulkUploadFiles([]);
     setIsBulkUploadModalOpen(false);
   };
 
-  const columns: ColumnDef<Product>[] = [
+  // Configuración de columnas para la tabla
+  const columns: ColumnDef<ProductType>[] = [
     {
       accessorKey: "product_name",
       header: "Producto",
       cell: ({ row }) => (
         <div className="flex items-center gap-2 min-w-[150px]">
-          {row.original.image && (
-            <Image
-              src={row.original.image}
-              alt={row.getValue("product_name")}
-              width={40}
-              height={40}
-              className="h-10 w-10 object-cover rounded-md"
-            />
-          )}
           <div className="font-medium">{row.getValue("product_name")}</div>
         </div>
       ),
@@ -427,7 +382,9 @@ const ProductsPage = () => {
         const categoryId = row.getValue("categoryId") as number;
         const category = categories.find((c) => c.id === categoryId);
         return (
-          <div className="font-medium">{category?.name || categoryId}</div>
+          <div className="font-medium">
+            {category?.category_name || "Sin categoría"}
+          </div>
         );
       },
     },
@@ -437,7 +394,7 @@ const ProductsPage = () => {
       cell: ({ row }) => {
         const brandId = row.getValue("brand_id") as number;
         const brand = brands.find((b) => b.id === brandId);
-        return <div className="font-medium">{brand?.name || brandId}</div>;
+        return <div className="font-medium">{brand?.name || "Sin marca"}</div>;
       },
     },
     {
@@ -523,7 +480,7 @@ const ProductsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(product)}
-                  className="cursor-pointer flex items-center gap-2 text-red_m"
+                  className="cursor-pointer flex items-center gap-2 text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -535,6 +492,55 @@ const ProductsPage = () => {
       },
     },
   ];
+
+  // Mostrar estado de carga o error
+  if ((productsLoading && products.length === 0) || categoriesLoading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Cargando productos...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (productsError || categoriesError) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center text-red-600">
+              <p>Error: {productsError || categoriesError}</p>
+              <Button
+                onClick={() => {
+                  refetchProducts();
+                  refetchCategories();
+                }}
+                className="mt-4"
+              >
+                Reintentar
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -551,16 +557,17 @@ const ProductsPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Productos
+              Productos {total > 0 && `(${total})`}{" "}
             </h1>
           </div>
+
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex gap-2 w-full max-w-[30rem] ">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar productos..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -595,7 +602,7 @@ const ProductsPage = () => {
                     <Label htmlFor="category-filter">Categoría</Label>
                     <Select
                       value={selectedCategory}
-                      onValueChange={setSelectedCategory}
+                      onValueChange={handleCategoryChange}
                     >
                       <SelectTrigger id="category-filter" className="mt-1">
                         <SelectValue placeholder="Todas las categorías" />
@@ -604,7 +611,7 @@ const ProductsPage = () => {
                         <SelectItem value="all">
                           Todas las categorías
                         </SelectItem>
-                        {instancesResponse.map((category: Category) => (
+                        {categories.map((category) => (
                           <SelectItem
                             key={category.id}
                             value={category.id.toString()}
@@ -626,6 +633,7 @@ const ProductsPage = () => {
                     setIsModalOpen(true);
                   }}
                   className="gap-2 w-full sm:w-auto"
+                  disabled={productsLoading}
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nuevo producto</span>
@@ -633,20 +641,24 @@ const ProductsPage = () => {
               </div>
             </div>
           </div>
-          <DataTable<Product, Product>
-            columns={columns}
-            data={productsResponse || []}
-            noResultsText="No se encontraron productos"
-            page={page}
-            setPage={setPage}
-            totalPage={totalPage}
-            total={total}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-          />
+
+          <div className="bg-white rounded-lg shadow-sm border">
+            <DataTable<ProductType, ColumnDef<ProductType>[]>
+              columns={columns}
+              data={displayProducts}
+              noResultsText="No se encontraron productos"
+              page={page}
+              setPage={setPage}
+              totalPage={totalPage}
+              total={total}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+            />
+          </div>
         </main>
       </div>
 
+      {/* Modal para crear/editar producto */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -720,27 +732,44 @@ const ProductsPage = () => {
                     name="categoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Categoría</FormLabel>
+                        <FormLabel>Categoría *</FormLabel>
                         <Select
                           value={field?.value?.toString() || ""}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }
+                          disabled={categoriesLoading}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecciona una categoría" />
+                              <SelectValue
+                                placeholder={
+                                  categoriesLoading
+                                    ? "Cargando categorías..."
+                                    : "Selecciona una categoría"
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {instancesResponse.map((category: Category) => (
-                              <SelectItem
-                                key={category.id}
-                                value={category.id.toString()}
-                              >
-                                {category.category_name}
+                            {categoriesLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Cargando categorías...
                               </SelectItem>
-                            ))}
+                            ) : categories.length === 0 ? (
+                              <SelectItem value="empty" disabled>
+                                No hay categorías disponibles
+                              </SelectItem>
+                            ) : (
+                              categories.map((category) => (
+                                <SelectItem
+                                  key={category.id}
+                                  value={category.id.toString()}
+                                >
+                                  {category.category_name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -919,7 +948,7 @@ const ProductsPage = () => {
                 />
               </div>
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -931,7 +960,11 @@ const ProductsPage = () => {
                 >
                   Cerrar
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={form.formState.isSubmitting}
+                >
                   {form.formState.isSubmitting
                     ? "Guardando..."
                     : editingProduct
@@ -944,6 +977,7 @@ const ProductsPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal para carga masiva de imágenes */}
       <Dialog
         open={isBulkUploadModalOpen}
         onOpenChange={setIsBulkUploadModalOpen}

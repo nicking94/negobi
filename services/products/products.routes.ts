@@ -1,4 +1,6 @@
-export const postProduct = "/products"
-export const getProducts = "/products"
-export const deleteProduct = "/products"
-export const updateProduct = "/products"
+export const PostProduct = "/products";
+export const GetProducts = "/products";
+export const PatchProduct = "/products";
+export const DeleteProduct = "/products";
+export const GetProductUnits = "/products/units";
+export const SyncProducts = "/products/sync";
