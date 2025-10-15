@@ -8,7 +8,7 @@ import {
   SyncProducts,
 } from "./products.routes";
 
-// Interfaces para parámetros de búsqueda
+// Interfaces para parámetros de búsqueda - CORREGIR
 export interface GetProductsParams {
   page?: number;
   itemsPerPage?: number;
@@ -17,7 +17,7 @@ export interface GetProductsParams {
   companyId?: number;
   product_name?: string;
   sku?: string;
-  category_id?: number;
+  categoryId?: number;
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -30,6 +30,7 @@ export interface GetProductsParams {
 }
 
 // Interface principal del producto
+// Interface principal del producto - CORREGIR
 export interface Product {
   // Campos del sistema
   id: number;
@@ -92,12 +93,15 @@ export interface Product {
   // Códigos ERP
   erp_code_inst: string;
 
-  // Relaciones
   companyId?: number;
-  categoryId?: number;
+  categoryId?: number; // ← Mantener para compatibilidad
+  category?: {
+    // ← AGREGAR para manejar la respuesta del backend
+    id: number;
+    category_name?: string; // Opcional: para mostrar nombre directamente
+  };
   brand_id?: number;
 }
-
 // Interface para crear producto
 export interface CreateProductData {
   product_name: string;
@@ -107,7 +111,7 @@ export interface CreateProductData {
   sku: string;
   description?: string;
   base_price: number;
-  brand_id?: number;
+  brand_id?: number | null;
   current_cost?: number;
   previous_cost?: number;
   average_cost?: number;
@@ -147,7 +151,7 @@ export interface UpdateProductData {
   sku?: string;
   description?: string;
   base_price?: number;
-  brand_id?: number;
+  brand_id?: number | null;
   current_cost?: number;
   previous_cost?: number;
   average_cost?: number;
@@ -308,7 +312,7 @@ export interface SyncProductsResponse {
 }
 
 export const productService = {
-  // Crear un nuevo producto (CORREGIDO)
+  // Crear un nuevo producto (ACTUALIZADO)
   createProduct: async (productData: CreateProductData): Promise<Product> => {
     try {
       const response = await api.post<ProductResponse>(
@@ -318,7 +322,14 @@ export const productService = {
       if (!response.data.success) {
         throw new Error(response.data.message || "Error al crear producto");
       }
-      return response.data.data;
+
+      // MAPEAR LA RESPUESTA PARA MANEJAR category object
+      const productResponse = response.data.data;
+      return {
+        ...productResponse,
+        // Asegurar que categoryId esté disponible tanto si viene en category object como directamente
+        categoryId: productResponse.category?.id || productResponse.categoryId,
+      };
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || "Error al crear producto"
@@ -326,112 +337,111 @@ export const productService = {
     }
   },
 
-  // Obtener productos paginados (CORREGIDO)
   getProducts: async (
     params?: GetProductsParams
   ): Promise<PaginatedProductsResponse["data"]> => {
     try {
-      const queryParams = new URLSearchParams();
+      // Crear objeto de parámetros limpio
+      const cleanParams: Record<string, any> = {};
 
-      // Parámetros requeridos
-      if (params?.page) queryParams.append("page", params.page.toString());
-      if (params?.itemsPerPage)
-        queryParams.append("itemsPerPage", params.itemsPerPage.toString());
+      if (params) {
+        // Procesar cada parámetro individualmente
+        Object.keys(params).forEach((key) => {
+          const value = params[key as keyof GetProductsParams];
 
-      // Parámetros opcionales - CORREGIDO: usar nombres exactos del Swagger
-      if (params?.companyId)
-        queryParams.append("companyId", params.companyId.toString());
-      if (params?.search) queryParams.append("search", params.search);
-      if (params?.order) queryParams.append("order", params.order);
-      if (params?.product_name)
-        queryParams.append("product_name", params.product_name);
-      if (params?.sku) queryParams.append("sku", params.sku);
-      if (params?.category_id)
-        queryParams.append("category_id", params.category_id.toString());
-      if (params?.brand_id)
-        queryParams.append("brand_id", params.brand_id.toString());
-      if (params?.unit_id)
-        queryParams.append("unit_id", params.unit_id.toString());
-      if (params?.default_warehouse_id)
-        queryParams.append(
-          "default_warehouse_id",
-          params.default_warehouse_id.toString()
-        );
+          // Solo incluir valores definidos y no vacíos
+          if (value !== undefined && value !== null && value !== "") {
+            // Para parámetros numéricos, asegurarse de que sean números válidos
+            if (
+              [
+                "page",
+                "itemsPerPage",
+                "companyId",
+                "categoryId",
+                "brand_id",
+                "unit_id",
+                "default_warehouse_id",
+              ].includes(key)
+            ) {
+              const numValue = Number(value);
+              if (!isNaN(numValue)) {
+                cleanParams[key] = numValue;
+              }
+            }
+            // Para parámetros booleanos
+            else if (
+              [
+                "manages_serials",
+                "manages_lots",
+                "is_tax_exempt",
+                "show_in_ecommerce",
+                "show_in_sales_app",
+                "is_active",
+              ].includes(key)
+            ) {
+              cleanParams[key] = Boolean(value);
+            }
+            // Para strings y otros
+            else {
+              cleanParams[key] = value;
+            }
+          }
+        });
+      }
 
-      // Parámetros booleanos - CORREGIDO: enviar como string "true"/"false"
-      if (params?.manages_serials !== undefined)
-        queryParams.append(
-          "manages_serials",
-          params.manages_serials.toString()
-        );
-      if (params?.manages_lots !== undefined)
-        queryParams.append("manages_lots", params.manages_lots.toString());
-      if (params?.is_tax_exempt !== undefined)
-        queryParams.append("is_tax_exempt", params.is_tax_exempt.toString());
-      if (params?.show_in_ecommerce !== undefined)
-        queryParams.append(
-          "show_in_ecommerce",
-          params.show_in_ecommerce.toString()
-        );
-      if (params?.show_in_sales_app !== undefined)
-        queryParams.append(
-          "show_in_sales_app",
-          params.show_in_sales_app.toString()
-        );
-      if (params?.is_active !== undefined)
-        queryParams.append("is_active", params.is_active.toString());
-
+      console.log("🔵 Fetching products with cleaned params:", cleanParams);
       console.log(
-        "🔵 Fetching products with params:",
-        Object.fromEntries(queryParams)
+        "🔵 URL params:",
+        new URLSearchParams(cleanParams).toString()
       );
 
-      const response = await api.get<PaginatedProductsResponse>(
-        `${GetProducts}?${queryParams}`
-      );
+      const response = await api.get<PaginatedProductsResponse>(GetProducts, {
+        params: cleanParams,
+      });
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Error al obtener productos");
       }
 
-      return response.data.data;
+      // MAPEAR LOS PRODUCTOS PARA GARANTIZAR categoryId ESTÉ DISPONIBLE
+      const mappedData = {
+        ...response.data.data,
+        data: response.data.data.data.map((product) => ({
+          ...product,
+          categoryId: product.category?.id || product.categoryId,
+        })),
+      };
+
+      return mappedData;
     } catch (error: any) {
       console.error("❌ Error fetching products:", error);
+
+      // Log detallado del error
+      if (error.response) {
+        console.error("❌ Error response:", error.response.data);
+        console.error("❌ Error status:", error.response.status);
+      }
+
       throw new Error(
         error.response?.data?.message || "Error al obtener productos"
       );
     }
   },
 
-  // Obtener todos los productos sin paginación (CORREGIDO)
-  getAllProducts: async (
-    params?: Omit<GetProductsParams, "page" | "itemsPerPage">
-  ): Promise<Product[]> => {
-    try {
-      // Usar getProducts con paginación grande para obtener todos
-      const paginatedResponse = await productService.getProducts({
-        ...params,
-        page: 1,
-        itemsPerPage: 1000, // O un número suficientemente grande
-      });
-
-      return paginatedResponse.data;
-    } catch (error: any) {
-      console.error("❌ Error fetching all products:", error);
-      throw new Error(
-        error.response?.data?.message || "Error al obtener productos"
-      );
-    }
-  },
-
-  // Obtener producto por ID (CORREGIDO)
+  // Obtener producto por ID (ACTUALIZADO)
   getProductById: async (id: string): Promise<Product> => {
     try {
       const response = await api.get<ProductResponse>(`${GetProducts}/${id}`);
       if (!response.data.success) {
         throw new Error(response.data.message || "Producto no encontrado");
       }
-      return response.data.data;
+
+      // MAPEAR LA RESPUESTA
+      const productResponse = response.data.data;
+      return {
+        ...productResponse,
+        categoryId: productResponse.category?.id || productResponse.categoryId,
+      };
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || "Error al obtener producto"
@@ -439,7 +449,7 @@ export const productService = {
     }
   },
 
-  // Actualizar producto (CORREGIDO)
+  // Actualizar producto (ACTUALIZADO)
   updateProduct: async (
     id: string,
     updates: UpdateProductData
@@ -454,7 +464,13 @@ export const productService = {
           response.data.message || "Error al actualizar producto"
         );
       }
-      return response.data.data;
+
+      // MAPEAR LA RESPUESTA
+      const productResponse = response.data.data;
+      return {
+        ...productResponse,
+        categoryId: productResponse.category?.id || productResponse.categoryId,
+      };
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || "Error al actualizar producto"
@@ -546,7 +562,7 @@ export const productService = {
   ): Promise<Product[]> => {
     return productService.getAllProducts({
       companyId,
-      category_id: categoryId,
+      categoryId: categoryId,
       ...params,
     });
   },

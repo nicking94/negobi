@@ -634,7 +634,7 @@ const GoalsPage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="w-full bg-red-500">
+                    <div className="w-full">
                       <Label className="text-sm">Tipo de Período</Label>
                       <Select
                         value={formData.period_type}

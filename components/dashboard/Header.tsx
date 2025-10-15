@@ -1,3 +1,4 @@
+// components/dashboard/Header.tsx (actualizado)
 "use client";
 import {
   ChevronDown,
@@ -32,6 +33,7 @@ import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/translation/useTranslation";
+import { useCurrency } from "@/context/CurrencyContext"; // Importar el hook
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -46,6 +48,7 @@ const DashboardHeader = ({
   const { loading } = useLogout();
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const { translateRole } = useTranslation();
+  const { currency, setCurrency } = useCurrency(); // Usar el contexto de moneda
 
   useEffect(() => {
     const refreshProfile = async () => {
@@ -64,55 +67,43 @@ const DashboardHeader = ({
     refreshProfile();
   }, [user, refreshUserProfile]);
 
-  // Función para obtener las iniciales del usuario
   const getUserInitials = () => {
     if (!user) return "US";
-
     const { first_name, last_name, username } = user;
 
     if (first_name && last_name) {
       return `${first_name.charAt(0)}${last_name.charAt(0)}`.toUpperCase();
     }
-
     if (first_name) {
       return `${first_name.charAt(0)}${
         first_name.charAt(1) || ""
       }`.toUpperCase();
     }
-
     if (last_name) {
       return `${last_name.charAt(0)}${last_name.charAt(1) || ""}`.toUpperCase();
     }
-
     if (username) {
       return username.substring(0, 2).toUpperCase();
     }
-
     return "US";
   };
 
-  // Función para obtener el nombre completo del usuario
   const getUserFullName = () => {
     if (!user) return "Usuario";
-
     const { first_name, last_name, username, email } = user;
 
     if (first_name && last_name) {
       return `${first_name} ${last_name}`;
     }
-
     if (first_name) {
       return first_name;
     }
-
     if (last_name) {
       return last_name;
     }
-
     return username || email?.split("@")[0] || "Usuario";
   };
 
-  // Función para obtener el rol traducido usando tu hook
   const getUserRole = () => {
     if (!user?.role) return "Usuario";
     return translateRole(user.role);
@@ -120,6 +111,10 @@ const DashboardHeader = ({
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency);
   };
 
   return (
@@ -142,17 +137,31 @@ const DashboardHeader = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
-          {/* Selector de Moneda */}
-          <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1 ">
-            <button className="px-2 md:px-3 lg:px-4 py-1 md:py-2 bg-gradient-to-r from-green_m to-green_b text-white text-xs font-medium rounded-md shadow-sm transition-all duration-300">
+          {/* Selector de Moneda Funcional */}
+          <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1">
+            <button
+              onClick={() => handleCurrencyChange("VES")}
+              className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
+                currency === "VES"
+                  ? "bg-gradient-to-r from-green_m to-green_b text-white"
+                  : "bg-white hover:bg-gray_xxl text-gray_m hover:shadow-sm"
+              }`}
+            >
               VES
             </button>
-            <button className="bg-white hover:bg-gray_xxl px-2 md:px-3 lg:px-4 py-1 md:py-2 text-gray_m text-xs font-medium rounded-md hover:shadow-sm transition-all duration-300">
+            <button
+              onClick={() => handleCurrencyChange("USD")}
+              className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
+                currency === "USD"
+                  ? "bg-gradient-to-r from-green_m to-green_b text-white"
+                  : "bg-white hover:bg-gray_xxl text-gray_m hover:shadow-sm"
+              }`}
+            >
               USD
             </button>
           </div>
 
-          {/* Dropdown del Usuario */}
+          {/* Dropdown del Usuario (sin cambios) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -161,7 +170,6 @@ const DashboardHeader = ({
                 disabled={isRefreshingProfile}
               >
                 {isRefreshingProfile ? (
-                  // Loading state
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-md flex items-center justify-center">
                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green_b"></div>
@@ -191,7 +199,7 @@ const DashboardHeader = ({
               align="end"
               className="w-[18rem] md:w-64 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
             >
-              {/* Información del Usuario en el Header del Dropdown */}
+              {/* Resto del código del dropdown sin cambios */}
               <div className="px-2 py-3 border-b border-gray_xxl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-green_xl to-green_b rounded-md flex items-center justify-center text-white font-semibold text-sm">
@@ -208,7 +216,6 @@ const DashboardHeader = ({
                 </div>
               </div>
 
-              {/* Item de Perfil */}
               <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                 <Link
                   href="/dashboard/settings/profile"
@@ -296,7 +303,6 @@ const DashboardHeader = ({
 
               <DropdownMenuSeparator className="bg-gray_xxl" />
 
-              {/* Cerrar Sesión */}
               <DropdownMenuItem
                 className="cursor-pointer bg-white hover:bg-red-50 text-red_b rounded-md m-1 text-xs md:text-sm"
                 onClick={handleLogout}

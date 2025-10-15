@@ -16,7 +16,7 @@ export interface UseProductsFilters {
   companyId?: number;
   product_name?: string;
   sku?: string;
-  category_id?: number;
+  categoryId?: number;
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -39,30 +39,63 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
   const [totalPage, setTotalPage] = useState(0);
   const [modified, setModified] = useState(false);
 
+  // En useProducts.ts - MODIFICAR loadProducts
   const loadProducts = async (customFilters?: Partial<UseProductsFilters>) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
+      // Función helper para convertir valores a número de forma segura
+      const safeNumber = (value: any): number | undefined => {
+        if (value === undefined || value === null || value === "")
+          return undefined;
+        const num = Number(value);
+        return isNaN(num) ? undefined : num;
+      };
+
+      // Combinar filtros - USAR categoryId (sin guión bajo)
       const combinedFilters: GetProductsParams = {
         ...filters,
         ...customFilters,
         page: customFilters?.page || page,
         itemsPerPage: customFilters?.itemsPerPage || itemsPerPage,
+        // Usar categoryId que es lo que espera el backend
+        categoryId:
+          safeNumber(customFilters?.categoryId) ||
+          safeNumber(filters.categoryId),
       };
+
+      // Remover valores undefined
+      Object.keys(combinedFilters).forEach((key) => {
+        if (combinedFilters[key as keyof GetProductsParams] === undefined) {
+          delete combinedFilters[key as keyof GetProductsParams];
+        }
+      });
 
       console.log("🔵 Loading products with filters:", combinedFilters);
 
       const productsData = await productService.getProducts(combinedFilters);
       console.log("🟢 Products data received:", productsData);
 
-      // CORREGIDO: La API siempre devuelve estructura paginada
       if (
         productsData &&
         typeof productsData === "object" &&
         "data" in productsData
       ) {
+        // DEBUG: Verificar estructura de productos recibidos
+        console.log("📦 Estructura de productos recibidos:", {
+          total: productsData.total,
+          count: productsData.data.length,
+          firstProduct: productsData.data[0]
+            ? {
+                id: productsData.data[0].id,
+                name: productsData.data[0].product_name,
+                categoryId: productsData.data[0].categoryId,
+                categoryObject: productsData.data[0].category,
+              }
+            : "No products",
+        });
+
         setProducts(productsData.data);
         setTotal(productsData.total);
         setTotalPage(productsData.totalPages);
@@ -150,7 +183,6 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Cargar productos al montar el hook o cuando cambien los filtros
   useEffect(() => {
     if (filters.companyId) {
       loadProducts();
@@ -158,7 +190,7 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
   }, [
     filters.companyId,
     filters.search,
-    filters.category_id,
+    filters.categoryId,
     filters.brand_id,
     filters.is_active,
     page,

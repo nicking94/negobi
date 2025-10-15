@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +53,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import Image from "next/image";
 
 import { useProducts } from "@/hooks/products/useProducts";
 import {
@@ -63,37 +61,20 @@ import {
   UpdateProductData,
 } from "@/services/products/products.service";
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
-import { ProductCategory } from "@/services/productCategories/productCategories.service";
 import { useBrands } from "@/hooks/brands/useBrands";
-import { Brand } from "@/services/brands/brands.service";
 
-// Componentes para los selects searchables
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SelectSearchable } from "@/components/ui/select-searchable";
+import { useCurrency } from "@/context/CurrencyContext";
 
-// Esquema de validación actualizado
 const productSchema = z.object({
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   sku: z.string().min(1, "El SKU es requerido"),
-  code: z.string().min(1, "El código es requerido"),
+  code: z.string().min(1, "El código es requerido"), // AÑADIDO
   description: z.string().optional(),
   base_price: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
   companyId: z.number().min(1, "La compañía es requerida"),
   categoryId: z.number().min(1, "La categoría es requerida"),
-  brand_id: z.number().min(1, "La marca es requerida"),
+  brand_id: z.number().optional().nullable(),
   current_cost: z.number().min(0, "El costo actual debe ser mayor o igual a 0"),
   price_level_1: z
     .number()
@@ -109,26 +90,16 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-// Interfaces para datos locales
-type Unit = {
-  id: number;
-  name: string;
-};
-
 const ProductsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { formatPrice } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductType | null>(
     null
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [bulkUploadFiles, setBulkUploadFiles] = useState<File[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [brandSearchOpen, setBrandSearchOpen] = useState(false);
-  const [categorySearchOpen, setCategorySearchOpen] = useState(false); // Estado para el popover de categorías
 
   // Asumimos que la primera instancia es la compañía activa
   const activeCompanyId = 4;
@@ -150,7 +121,7 @@ const ProductsPage = () => {
   } = useProducts({
     companyId: activeCompanyId,
     search: searchTerm || undefined,
-    category_id:
+    categoryId:
       selectedCategory !== "all" ? parseInt(selectedCategory) : undefined,
     is_active: true,
   });
@@ -185,7 +156,7 @@ const ProductsPage = () => {
       description: "",
       base_price: 0,
       categoryId: 0,
-      brand_id: 0,
+      brand_id: undefined,
       current_cost: 0,
       price_level_1: 0,
       price_level_2: 0,
@@ -194,16 +165,40 @@ const ProductsPage = () => {
     },
   });
 
-  // Simular carga de datos de unidades
   useEffect(() => {
-    setUnits([
-      { id: 1, name: "Unidad" },
-      { id: 2, name: "Kilogramo" },
-      { id: 3, name: "Litro" },
-    ]);
-  }, []);
+    console.log("🔍 Current products state:", {
+      products,
+      productsCount: products.length,
+      loading: productsLoading,
+      error: productsError,
+    });
+
+    // DEBUG DETALLADO DE CATEGORÍAS EN PRODUCTOS
+    if (products.length > 0) {
+      console.log(
+        "📋 Detalle de categorías en productos:",
+        products.map((p) => ({
+          id: p.id,
+          name: p.product_name,
+          categoryId: p.categoryId,
+          categoryObject: p.category,
+          hasCategory: !!(p.categoryId || p.category?.id),
+        }))
+      );
+    }
+  }, [products, productsLoading, productsError]);
 
   const displayProducts = products;
+
+  const brandOptions = brands.map((brand) => ({
+    value: brand.id.toString(),
+    label: brand.brand_name,
+  }));
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.id.toString(),
+    label: category.category_name,
+  }));
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -212,38 +207,44 @@ const ProductsPage = () => {
         return;
       }
 
+      console.log("📝 Datos del formulario:", data);
+
+      // Preparar datos comunes - USAR category_id en lugar de categoryId
+      const commonData = {
+        product_name: data.product_name,
+        sku: data.sku,
+        code: data.code,
+        description: data.description || "",
+        base_price: data.base_price,
+        companyId: activeCompanyId,
+        categoryId: data.categoryId,
+        brand_id: data.brand_id || null,
+        current_cost: data.current_cost,
+        price_level_1: data.price_level_1,
+        price_level_2: data.price_level_2,
+        price_level_3: data.price_level_3,
+        is_active: data.is_active,
+      };
+
       if (editingProduct && editingProduct.id) {
         // Actualizar producto existente
         const updateData: UpdateProductData = {
-          product_name: data.product_name,
-          sku: data.sku,
-          description: data.description,
-          base_price: data.base_price,
-          categoryId: data.categoryId,
-          brand_id: data.brand_id,
-          current_cost: data.current_cost,
-          price_level_1: data.price_level_1,
-          price_level_2: data.price_level_2,
-          price_level_3: data.price_level_3,
-          is_active: data.is_active,
+          ...commonData,
         };
 
+        console.log("🔄 Actualizando producto:", updateData);
         const result = await updateProduct(
           editingProduct.id.toString(),
           updateData
         );
         if (result) {
           toast.success("Producto actualizado exitosamente");
-        } else {
-          toast.error("Error al actualizar el producto");
         }
       } else {
         // Crear nuevo producto
         const createData: CreateProductData = {
-          ...data,
-          companyId: activeCompanyId,
-          // Campos requeridos con valores por defecto
-          code: data.sku, // Usar SKU como código por defecto
+          ...commonData,
+          // Campos con valores por defecto
           manages_serials: false,
           manages_lots: false,
           uses_decimals_in_quantity: false,
@@ -263,28 +264,40 @@ const ProductsPage = () => {
           total_quantity_reserved: 0,
           total_quantity_on_order: 0,
           erp_code_inst: "",
+          external_code: "",
+          previous_cost: 0,
+          average_cost: 0,
+          price_level_4: 0,
+          price_level_5: 0,
         };
 
+        console.log("🆕 Creando producto:", createData);
         const result = await createProduct(createData);
         if (result) {
           toast.success("Producto creado exitosamente");
-        } else {
-          toast.error("Error al crear el producto");
         }
       }
 
       resetForm();
       setIsModalOpen(false);
-      refetchProducts(); // Recargar productos después de guardar
+      refetchProducts();
     } catch (error) {
-      console.error("Error al guardar el producto:", error);
+      console.error("❌ Error al guardar el producto:", error);
       toast.error("Error al guardar el producto");
     }
   };
 
   const handleCategoryChange = (categoryId: string) => {
+    // Convertir a número si no es "all"
+    const categoryIdNum = categoryId !== "all" ? Number(categoryId) : undefined;
     setSelectedCategory(categoryId);
-    setPage(1); // Resetear a la primera página cuando cambia el filtro
+    setPage(1);
+
+    // Actualizar el filtro con el número
+    if (categoryIdNum !== undefined && !isNaN(categoryIdNum)) {
+      // Aquí deberías actualizar el filtro que se pasa al hook useProducts
+      // Depende de cómo tengas implementada la actualización de filtros
+    }
   };
 
   const handleDelete = async (product: ProductType) => {
@@ -333,13 +346,19 @@ const ProductsPage = () => {
 
   const handleEdit = (product: ProductType) => {
     setEditingProduct(product);
+
+    // OBTENER categoryId CONSISTENTEMENTE
+    const categoryId = product.categoryId || product.category?.id;
+
     form.reset({
       product_name: product.product_name,
       sku: product.sku,
+      code: product.code || product.sku,
       description: product.description || "",
       base_price: product.base_price,
-      categoryId: product.categoryId || 0,
-      brand_id: product.brand_id || 0,
+      companyId: product.companyId || activeCompanyId,
+      categoryId: categoryId || 0,
+      brand_id: product.brand_id || undefined,
       current_cost: product.current_cost,
       price_level_1: product.price_level_1,
       price_level_2: product.price_level_2,
@@ -353,10 +372,12 @@ const ProductsPage = () => {
     form.reset({
       product_name: "",
       sku: "",
+      code: "", // AÑADIDO
       description: "",
       base_price: 0,
+      companyId: activeCompanyId, // INCLUIR companyId
       categoryId: 0,
-      brand_id: 0,
+      brand_id: undefined,
       current_cost: 0,
       price_level_1: 0,
       price_level_2: 0,
@@ -366,42 +387,45 @@ const ProductsPage = () => {
     setEditingProduct(null);
   };
 
-  const handleBulkImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const validFiles = Array.from(files).filter((file) => {
-      const extension = file.name.split(".").pop()?.toLowerCase();
-      return extension === "jpg" || extension === "jpeg" || extension === "png";
-    });
-
-    setBulkUploadFiles(validFiles);
-  };
-
-  const processBulkUpload = () => {
-    if (bulkUploadFiles.length === 0) {
-      toast.error("No hay imágenes válidas para procesar");
-      return;
-    }
-
-    toast.info("Funcionalidad de carga masiva en desarrollo");
-    setBulkUploadFiles([]);
-    setIsBulkUploadModalOpen(false);
-  };
-
-  // Función para obtener el nombre de la marca por ID
-  const getBrandName = (brandId: number) => {
+  const getBrandName = (brandId: number | undefined) => {
+    if (!brandId) return "Sin marca";
     const brand = brands.find((b) => b.id === brandId);
     return brand?.brand_name || "Sin marca";
   };
 
-  // Función para obtener el nombre de la categoría por ID
-  const getCategoryName = (categoryId: number) => {
-    const category = categories.find((c) => c.id === categoryId);
-    return category?.category_name || "Sin categoría";
+  const getCategoryName = (product: ProductType) => {
+    // DEBUG: Verificar qué datos tenemos
+    console.log(`🔍 Buscando categoría para producto ${product.id}:`, {
+      productName: product.product_name,
+      categoryId: product.categoryId,
+      categoryObject: product.category,
+    });
+
+    if (product.category?.category_name) {
+      console.log(
+        `✅ Encontrado en category object: ${product.category.category_name}`
+      );
+      return product.category.category_name;
+    }
+    const categoryId = product.categoryId || product.category?.id;
+    if (categoryId) {
+      const category = categories.find((c) => c.id === categoryId);
+      if (category) {
+        console.log(
+          `✅ Encontrado en categorías globales: ${category.category_name}`
+        );
+        return category.category_name;
+      } else {
+        console.log(
+          `❌ Categoría ID ${categoryId} no encontrada en categorías globales`
+        );
+      }
+    }
+
+    console.log(`❌ Sin categoría para producto ${product.id}`);
+    return "Sin categoría";
   };
 
-  // Configuración de columnas para la tabla
   const columns: ColumnDef<ProductType>[] = [
     {
       accessorKey: "product_name",
@@ -420,18 +444,18 @@ const ProductsPage = () => {
       ),
     },
     {
-      accessorKey: "categoryId",
+      accessorKey: "category",
       header: "Categoría",
       cell: ({ row }) => {
-        const categoryId = row.getValue("categoryId") as number;
-        return <div className="font-medium">{getCategoryName(categoryId)}</div>;
+        const product = row.original;
+        return <div className="font-medium">{getCategoryName(product)}</div>;
       },
     },
     {
       accessorKey: "brand_id",
       header: "Marca",
       cell: ({ row }) => {
-        const brandId = row.getValue("brand_id") as number;
+        const brandId = row.getValue("brand_id") as number | undefined;
         return <div className="font-medium">{getBrandName(brandId)}</div>;
       },
     },
@@ -447,11 +471,7 @@ const ProductsPage = () => {
       header: "Costo",
       cell: ({ row }) => {
         const cost = parseFloat(row.getValue("current_cost"));
-        const formatted = new Intl.NumberFormat("es-VE", {
-          style: "currency",
-          currency: "USD",
-        }).format(cost);
-        return <div className="font-medium">{formatted}</div>;
+        return <div className="font-medium">{formatPrice(cost)}</div>;
       },
     },
     {
@@ -459,11 +479,7 @@ const ProductsPage = () => {
       header: "Precio Base",
       cell: ({ row }) => {
         const price = parseFloat(row.getValue("base_price"));
-        const formatted = new Intl.NumberFormat("es-VE", {
-          style: "currency",
-          currency: "USD",
-        }).format(price);
-        return <div className="font-medium">{formatted}</div>;
+        return <div className="font-medium">{formatPrice(price)}</div>;
       },
     },
     {
@@ -471,11 +487,7 @@ const ProductsPage = () => {
       header: "Precio 1",
       cell: ({ row }) => {
         const price = parseFloat(row.getValue("price_level_1"));
-        const formatted = new Intl.NumberFormat("es-VE", {
-          style: "currency",
-          currency: "USD",
-        }).format(price);
-        return <div className="font-medium">{formatted}</div>;
+        return <div className="font-medium">{formatPrice(price)}</div>;
       },
     },
     {
@@ -600,7 +612,7 @@ const ProductsPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Productos {total > 0 && `(${total})`}{" "}
+              Productos
             </h1>
           </div>
 
@@ -685,7 +697,7 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border">
+          <div className="bg-white rounded-lg shadow-sm">
             <DataTable<ProductType, ColumnDef<ProductType>[]>
               columns={columns}
               data={displayProducts}
@@ -723,7 +735,11 @@ const ProductsPage = () => {
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Arroz"
+                          />
                         </FormControl>
                         <FormMessage />
                       </div>
@@ -739,7 +755,33 @@ const ProductsPage = () => {
                       <FormLabel className="pt-2 sm:text-right">SKU</FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="BEB-COC-4821"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
+                      <FormLabel className="pt-2 sm:text-right">
+                        Código
+                      </FormLabel>
+                      <div className="w-full col-span-1 sm:col-span-3">
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Código interno"
+                          />
                         </FormControl>
                         <FormMessage />
                       </div>
@@ -759,8 +801,9 @@ const ProductsPage = () => {
                         <FormControl>
                           <textarea
                             {...field}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="bg-white flex w-full rounded-md border border-input  px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             rows={3}
+                            placeholder="Escribe aquí..."
                           />
                         </FormControl>
                         <FormMessage />
@@ -777,130 +820,45 @@ const ProductsPage = () => {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Categoría *</FormLabel>
-                        <Popover
-                          open={categorySearchOpen}
-                          onOpenChange={setCategorySearchOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={categorySearchOpen}
-                                className="w-full justify-between"
-                                disabled={categoriesLoading}
-                              >
-                                {field.value
-                                  ? getCategoryName(field.value)
-                                  : "Selecciona una categoría"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput
-                                placeholder="Buscar categoría..."
-                                className="h-9"
-                              />
-                              <CommandList>
-                                <CommandEmpty>
-                                  No se encontraron categorías.
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {categories.map((category) => (
-                                    <CommandItem
-                                      key={category.id}
-                                      value={category.category_name}
-                                      onSelect={() => {
-                                        field.onChange(category.id);
-                                        setCategorySearchOpen(false);
-                                      }}
-                                    >
-                                      {category.category_name}
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          field.value === category.id
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <SelectSearchable
+                            value={field.value ? field.value.toString() : ""}
+                            onValueChange={(value) =>
+                              field.onChange(value ? parseInt(value) : 0)
+                            }
+                            placeholder="Selecciona una categoría"
+                            options={categoryOptions}
+                            searchPlaceholder="Buscar categoría..."
+                            emptyMessage="No se encontraron categorías."
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Select Searchable para Marcas */}
+                  {/* Select Searchable para Marcas - CORREGIDO */}
                   <FormField
                     control={form.control}
                     name="brand_id"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Marca *</FormLabel>
-                        <Popover
-                          open={brandSearchOpen}
-                          onOpenChange={setBrandSearchOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={brandSearchOpen}
-                                className="w-full justify-between"
-                                disabled={brandsLoading}
-                              >
-                                {field.value
-                                  ? getBrandName(field.value)
-                                  : "Selecciona una marca"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput
-                                placeholder="Buscar marca..."
-                                className="h-9"
-                              />
-                              <CommandList>
-                                <CommandEmpty>
-                                  No se encontraron marcas.
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {brands.map((brand) => (
-                                    <CommandItem
-                                      key={brand.id}
-                                      value={brand.brand_name}
-                                      onSelect={() => {
-                                        field.onChange(brand.id);
-                                        setBrandSearchOpen(false);
-                                      }}
-                                    >
-                                      {brand.brand_name}
-                                      <Check
-                                        className={cn(
-                                          "ml-auto h-4 w-4",
-                                          field.value === brand.id
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                        <FormLabel>Marca</FormLabel>{" "}
+                        {/* Removido el asterisco */}
+                        <FormControl>
+                          <SelectSearchable
+                            value={field.value?.toString()}
+                            onValueChange={(value) =>
+                              field.onChange(
+                                value ? parseInt(value) : undefined
+                              )
+                            }
+                            placeholder="Selecciona una marca (opcional)"
+                            options={brandOptions}
+                            searchPlaceholder="Buscar marca..."
+                            emptyMessage="No se encontraron marcas."
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1070,68 +1028,6 @@ const ProductsPage = () => {
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para carga masiva de imágenes */}
-      <Dialog
-        open={isBulkUploadModalOpen}
-        onOpenChange={setIsBulkUploadModalOpen}
-      >
-        <DialogContent className="w-[95%] sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Carga masiva de imágenes</DialogTitle>
-            <DialogDescription>
-              Seleccione las imágenes para cargar. El nombre debe seguir el
-              formato: SKU-NÚMERO (ej: SKU001-1.jpg)
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid items-center gap-2">
-              <Input
-                id="bulk-images"
-                type="file"
-                accept=".jpg,.jpeg,.png"
-                multiple
-                onChange={handleBulkImageUpload}
-                className="cursor-pointer"
-              />
-            </div>
-
-            {bulkUploadFiles.length > 0 && (
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-2">Archivos a procesar:</h3>
-                <ul className="max-h-40 overflow-y-auto">
-                  {bulkUploadFiles.map((file, index) => (
-                    <li key={index} className="text-sm py-1">
-                      {file.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsBulkUploadModalOpen(false);
-                setBulkUploadFiles([]);
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              onClick={processBulkUpload}
-              disabled={bulkUploadFiles.length === 0}
-            >
-              Procesar imágenes
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
