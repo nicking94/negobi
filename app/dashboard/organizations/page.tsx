@@ -38,7 +38,7 @@ import { OrganizationType, ApiError } from "@/types";
 // ✅ Schema de validación
 const organizationSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  rif: z.string().min(6, "RIF inválido").max(13, "ID Empresa inválido"),
+  rif: z.string().min(1, "ID Empresa inválido").max(8, "ID Empresa inválido"),
   email: z.string().email("Email inválido"),
   phone: z.string().min(7, "Teléfono inválido").max(15, "Teléfono inválido"),
 });

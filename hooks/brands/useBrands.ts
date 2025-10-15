@@ -20,7 +20,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las marcas con filtros
   const loadBrands = async (customFilters?: Partial<UseBrandsFilters>) => {
     try {
       setLoading(true);
@@ -31,7 +30,7 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 10,
+        itemsPerPage: 100, // Aumentar items para mejor búsqueda
       };
 
       console.log("🔵 Enviando parámetros para marcas:", combinedFilters);

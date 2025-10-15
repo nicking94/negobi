@@ -6,6 +6,7 @@ import {
   CreateProductCategoryData,
   UpdateProductCategoryData,
   GetProductCategoriesParams,
+  PaginatedProductCategoriesResponse, // Importar la interfaz corregida
 } from "../../services/productCategories/productCategories.service";
 
 export interface UseProductCategoriesFilters {
@@ -34,7 +35,6 @@ export const useProductCategories = (
   const [totalPage, setTotalPage] = useState(0);
   const [modified, setModified] = useState(false);
 
-  // Cargar todas las categorías con filtros
   const loadProductCategories = async (
     customFilters?: Partial<UseProductCategoriesFilters>
   ) => {
@@ -42,19 +42,17 @@ export const useProductCategories = (
       setLoading(true);
       setError(null);
 
-      // Combinar filtros - REMOVER companyId ya que no es soportado por la API
       const combinedFilters: GetProductCategoriesParams = {
         page,
         itemsPerPage,
-        // Solo incluir parámetros válidos
+        ...(filters.is_active !== undefined && {
+          is_active: filters.is_active,
+        }),
         ...(filters.search && { search: filters.search }),
         ...(filters.category_name && { category_name: filters.category_name }),
         ...(filters.category_code && { category_code: filters.category_code }),
         ...(filters.parentCategoryId && {
           parentCategoryId: filters.parentCategoryId,
-        }),
-        ...(filters.is_active !== undefined && {
-          is_active: filters.is_active,
         }),
         ...(filters.show_in_ecommerce !== undefined && {
           show_in_ecommerce: filters.show_in_ecommerce,
@@ -65,29 +63,36 @@ export const useProductCategories = (
         ...customFilters,
       };
 
-      // Asegurarse de que is_active sea booleano
-      if (combinedFilters.is_active !== undefined) {
-        combinedFilters.is_active = Boolean(combinedFilters.is_active);
-      }
-
       console.log("🔵 Enviando parámetros para categorías:", combinedFilters);
 
-      const categoriesData = await productCategoryService.getProductCategories(
-        combinedFilters
-      );
-      console.log("🟢 Datos de categorías recibidos:", categoriesData);
+      const response: PaginatedProductCategoriesResponse =
+        await productCategoryService.getProductCategories(combinedFilters);
 
-      if (Array.isArray(categoriesData)) {
-        setProductCategories(categoriesData);
-        setTotal(categoriesData.length);
-        setTotalPage(Math.ceil(categoriesData.length / itemsPerPage));
+      console.log("🟢 Respuesta completa de categorías:", response);
+
+      // Ahora response tiene la estructura correcta
+      if (response && Array.isArray(response.data)) {
+        setProductCategories(response.data);
+        setTotal(response.total);
+        setTotalPage(response.totalPages);
+
+        // Sincronizar la página actual con la respuesta
+        if (response.page && response.page !== page) {
+          setPage(response.page);
+        }
+
+        // Sincronizar itemsPerPage si es diferente
+        if (response.itemsPerPage && response.itemsPerPage !== itemsPerPage) {
+          setItemsPerPage(response.itemsPerPage);
+        }
       } else {
-        console.warn("⚠️ Estructura inesperada:", categoriesData);
+        console.warn("⚠️ Estructura inesperada:", response);
         setProductCategories([]);
         setTotal(0);
         setTotalPage(0);
       }
     } catch (err) {
+      console.error("❌ Error al cargar categorías:", err);
       setError(
         err instanceof Error ? err.message : "Error al cargar categorías"
       );
@@ -109,7 +114,8 @@ export const useProductCategories = (
       const newCategory = await productCategoryService.createProductCategory(
         categoryData
       );
-      setModified((prev) => !prev); // Trigger refetch
+      // Recargar las categorías después de crear
+      await loadProductCategories();
       return newCategory;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear categoría");
@@ -129,7 +135,8 @@ export const useProductCategories = (
       setError(null);
       const updatedCategory =
         await productCategoryService.updateProductCategory(id, updates);
-      setModified((prev) => !prev); // Trigger refetch
+      // Recargar las categorías después de actualizar
+      await loadProductCategories();
       return updatedCategory;
     } catch (err) {
       setError(
@@ -147,7 +154,8 @@ export const useProductCategories = (
       setLoading(true);
       setError(null);
       await productCategoryService.deleteProductCategory(id);
-      setModified((prev) => !prev); // Trigger refetch
+      // Recargar las categorías después de eliminar
+      await loadProductCategories();
       return true;
     } catch (err) {
       setError(

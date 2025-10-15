@@ -33,19 +33,24 @@ import {
   UpdateProductCategoryData,
 } from "@/services/productCategories/productCategories.service";
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
+import useUserCompany from "@/hooks/auth/useUserCompany";
 
 const categorySchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
   category_name: z.string().min(1, "El nombre es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   prefix: z.string().min(1, "El prefijo es requerido"),
-  correlative_length: z.string().min(1, "La longitud es requerida"),
+  correlative_length: z
+    .number()
+    .min(1, "La longitud debe ser al menos 1")
+    .max(10, "La longitud no puede ser mayor a 10"),
   is_active: z.boolean(),
   show_in_ecommerce: z.boolean(),
   show_in_sales_app: z.boolean(),
 });
 
 const InstancesPage = () => {
+  const { companyId } = useUserCompany();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] =
@@ -66,7 +71,6 @@ const InstancesPage = () => {
     setItemsPerPage,
     setModified,
   } = useProductCategories({
-    is_active: true,
     page: 1,
     itemsPerPage: 10,
   });
@@ -85,12 +89,40 @@ const InstancesPage = () => {
       category_name: "",
       description: "",
       prefix: "",
-      correlative_length: "5",
+      correlative_length: 5,
       is_active: true,
       show_in_ecommerce: true,
       show_in_sales_app: true,
     },
   });
+
+  useEffect(() => {
+    if (editingCategory) {
+      // Cuando hay una categoría para editar, llena el formulario con sus datos
+      reset({
+        category_code: editingCategory.category_code || "",
+        category_name: editingCategory.category_name || "",
+        description: editingCategory.description || "",
+        prefix: editingCategory.prefix || "",
+        correlative_length: editingCategory.correlative_length || 5,
+        is_active: editingCategory.is_active ?? true,
+        show_in_ecommerce: editingCategory.show_in_ecommerce ?? true,
+        show_in_sales_app: editingCategory.show_in_sales_app ?? true,
+      });
+    } else {
+      // Cuando no hay categoría para editar, resetea a los valores por defecto
+      reset({
+        category_code: "",
+        category_name: "",
+        description: "",
+        prefix: "",
+        correlative_length: 5,
+        is_active: true,
+        show_in_ecommerce: true,
+        show_in_sales_app: true,
+      });
+    }
+  }, [editingCategory, reset]);
 
   const isActive = watch("is_active");
   const showInEcommerce = watch("show_in_ecommerce");
@@ -112,14 +144,12 @@ const InstancesPage = () => {
 
   const onSubmit = async (formData: CategoryFormInputs) => {
     try {
-      // Convertir correlative_length a número
       const processedData: CategoryFormValues = {
         ...formData,
         correlative_length: Number(formData.correlative_length),
       };
 
       if (editingCategory) {
-        // Editar categoría existente
         const updateData: UpdateProductCategoryData = {
           category_name: processedData.category_name,
           category_code: processedData.category_code,
@@ -139,14 +169,15 @@ const InstancesPage = () => {
         if (result) {
           toast.success("Categoría actualizada exitosamente");
           setModified((prev) => !prev);
+          resetForm();
+          setIsModalOpen(false);
         } else {
           toast.error("Error al actualizar la categoría");
           return;
         }
       } else {
-        // Crear nueva categoría
         const createData: CreateProductCategoryData = {
-          companyId: 4,
+          companyId: companyId || 4,
           category_name: processedData.category_name,
           category_code: processedData.category_code,
           description: processedData.description,
@@ -157,11 +188,15 @@ const InstancesPage = () => {
           show_in_sales_app: processedData.show_in_sales_app,
         };
 
+        console.log("📤 Enviando datos de creación:", createData);
+
         const result = await createProductCategory(createData);
 
         if (result) {
           toast.success("Categoría creada exitosamente");
           setModified((prev) => !prev);
+
+          setTimeout(() => setModified((prev) => !prev), 100);
         } else {
           toast.error("Error al crear la categoría");
           return;
@@ -175,6 +210,18 @@ const InstancesPage = () => {
       toast.error("Error al guardar la categoría");
     }
   };
+
+  useEffect(() => {
+    console.log("📊 Estado actual de categorías:", {
+      productCategories,
+      loading,
+      error,
+      total,
+      totalPage,
+      page,
+      itemsPerPage,
+    });
+  }, [productCategories, loading, error, total, totalPage, page, itemsPerPage]);
 
   const handleDelete = async (category: ProductCategory) => {
     if (!category.id) {
@@ -190,7 +237,7 @@ const InstancesPage = () => {
           const success = await deleteProductCategory(category.id.toString());
           if (success) {
             toast.success("Categoría eliminada exitosamente");
-            setModified((prev) => !prev); // Trigger refetch como en clients
+            setModified((prev) => !prev);
           } else {
             toast.error("Error al eliminar la categoría");
           }
@@ -211,14 +258,19 @@ const InstancesPage = () => {
       category_name: "",
       description: "",
       prefix: "",
-      correlative_length: "5",
+      correlative_length: 5,
       is_active: true,
       show_in_ecommerce: true,
       show_in_sales_app: true,
     });
     setEditingCategory(null);
   };
-  // Función para manejar cambios en checkboxes
+
+  const handleOpenCreateModal = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
   const handleCheckboxChange = (
     field: keyof CategoryFormValues,
     checked: boolean
@@ -389,10 +441,7 @@ const InstancesPage = () => {
               {productCategories.length > 0 && `(${productCategories.length})`}
             </h1>
             <Button
-              onClick={() => {
-                resetForm();
-                setIsModalOpen(true);
-              }}
+              onClick={handleOpenCreateModal}
               className="gap-2 w-full sm:w-auto"
               disabled={loading}
             >
@@ -402,7 +451,7 @@ const InstancesPage = () => {
           </div>
 
           {/* Tabla de categorías CON PAGINACIÓN - SIGUIENDO EL PATRÓN DE CLIENTS */}
-          <div className="bg-white rounded-lg shadow-sm border">
+          <div className="bg-white rounded-lg shadow-sm">
             <DataTable<ProductCategory, ColumnDef<ProductCategory>[]>
               columns={columns}
               data={productCategories}

@@ -7,6 +7,7 @@ import {
   GetProductsParams,
   ProductUnit,
 } from "../../services/products/products.service";
+import { toast } from "sonner";
 
 // Definir el tipo para los filtros del hook
 export interface UseProductsFilters {
@@ -47,50 +48,44 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       const combinedFilters: GetProductsParams = {
         ...filters,
         ...customFilters,
-        page,
-        itemsPerPage,
+        page: customFilters?.page || page,
+        itemsPerPage: customFilters?.itemsPerPage || itemsPerPage,
       };
 
-      console.log("🔵 Enviando parámetros para productos:", combinedFilters);
+      console.log("🔵 Loading products with filters:", combinedFilters);
 
       const productsData = await productService.getProducts(combinedFilters);
-      console.log("🟢 Datos de productos recibidos:", productsData);
+      console.log("🟢 Products data received:", productsData);
 
-      // Manejar la respuesta de la API
-      if (Array.isArray(productsData)) {
-        // Si la API devuelve un array simple
-        setProducts(productsData);
-        setTotal(productsData.length);
-        setTotalPage(Math.ceil(productsData.length / itemsPerPage));
-      } else if (
+      // CORREGIDO: La API siempre devuelve estructura paginada
+      if (
         productsData &&
         typeof productsData === "object" &&
-        "data" in productsData &&
-        "total" in productsData
+        "data" in productsData
       ) {
-        // Si la API devuelve un objeto paginado { data: [], total, totalPages }
         setProducts(productsData.data);
         setTotal(productsData.total);
         setTotalPage(productsData.totalPages);
       } else {
-        console.warn("⚠️ Estructura inesperada:", productsData);
+        console.warn("⚠️ Unexpected data structure:", productsData);
         setProducts([]);
         setTotal(0);
         setTotalPage(0);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar productos"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al cargar productos";
+      setError(errorMessage);
       setProducts([]);
       setTotal(0);
       setTotalPage(0);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Crear producto
+  // Crear producto (MEJORADO)
   const createProduct = async (
     productData: CreateProductData
   ): Promise<Product | null> => {
@@ -98,17 +93,21 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       setLoading(true);
       setError(null);
       const newProduct = await productService.createProduct(productData);
+      toast.success("Producto creado exitosamente");
       setModified((prev) => !prev); // Trigger refetch
       return newProduct;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear producto");
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al crear producto";
+      setError(errorMessage);
+      toast.error(errorMessage);
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Actualizar producto
+  // Actualizar producto (MEJORADO)
   const updateProduct = async (
     id: string,
     updates: UpdateProductData
@@ -117,30 +116,34 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       setLoading(true);
       setError(null);
       const updatedProduct = await productService.updateProduct(id, updates);
+      toast.success("Producto actualizado exitosamente");
       setModified((prev) => !prev); // Trigger refetch
       return updatedProduct;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al actualizar producto"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al actualizar producto";
+      setError(errorMessage);
+      toast.error(errorMessage);
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Eliminar producto
+  // Eliminar producto (MEJORADO)
   const deleteProduct = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await productService.deleteProduct(id);
+      toast.success("Producto eliminado exitosamente");
       setModified((prev) => !prev); // Trigger refetch
       return true;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al eliminar producto"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al eliminar producto";
+      setError(errorMessage);
+      toast.error(errorMessage);
       return false;
     } finally {
       setLoading(false);

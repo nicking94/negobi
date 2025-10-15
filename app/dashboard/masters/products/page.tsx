@@ -64,13 +64,34 @@ import {
 } from "@/services/products/products.service";
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
 import { ProductCategory } from "@/services/productCategories/productCategories.service";
+import { useBrands } from "@/hooks/brands/useBrands";
+import { Brand } from "@/services/brands/brands.service";
+
+// Componentes para los selects searchables
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Esquema de validación actualizado
 const productSchema = z.object({
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   sku: z.string().min(1, "El SKU es requerido"),
+  code: z.string().min(1, "El código es requerido"),
   description: z.string().optional(),
   base_price: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
+  companyId: z.number().min(1, "La compañía es requerida"),
   categoryId: z.number().min(1, "La categoría es requerida"),
   brand_id: z.number().min(1, "La marca es requerida"),
   current_cost: z.number().min(0, "El costo actual debe ser mayor o igual a 0"),
@@ -89,11 +110,6 @@ const productSchema = z.object({
 type ProductFormData = z.infer<typeof productSchema>;
 
 // Interfaces para datos locales
-type Brand = {
-  id: number;
-  name: string;
-};
-
 type Unit = {
   id: number;
   name: string;
@@ -110,11 +126,12 @@ const ProductsPage = () => {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [bulkUploadFiles, setBulkUploadFiles] = useState<File[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [brandSearchOpen, setBrandSearchOpen] = useState(false);
+  const [categorySearchOpen, setCategorySearchOpen] = useState(false); // Estado para el popover de categorías
 
   // Asumimos que la primera instancia es la compañía activa
-  const activeCompanyId = 4; // Puedes cambiar esto según tu lógica de compañías
+  const activeCompanyId = 4;
 
   const {
     products,
@@ -134,7 +151,7 @@ const ProductsPage = () => {
     companyId: activeCompanyId,
     search: searchTerm || undefined,
     category_id:
-      selectedCategory !== "all" ? parseInt(selectedCategory) : undefined, // Enviar category_id al servidor
+      selectedCategory !== "all" ? parseInt(selectedCategory) : undefined,
     is_active: true,
   });
 
@@ -147,7 +164,17 @@ const ProductsPage = () => {
   } = useProductCategories({
     is_active: true,
     page: 1,
-    itemsPerPage: 100, // Obtener más categorías para el dropdown
+    itemsPerPage: 100,
+  });
+
+  // Obtener marcas usando el hook useBrands
+  const {
+    brands,
+    loading: brandsLoading,
+    error: brandsError,
+    refetch: refetchBrands,
+  } = useBrands({
+    is_active: true, // Solo marcas activas
   });
 
   const form = useForm<ProductFormData>({
@@ -167,15 +194,8 @@ const ProductsPage = () => {
     },
   });
 
-  // Simular carga de datos de marcas y unidades
+  // Simular carga de datos de unidades
   useEffect(() => {
-    // En una implementación real, estos vendrían de APIs
-    setBrands([
-      { id: 1, name: "Samsung" },
-      { id: 2, name: "Apple" },
-      { id: 3, name: "Sony" },
-    ]);
-
     setUnits([
       { id: 1, name: "Unidad" },
       { id: 2, name: "Kilogramo" },
@@ -273,27 +293,42 @@ const ProductsPage = () => {
       return;
     }
 
-    toast.error(`¿Eliminar el producto "${product.product_name}"?`, {
-      description: "Esta acción no se puede deshacer.",
-      action: {
-        label: "Eliminar",
-        onClick: async () => {
-          const success = await deleteProduct(product.id!.toString());
-          if (success) {
-            toast.success("Producto eliminado exitosamente");
-            refetchProducts(); // Recargar productos después de eliminar
-          } else {
-            toast.error("Error al eliminar el producto");
-          }
-        },
-      },
-      cancel: {
-        label: "Cancelar",
-        onClick: () => {
-          toast.info("Eliminación cancelada");
-        },
-      },
-    });
+    toast.custom(
+      (t) => (
+        <div className="bg-white rounded-lg shadow-lg p-4 border">
+          <h3 className="font-semibold mb-2">¿Eliminar producto?</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {`¿Estás seguro de que quieres eliminar "${product.product_name}"? Esta
+            acción no se puede deshacer.`}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toast.dismiss(t)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                toast.dismiss(t);
+                const success = await deleteProduct(product.id!.toString());
+                if (success) {
+                  toast.success("Producto eliminado exitosamente");
+                }
+              }}
+            >
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 10000,
+      }
+    );
   };
 
   const handleEdit = (product: ProductType) => {
@@ -349,12 +384,21 @@ const ProductsPage = () => {
       return;
     }
 
-    // Nota: Esta funcionalidad necesitaría ser adaptada para trabajar con los productos reales
-    // Por ahora es solo un esqueleto
     toast.info("Funcionalidad de carga masiva en desarrollo");
-
     setBulkUploadFiles([]);
     setIsBulkUploadModalOpen(false);
+  };
+
+  // Función para obtener el nombre de la marca por ID
+  const getBrandName = (brandId: number) => {
+    const brand = brands.find((b) => b.id === brandId);
+    return brand?.brand_name || "Sin marca";
+  };
+
+  // Función para obtener el nombre de la categoría por ID
+  const getCategoryName = (categoryId: number) => {
+    const category = categories.find((c) => c.id === categoryId);
+    return category?.category_name || "Sin categoría";
   };
 
   // Configuración de columnas para la tabla
@@ -380,12 +424,7 @@ const ProductsPage = () => {
       header: "Categoría",
       cell: ({ row }) => {
         const categoryId = row.getValue("categoryId") as number;
-        const category = categories.find((c) => c.id === categoryId);
-        return (
-          <div className="font-medium">
-            {category?.category_name || "Sin categoría"}
-          </div>
-        );
+        return <div className="font-medium">{getCategoryName(categoryId)}</div>;
       },
     },
     {
@@ -393,8 +432,7 @@ const ProductsPage = () => {
       header: "Marca",
       cell: ({ row }) => {
         const brandId = row.getValue("brand_id") as number;
-        const brand = brands.find((b) => b.id === brandId);
-        return <div className="font-medium">{brand?.name || "Sin marca"}</div>;
+        return <div className="font-medium">{getBrandName(brandId)}</div>;
       },
     },
     {
@@ -494,7 +532,11 @@ const ProductsPage = () => {
   ];
 
   // Mostrar estado de carga o error
-  if ((productsLoading && products.length === 0) || categoriesLoading) {
+  if (
+    (productsLoading && products.length === 0) ||
+    categoriesLoading ||
+    brandsLoading
+  ) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
         <Sidebar />
@@ -514,7 +556,7 @@ const ProductsPage = () => {
     );
   }
 
-  if (productsError || categoriesError) {
+  if (productsError || categoriesError || brandsError) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
         <Sidebar />
@@ -525,11 +567,12 @@ const ProductsPage = () => {
           />
           <main className="flex-1 p-8 flex items-center justify-center">
             <div className="text-center text-red-600">
-              <p>Error: {productsError || categoriesError}</p>
+              <p>Error: {productsError || categoriesError || brandsError}</p>
               <Button
                 onClick={() => {
                   refetchProducts();
                   refetchCategories();
+                  refetchBrands();
                 }}
                 className="mt-4"
               >
@@ -727,84 +770,137 @@ const ProductsPage = () => {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Select Searchable para Categorías */}
                   <FormField
                     control={form.control}
                     name="categoryId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Categoría *</FormLabel>
-                        <Select
-                          value={field?.value?.toString() || ""}
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
-                          disabled={categoriesLoading}
+                        <Popover
+                          open={categorySearchOpen}
+                          onOpenChange={setCategorySearchOpen}
                         >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue
-                                placeholder={
-                                  categoriesLoading
-                                    ? "Cargando categorías..."
-                                    : "Selecciona una categoría"
-                                }
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={categorySearchOpen}
+                                className="w-full justify-between"
+                                disabled={categoriesLoading}
+                              >
+                                {field.value
+                                  ? getCategoryName(field.value)
+                                  : "Selecciona una categoría"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput
+                                placeholder="Buscar categoría..."
+                                className="h-9"
                               />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categoriesLoading ? (
-                              <SelectItem value="loading" disabled>
-                                Cargando categorías...
-                              </SelectItem>
-                            ) : categories.length === 0 ? (
-                              <SelectItem value="empty" disabled>
-                                No hay categorías disponibles
-                              </SelectItem>
-                            ) : (
-                              categories.map((category) => (
-                                <SelectItem
-                                  key={category.id}
-                                  value={category.id.toString()}
-                                >
-                                  {category.category_name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                              <CommandList>
+                                <CommandEmpty>
+                                  No se encontraron categorías.
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {categories.map((category) => (
+                                    <CommandItem
+                                      key={category.id}
+                                      value={category.category_name}
+                                      onSelect={() => {
+                                        field.onChange(category.id);
+                                        setCategorySearchOpen(false);
+                                      }}
+                                    >
+                                      {category.category_name}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          field.value === category.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* Select Searchable para Marcas */}
                   <FormField
                     control={form.control}
                     name="brand_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Marca</FormLabel>
-                        <Select
-                          value={field?.value?.toString() || ""}
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Marca *</FormLabel>
+                        <Popover
+                          open={brandSearchOpen}
+                          onOpenChange={setBrandSearchOpen}
                         >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecciona una marca" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {brands.map((brand) => (
-                              <SelectItem
-                                key={brand.id}
-                                value={brand.id.toString()}
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={brandSearchOpen}
+                                className="w-full justify-between"
+                                disabled={brandsLoading}
                               >
-                                {brand.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                                {field.value
+                                  ? getBrandName(field.value)
+                                  : "Selecciona una marca"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput
+                                placeholder="Buscar marca..."
+                                className="h-9"
+                              />
+                              <CommandList>
+                                <CommandEmpty>
+                                  No se encontraron marcas.
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {brands.map((brand) => (
+                                    <CommandItem
+                                      key={brand.id}
+                                      value={brand.brand_name}
+                                      onSelect={() => {
+                                        field.onChange(brand.id);
+                                        setBrandSearchOpen(false);
+                                      }}
+                                    >
+                                      {brand.brand_name}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          field.value === brand.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -18,7 +18,12 @@ export interface GetProductCategoriesParams {
   is_active?: boolean;
   show_in_ecommerce?: boolean;
   show_in_sales_app?: boolean;
-  companyId?: number; // Agregado para filtrar por empresa
+  companyId?: number;
+}
+export interface ParentCategory {
+  id: number;
+  category_name: string;
+  category_code: string;
 }
 
 export interface ProductCategory {
@@ -31,12 +36,13 @@ export interface ProductCategory {
   correlative_length: number;
   prefix: string;
   value: number;
-  is_service_category: boolean;
+  is_service_category: boolean | null;
   show_in_ecommerce: boolean;
   show_in_sales_app: boolean;
 
   // Campos de relación
   parentCategoryId?: number;
+  parent_category?: ParentCategory | null;
   companyId?: number;
 
   // Campos de sistema
@@ -104,6 +110,18 @@ export interface SyncResponse {
 }
 
 // Response interfaces
+
+export interface ProductCategoriesApiResponse {
+  success: boolean;
+  data: {
+    data: ProductCategory[];
+    total: number;
+    page: number;
+    totalPages: number;
+    itemsPerPage: number;
+    order?: string;
+  };
+}
 export interface ProductCategoryResponse {
   success: boolean;
   data: ProductCategory;
@@ -115,12 +133,12 @@ export interface ProductCategoriesListResponse {
 }
 
 export interface PaginatedProductCategoriesResponse {
-  success: boolean;
-  data: {
-    data: ProductCategory[];
-    totalPages: number;
-    total: number;
-  };
+  data: ProductCategory[];
+  total: number;
+  page: number;
+  totalPages: number;
+  itemsPerPage: number;
+  order?: string;
 }
 
 export const productCategoryService = {
@@ -135,7 +153,7 @@ export const productCategoryService = {
   // Obtener todas las categorías de productos
   getProductCategories: async (
     params?: GetProductCategoriesParams
-  ): Promise<ProductCategory[]> => {
+  ): Promise<PaginatedProductCategoriesResponse> => {
     const queryParams = new URLSearchParams();
 
     // Parámetros requeridos
@@ -145,29 +163,24 @@ export const productCategoryService = {
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales - asegurar que los booleanos sean strings
-    if (params?.search) {
-      queryParams.append("search", params.search);
-    }
-    if (params?.order) {
-      queryParams.append("order", params.order);
-    }
+    // Parámetros opcionales
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.order) queryParams.append("order", params.order);
     if (params?.parentCategoryId) {
       queryParams.append(
         "parentCategoryId",
         params.parentCategoryId.toString()
       );
     }
-    if (params?.category_name) {
+    if (params?.category_name)
       queryParams.append("category_name", params.category_name);
-    }
-    if (params?.category_code) {
+    if (params?.category_code)
       queryParams.append("category_code", params.category_code);
-    }
-    // REMOVER companyId ya que no es soportado
+
     if (params?.is_active !== undefined) {
       queryParams.append("is_active", params.is_active.toString());
     }
+
     if (params?.show_in_ecommerce !== undefined) {
       queryParams.append(
         "show_in_ecommerce",
@@ -183,10 +196,13 @@ export const productCategoryService = {
 
     console.log("📡 URL final:", `${GetProductCategories}?${queryParams}`);
 
-    const response = await api.get(`${GetProductCategories}?${queryParams}`);
+    const response = await api.get<ProductCategoriesApiResponse>(
+      `${GetProductCategories}?${queryParams}`
+    );
+    console.log("📦 Respuesta cruda de la API:", response.data);
+
     return response.data.data;
   },
-
   // Actualizar una categoría de producto
   updateProductCategory: async (
     id: string,
@@ -219,10 +235,11 @@ export const productCategoryService = {
   getCategoriesByCompany: async (
     companyId: number
   ): Promise<ProductCategory[]> => {
-    return productCategoryService.getProductCategories({
-      companyId,
-      itemsPerPage: 10,
+    const response = await productCategoryService.getProductCategories({
+      // companyId, // Comentado si la API no soporta este parámetro
+      itemsPerPage: 100,
     });
+    return response.data; // Devolver solo el array de categorías
   },
 
   getActiveCategories: async (
@@ -230,23 +247,33 @@ export const productCategoryService = {
   ): Promise<ProductCategory[]> => {
     const params: GetProductCategoriesParams = {
       is_active: true,
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     };
-    if (companyId) {
-      params.companyId = companyId;
-    }
-    return productCategoryService.getProductCategories(params);
+    // if (companyId) {
+    //   params.companyId = companyId;
+    // }
+    const response = await productCategoryService.getProductCategories(params);
+    return response.data; // Devolver solo el array de categorías
   },
 
-  getCategoriesTree: async (companyId: number): Promise<ProductCategory[]> => {
-    const categories = await productCategoryService.getCategoriesByCompany(
-      companyId
-    );
+  getCategoriesTree: async (): Promise<ProductCategory[]> => {
+    const response = await productCategoryService.getProductCategories({
+      itemsPerPage: 100,
+    });
+    const categories = response.data;
 
     // Organizar categorías en estructura de árbol
     const buildTree = (parentId?: number): ProductCategory[] => {
       return categories
-        .filter((category) => category.parentCategoryId === parentId)
+        .filter((category) => {
+          // Si no hay parent_category, es categoría raíz
+          if (!parentId && !category.parent_category) return true;
+          // Si hay parent_category, comparar IDs
+          if (parentId && category.parent_category) {
+            return category.parent_category.id === parentId;
+          }
+          return false;
+        })
         .map((category) => ({
           ...category,
           children: buildTree(category.id),

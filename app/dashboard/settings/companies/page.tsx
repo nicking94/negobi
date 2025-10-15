@@ -43,30 +43,16 @@ import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import useAddCompanies from "@/hooks/companies/useAddCompanies";
 import useGetCompanies from "@/hooks/companies/useGetCompanies";
 import useDeleteCompanies from "@/hooks/companies/useDeleteCompanies";
 import useUpdateCompanies from "@/hooks/companies/useUpdateCompanies";
-
-const companySchema = z.object({
-  name: z.string().min(1, "El nombre es requerido"),
-  code: z.string().min(1, "El código es requerido"),
-  legal_tax_id: z.string().min(1, "El RIF es requerido"),
-  contact_email: z.string().email("Correo inválido"),
-  main_phone: z.string().min(1, "El teléfono es requerido"),
-  fiscal_address: z.string().min(1, "La dirección es requerida"),
-  admin_first_name: z.string().min(1, "El nombre es requerido"),
-  admin_last_name: z.string().min(1, "El apellido es requerido"),
-  admin_username: z.string().min(1, "El usuario es requerido"),
-  admin_email: z.string().email("Correo inválido"),
-  admin_phone: z.string().min(1, "El teléfono es requerido"),
-  admin_password: z.string().min(6, "Mínimo 6 caracteres"),
-  api_key_duration_days: z.number().min(1, "La duración es requerida"),
-});
-type CompanyFormValues = z.infer<typeof companySchema>;
+import useGetCompanyById from "@/hooks/companies/useGetCompanyById";
+import {
+  useCompanyForm,
+  CreateCompanyFormValues,
+  EditCompanyFormValues,
+} from "@/hooks/companies/useCompanyForm";
 
 export type Company = {
   id: number;
@@ -88,10 +74,20 @@ export type Company = {
   created_at: Date;
 };
 
+// Type for admin fields to ensure type safety
+type AdminField =
+  | "admin_first_name"
+  | "admin_last_name"
+  | "admin_username"
+  | "admin_email"
+  | "admin_phone"
+  | "admin_password";
+
 const CompaniesPage = () => {
   const { deleteCompany, loading: deleteLoading } = useDeleteCompanies();
   const { updateCompany, loading: updateLoading } = useUpdateCompanies();
   const { newCompany, loading: createLoading } = useAddCompanies();
+  const { getCompanyById, loading: companyDetailLoading } = useGetCompanyById();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -101,24 +97,9 @@ const CompaniesPage = () => {
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
-    defaultValues: {
-      name: "",
-      code: "",
-      legal_tax_id: "",
-      contact_email: "",
-      main_phone: "",
-      fiscal_address: "",
-      admin_first_name: "",
-      admin_last_name: "",
-      admin_username: "",
-      admin_email: "",
-      admin_phone: "",
-      admin_password: "",
-      api_key_duration_days: 180,
-    },
-  });
+  // Usar el hook personalizado para el formulario
+  const isEditMode = !!selectedCompany;
+  const { form, hasAdminError, getAdminError } = useCompanyForm(isEditMode);
 
   const {
     setModified,
@@ -136,29 +117,37 @@ const CompaniesPage = () => {
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
 
-  const handleEditCompany = (company: Company) => {
+  const handleEditCompany = async (company: Company) => {
     if (!company.id) {
       toast.error("No se puede editar la empresa: ID no disponible");
       return;
     }
 
-    setSelectedCompany(company);
-    form.reset({
-      name: company.name,
-      code: company.code,
-      legal_tax_id: company.legal_tax_id,
-      contact_email: company.contact_email,
-      main_phone: company.main_phone,
-      fiscal_address: company.fiscal_address,
-      admin_first_name: company.admin_first_name,
-      admin_last_name: company.admin_last_name,
-      admin_username: company.admin_username,
-      admin_email: company.admin_email,
-      admin_phone: company.admin_phone,
-      admin_password: "", // No mostramos la contraseña por seguridad
-      api_key_duration_days: company.api_key_duration_days,
-    });
-    setIsEditDialogOpen(true);
+    try {
+      console.log("🔍 Obteniendo detalles completos de la empresa...");
+
+      // Obtener los detalles completos de la empresa
+      const companyDetails = await getCompanyById(company.id.toString());
+
+      console.log("🔍 Datos completos de empresa:", companyDetails);
+
+      setSelectedCompany(companyDetails);
+
+      // Resetear el formulario SOLO con datos de la empresa (sin admin)
+      form.reset({
+        name: companyDetails.name,
+        code: companyDetails.code,
+        legal_tax_id: companyDetails.legal_tax_id,
+        contact_email: companyDetails.contact_email,
+        main_phone: companyDetails.main_phone,
+        fiscal_address: companyDetails.fiscal_address,
+        api_key_duration_days: companyDetails.api_key_duration_days,
+      });
+      setIsEditDialogOpen(true);
+    } catch (error) {
+      console.error("🔴 Error al obtener detalles de la empresa:", error);
+      toast.error("Error al cargar los detalles de la empresa");
+    }
   };
 
   const handleCreateCompany = () => {
@@ -181,26 +170,28 @@ const CompaniesPage = () => {
     setIsCreateDialogOpen(true);
   };
 
-  const onSubmit = async (data: CompanyFormValues) => {
+  const onSubmit = async (
+    data: CreateCompanyFormValues | EditCompanyFormValues
+  ) => {
     try {
       if (selectedCompany) {
         if (!selectedCompany.id) {
           toast.error("No se puede actualizar: ID no disponible");
           return;
         }
-        const { admin_password, ...updateData } = data;
 
-        const finalUpdateData = admin_password
-          ? { ...updateData, admin_password }
-          : updateData;
+        // Para edición, solo enviar datos de la empresa (sin admin)
+        const editData = data as EditCompanyFormValues;
+
+        console.log("🟡 Actualizando empresa con datos:", editData);
 
         const response = await updateCompany(
           selectedCompany.id.toString(),
-          finalUpdateData
+          editData
         );
 
         if (response && response.status === 200) {
-          toast.success("Empresa y administrador actualizados exitosamente");
+          toast.success("Empresa actualizada exitosamente");
           setIsEditDialogOpen(false);
           setModified((prev) => !prev);
           setSelectedCompany(null);
@@ -209,8 +200,11 @@ const CompaniesPage = () => {
           toast.error("Error al actualizar la empresa");
         }
       } else {
+        // Para creación, enviar todos los datos incluyendo admin
+        const createData = data as CreateCompanyFormValues;
+
         const companyData = {
-          ...data,
+          ...createData,
           organizationId: 0,
           is_active: true,
         };
@@ -268,7 +262,7 @@ const CompaniesPage = () => {
     }
 
     try {
-      // Enviar todos los datos necesarios junto con el cambio de estado
+      // Enviar solo datos de la empresa (sin admin) junto con el cambio de estado
       const updateData = {
         name: company.name,
         code: company.code,
@@ -276,11 +270,6 @@ const CompaniesPage = () => {
         contact_email: company.contact_email,
         main_phone: company.main_phone,
         fiscal_address: company.fiscal_address,
-        admin_first_name: company.admin_first_name,
-        admin_last_name: company.admin_last_name,
-        admin_username: company.admin_username,
-        admin_email: company.admin_email,
-        admin_phone: company.admin_phone,
         api_key_duration_days: company.api_key_duration_days,
         is_active: !company.is_active,
       };
@@ -402,12 +391,14 @@ const CompaniesPage = () => {
                 <DropdownMenuItem
                   onClick={() => handleEditCompany(company)}
                   className={`cursor-pointer flex items-center gap-2 ${
-                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                    !hasValidId || companyDetailLoading
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
                   }`}
-                  disabled={!hasValidId}
+                  disabled={!hasValidId || companyDetailLoading}
                 >
                   <Edit className="h-4 w-4" />
-                  <span>Editar</span>
+                  <span>{companyDetailLoading ? "Cargando..." : "Editar"}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleToggleStatus(company)}
@@ -726,89 +717,89 @@ const CompaniesPage = () => {
               </div>
             </div>
 
-            {/* Información del Administrador */}
-            <div className="space-y-4 pt-4 ">
-              <h3 className="font-semibold text-gray_b">
-                Información del Administrador
-              </h3>
+            {/* Información del Administrador - SOLO MOSTRAR EN CREACIÓN */}
+            {!selectedCompany && (
+              <div className="space-y-4 pt-4">
+                <h3 className="font-semibold text-gray_b">
+                  Información del Administrador
+                </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin_first_name">Nombre *</Label>
-                  <Input
-                    id="admin_first_name"
-                    {...form.register("admin_first_name")}
-                    placeholder="Juan"
-                  />
-                  {form.formState.errors.admin_first_name && (
-                    <p className="text-red-500 text-sm">
-                      {form.formState.errors.admin_first_name.message}
-                    </p>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_first_name">Nombre *</Label>
+                    <Input
+                      id="admin_first_name"
+                      {...form.register("admin_first_name")}
+                      placeholder="Juan"
+                    />
+                    {hasAdminError("admin_first_name") && (
+                      <p className="text-red-500 text-sm">
+                        {getAdminError("admin_first_name")?.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_last_name">Apellido *</Label>
+                    <Input
+                      id="admin_last_name"
+                      {...form.register("admin_last_name")}
+                      placeholder="Pérez"
+                    />
+                    {hasAdminError("admin_last_name") && (
+                      <p className="text-red-500 text-sm">
+                        {getAdminError("admin_last_name")?.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="admin_last_name">Apellido *</Label>
-                  <Input
-                    id="admin_last_name"
-                    {...form.register("admin_last_name")}
-                    placeholder="Pérez"
-                  />
-                  {form.formState.errors.admin_last_name && (
-                    <p className="text-red-500 text-sm">
-                      {form.formState.errors.admin_last_name.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_username">Usuario *</Label>
+                    <Input
+                      id="admin_username"
+                      {...form.register("admin_username")}
+                      placeholder="juan.perez"
+                    />
+                    {hasAdminError("admin_username") && (
+                      <p className="text-red-500 text-sm">
+                        {getAdminError("admin_username")?.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin_username">Usuario *</Label>
-                  <Input
-                    id="admin_username"
-                    {...form.register("admin_username")}
-                    placeholder="juan.perez"
-                  />
-                  {form.formState.errors.admin_username && (
-                    <p className="text-red-500 text-sm">
-                      {form.formState.errors.admin_username.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="admin_email">Email *</Label>
-                  <Input
-                    id="admin_email"
-                    type="email"
-                    {...form.register("admin_email")}
-                    placeholder="juan.perez@empresa.com"
-                  />
-                  {form.formState.errors.admin_email && (
-                    <p className="text-red-500 text-sm">
-                      {form.formState.errors.admin_email.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin_phone">Teléfono *</Label>
-                  <Input
-                    id="admin_phone"
-                    {...form.register("admin_phone")}
-                    placeholder="+58 412-9876543"
-                  />
-                  {form.formState.errors.admin_phone && (
-                    <p className="text-red-500 text-sm">
-                      {form.formState.errors.admin_phone.message}
-                    </p>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_email">Email *</Label>
+                    <Input
+                      id="admin_email"
+                      type="email"
+                      {...form.register("admin_email")}
+                      placeholder="juan.perez@empresa.com"
+                    />
+                    {hasAdminError("admin_email") && (
+                      <p className="text-red-500 text-sm">
+                        {getAdminError("admin_email")?.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {!selectedCompany && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_phone">Teléfono *</Label>
+                    <Input
+                      id="admin_phone"
+                      {...form.register("admin_phone")}
+                      placeholder="+58 412-9876543"
+                    />
+                    {hasAdminError("admin_phone") && (
+                      <p className="text-red-500 text-sm">
+                        {getAdminError("admin_phone")?.message}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="admin_password">Contraseña *</Label>
                     <Input
@@ -817,15 +808,15 @@ const CompaniesPage = () => {
                       {...form.register("admin_password")}
                       placeholder="Mínimo 6 caracteres"
                     />
-                    {form.formState.errors.admin_password && (
+                    {hasAdminError("admin_password") && (
                       <p className="text-red-500 text-sm">
-                        {form.formState.errors.admin_password.message}
+                        {getAdminError("admin_password")?.message}
                       </p>
                     )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             <DialogFooter className="pt-4">
               <Button

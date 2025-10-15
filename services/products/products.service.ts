@@ -255,15 +255,19 @@ export interface ProductUnitsResponse {
   };
 }
 
-// Response interfaces
 export interface ProductResponse {
   success: boolean;
   data: Product;
+  // Agregar propiedades opcionales según Swagger
+  message?: string;
+  statusCode?: number;
 }
 
 export interface ProductsListResponse {
   success: boolean;
   data: Product[];
+  message?: string;
+  statusCode?: number;
 }
 
 export interface PaginatedProductsResponse {
@@ -273,6 +277,8 @@ export interface PaginatedProductsResponse {
     totalPages: number;
     total: number;
   };
+  message?: string;
+  statusCode?: number;
 }
 
 export interface DeleteProductResponse {
@@ -280,184 +286,212 @@ export interface DeleteProductResponse {
   data: {
     message: string;
   };
+  message?: string;
+  statusCode?: number;
+}
+
+export interface ProductUnitsResponse {
+  success: boolean;
+  data: {
+    message: string;
+    units?: ProductUnit[];
+  };
+  message?: string;
+  statusCode?: number;
+}
+
+export interface SyncProductsResponse {
+  success: boolean;
+  data: SyncProductResponse[];
+  message?: string;
+  statusCode?: number;
 }
 
 export const productService = {
-  // Crear un nuevo producto
+  // Crear un nuevo producto (CORREGIDO)
   createProduct: async (productData: CreateProductData): Promise<Product> => {
-    const response = await api.post<ProductResponse>(PostProduct, productData);
-    return response.data.data;
+    try {
+      const response = await api.post<ProductResponse>(
+        PostProduct,
+        productData
+      );
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Error al crear producto");
+      }
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al crear producto"
+      );
+    }
   },
 
+  // Obtener productos paginados (CORREGIDO)
   getProducts: async (
     params?: GetProductsParams
-  ): Promise<Product[] | PaginatedProductsResponse["data"]> => {
-    const queryParams = new URLSearchParams();
+  ): Promise<PaginatedProductsResponse["data"]> => {
+    try {
+      const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
-    queryParams.append("page", params?.page?.toString() || "1");
-    queryParams.append(
-      "itemsPerPage",
-      params?.itemsPerPage?.toString() || "10"
-    );
+      // Parámetros requeridos
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.itemsPerPage)
+        queryParams.append("itemsPerPage", params.itemsPerPage.toString());
 
-    // Solo agregar companyId si tiene valor (es requerido según Swagger)
-    if (params?.companyId) {
-      queryParams.append("companyId", params.companyId.toString());
+      // Parámetros opcionales - CORREGIDO: usar nombres exactos del Swagger
+      if (params?.companyId)
+        queryParams.append("companyId", params.companyId.toString());
+      if (params?.search) queryParams.append("search", params.search);
+      if (params?.order) queryParams.append("order", params.order);
+      if (params?.product_name)
+        queryParams.append("product_name", params.product_name);
+      if (params?.sku) queryParams.append("sku", params.sku);
+      if (params?.category_id)
+        queryParams.append("category_id", params.category_id.toString());
+      if (params?.brand_id)
+        queryParams.append("brand_id", params.brand_id.toString());
+      if (params?.unit_id)
+        queryParams.append("unit_id", params.unit_id.toString());
+      if (params?.default_warehouse_id)
+        queryParams.append(
+          "default_warehouse_id",
+          params.default_warehouse_id.toString()
+        );
+
+      // Parámetros booleanos - CORREGIDO: enviar como string "true"/"false"
+      if (params?.manages_serials !== undefined)
+        queryParams.append(
+          "manages_serials",
+          params.manages_serials.toString()
+        );
+      if (params?.manages_lots !== undefined)
+        queryParams.append("manages_lots", params.manages_lots.toString());
+      if (params?.is_tax_exempt !== undefined)
+        queryParams.append("is_tax_exempt", params.is_tax_exempt.toString());
+      if (params?.show_in_ecommerce !== undefined)
+        queryParams.append(
+          "show_in_ecommerce",
+          params.show_in_ecommerce.toString()
+        );
+      if (params?.show_in_sales_app !== undefined)
+        queryParams.append(
+          "show_in_sales_app",
+          params.show_in_sales_app.toString()
+        );
+      if (params?.is_active !== undefined)
+        queryParams.append("is_active", params.is_active.toString());
+
+      console.log(
+        "🔵 Fetching products with params:",
+        Object.fromEntries(queryParams)
+      );
+
+      const response = await api.get<PaginatedProductsResponse>(
+        `${GetProducts}?${queryParams}`
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Error al obtener productos");
+      }
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error("❌ Error fetching products:", error);
+      throw new Error(
+        error.response?.data?.message || "Error al obtener productos"
+      );
     }
-
-    // Parámetros opcionales
-    if (params?.search) queryParams.append("search", params.search);
-    if (params?.order) queryParams.append("order", params.order);
-    if (params?.product_name)
-      queryParams.append("product_name", params.product_name);
-    if (params?.sku) queryParams.append("sku", params.sku);
-    if (params?.category_id)
-      queryParams.append("category_id", params.category_id.toString());
-    if (params?.brand_id)
-      queryParams.append("brand_id", params.brand_id.toString());
-    if (params?.unit_id)
-      queryParams.append("unit_id", params.unit_id.toString());
-    if (params?.default_warehouse_id)
-      queryParams.append(
-        "default_warehouse_id",
-        params.default_warehouse_id.toString()
-      );
-
-    // CORRECCIÓN: Enviar booleanos como literales true/false
-    if (params?.manages_serials !== undefined)
-      queryParams.append(
-        "manages_serials",
-        params.manages_serials ? "true" : "false"
-      );
-    if (params?.manages_lots !== undefined)
-      queryParams.append(
-        "manages_lots",
-        params.manages_lots ? "true" : "false"
-      );
-    if (params?.is_tax_exempt !== undefined)
-      queryParams.append(
-        "is_tax_exempt",
-        params.is_tax_exempt ? "true" : "false"
-      );
-    if (params?.show_in_ecommerce !== undefined)
-      queryParams.append(
-        "show_in_ecommerce",
-        params.show_in_ecommerce ? "true" : "false"
-      );
-    if (params?.show_in_sales_app !== undefined)
-      queryParams.append(
-        "show_in_sales_app",
-        params.show_in_sales_app ? "true" : "false"
-      );
-    if (params?.is_active !== undefined)
-      queryParams.append("is_active", params.is_active ? "true" : "false"); // ← Aquí está la corrección
-
-    console.log(
-      "📡 URL final para productos:",
-      `${GetProducts}?${queryParams}`
-    );
-
-    const response = await api.get<PaginatedProductsResponse>(
-      `${GetProducts}?${queryParams}`
-    );
-
-    return response.data.data;
   },
 
-  // También aplica la misma corrección en getAllProducts:
+  // Obtener todos los productos sin paginación (CORREGIDO)
   getAllProducts: async (
     params?: Omit<GetProductsParams, "page" | "itemsPerPage">
   ): Promise<Product[]> => {
-    const queryParams = new URLSearchParams();
+    try {
+      // Usar getProducts con paginación grande para obtener todos
+      const paginatedResponse = await productService.getProducts({
+        ...params,
+        page: 1,
+        itemsPerPage: 1000, // O un número suficientemente grande
+      });
 
-    // Solo agregar companyId si tiene valor
-    if (params?.companyId) {
-      queryParams.append("companyId", params.companyId.toString());
+      return paginatedResponse.data;
+    } catch (error: any) {
+      console.error("❌ Error fetching all products:", error);
+      throw new Error(
+        error.response?.data?.message || "Error al obtener productos"
+      );
     }
-
-    // Parámetros opcionales (excluyendo paginación)
-    if (params?.search) queryParams.append("search", params.search);
-    if (params?.order) queryParams.append("order", params.order);
-    if (params?.product_name)
-      queryParams.append("product_name", params.product_name);
-    if (params?.sku) queryParams.append("sku", params.sku);
-    if (params?.category_id)
-      queryParams.append("category_id", params.category_id.toString());
-    if (params?.brand_id)
-      queryParams.append("brand_id", params.brand_id.toString());
-    if (params?.unit_id)
-      queryParams.append("unit_id", params.unit_id.toString());
-    if (params?.default_warehouse_id)
-      queryParams.append(
-        "default_warehouse_id",
-        params.default_warehouse_id.toString()
-      );
-
-    // CORRECCIÓN: Aplicar el mismo formato para booleanos
-    if (params?.manages_serials !== undefined)
-      queryParams.append(
-        "manages_serials",
-        params.manages_serials ? "true" : "false"
-      );
-    if (params?.manages_lots !== undefined)
-      queryParams.append(
-        "manages_lots",
-        params.manages_lots ? "true" : "false"
-      );
-    if (params?.is_tax_exempt !== undefined)
-      queryParams.append(
-        "is_tax_exempt",
-        params.is_tax_exempt ? "true" : "false"
-      );
-    if (params?.show_in_ecommerce !== undefined)
-      queryParams.append(
-        "show_in_ecommerce",
-        params.show_in_ecommerce ? "true" : "false"
-      );
-    if (params?.show_in_sales_app !== undefined)
-      queryParams.append(
-        "show_in_sales_app",
-        params.show_in_sales_app ? "true" : "false"
-      );
-    if (params?.is_active !== undefined)
-      queryParams.append("is_active", params.is_active ? "true" : "false");
-
-    const response = await api.get<ProductsListResponse>(
-      `${GetProducts}?${queryParams}`
-    );
-
-    return response.data.data;
   },
 
-  // Obtener producto por ID
+  // Obtener producto por ID (CORREGIDO)
   getProductById: async (id: string): Promise<Product> => {
-    const response = await api.get<ProductResponse>(`${GetProducts}/${id}`);
-    return response.data.data;
+    try {
+      const response = await api.get<ProductResponse>(`${GetProducts}/${id}`);
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Producto no encontrado");
+      }
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al obtener producto"
+      );
+    }
   },
 
-  // Actualizar producto
+  // Actualizar producto (CORREGIDO)
   updateProduct: async (
     id: string,
     updates: UpdateProductData
   ): Promise<Product> => {
-    const response = await api.patch<ProductResponse>(
-      `${PatchProduct}/${id}`,
-      updates
-    );
-    return response.data.data;
+    try {
+      const response = await api.patch<ProductResponse>(
+        `${PatchProduct}/${id}`,
+        updates
+      );
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "Error al actualizar producto"
+        );
+      }
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al actualizar producto"
+      );
+    }
   },
 
-  // Eliminar producto
+  // Eliminar producto (CORREGIDO)
   deleteProduct: async (id: string): Promise<void> => {
-    await api.delete<DeleteProductResponse>(`${DeleteProduct}/${id}`);
+    try {
+      const response = await api.delete<DeleteProductResponse>(
+        `${DeleteProduct}/${id}`
+      );
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Error al eliminar producto");
+      }
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al eliminar producto"
+      );
+    }
   },
 
-  // Obtener unidades de productos
+  // Obtener unidades de productos (CORREGIDO)
   getProductUnits: async (): Promise<ProductUnit[]> => {
-    const response = await api.get<ProductUnitsResponse>(GetProductUnits);
-    // Asumiendo que la respuesta contiene un array de unidades en data.units
-    return response.data.data.units || [];
+    try {
+      const response = await api.get<ProductUnitsResponse>(GetProductUnits);
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Error al obtener unidades");
+      }
+      // Ajustar según la estructura real de tu API
+      return (response.data.data as any).units || [];
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al obtener unidades"
+      );
+    }
   },
 
   // Sincronizar productos desde ERP
