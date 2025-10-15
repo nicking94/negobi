@@ -25,6 +25,7 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // hooks/documents/useDocuments.ts - En loadDocuments
   const loadDocuments = async (
     customFilters?: Partial<UseDocumentsFilters>
   ) => {
@@ -32,9 +33,10 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       setLoading(true);
       setError(null);
 
-      const currentCompanyId = customFilters?.companyId || filters.companyId;
-      if (!currentCompanyId) {
-        console.log("companyId no proporcionado, omitiendo carga");
+      const currentCompanyId = customFilters?.companyId || filters?.companyId;
+
+      if (!currentCompanyId || currentCompanyId === 0) {
+        console.log("⚠️ companyId no válido, omitiendo carga");
         setDocuments([]);
         return;
       }
@@ -47,18 +49,30 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
         companyId: currentCompanyId,
       };
 
-      console.log("Cargando documentos con parámetros:", combinedFilters);
+      console.log("📋 Cargando documentos con filtros:", combinedFilters);
 
       const documentsData = await documentService.getDocuments(combinedFilters);
 
+      console.log("📄 Datos recibidos del servicio:", documentsData);
+      console.log("🔢 Número de documentos:", documentsData.length);
+
       if (Array.isArray(documentsData)) {
         setDocuments(documentsData);
+        console.log(
+          `✅ ${documentsData.length} documentos cargados en el estado`
+        );
+
+        // Filtrar solo facturas para debug
+        const invoices = documentsData.filter(
+          (doc) => doc.document_type === "invoice"
+        );
+        console.log(`🧾 ${invoices.length} facturas encontradas`);
       } else {
-        console.warn("Estructura inesperada:", documentsData);
+        console.warn("⚠️ documentsData no es array:", documentsData);
         setDocuments([]);
       }
     } catch (err) {
-      console.error("Error al cargar documentos:", err);
+      console.error("❌ Error al cargar documentos:", err);
       setError(
         err instanceof Error ? err.message : "Error al cargar documentos"
       );
@@ -143,12 +157,12 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
   };
 
   useEffect(() => {
-    if (filters.companyId) {
+    if (filters?.companyId) {
       loadDocuments();
     } else {
       setDocuments([]);
     }
-  }, [filters.companyId, filters.document_type, filters.status]);
+  }, [filters?.companyId, filters?.document_type, filters?.status]);
 
   return {
     documents,

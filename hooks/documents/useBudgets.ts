@@ -6,6 +6,7 @@ import {
   CreateDocumentData,
 } from "@/services/documents/documents.service";
 import { useDocuments, UseDocumentsFilters } from "./useDocuments";
+import useUserCompany from "../auth/useUserCompany";
 
 // Hook especializado para presupuestos (quotes)
 export const useBudgets = (
@@ -28,7 +29,9 @@ export const useBudgets = (
 export const useCreateBudget = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { companyId, isLoading: companyLoading, hasCompany } = useUserCompany();
 
+  // hooks/documents/useBudgets.ts - Actualizar createBudget
   const createBudget = async (
     budgetData: Omit<CreateDocumentData, "document_type">
   ): Promise<Document | null> => {
@@ -36,22 +39,44 @@ export const useCreateBudget = () => {
       setLoading(true);
       setError(null);
 
+      console.log("🟡 useCreateBudget: Iniciando...", { budgetData });
+
+      // Validar que tenemos companyId
+      if (!companyId) {
+        const errorMsg =
+          "No se puede crear el presupuesto: Empresa no configurada";
+        console.error("❌", errorMsg);
+        throw new Error(errorMsg);
+      }
+
       const documentData: CreateDocumentData = {
         ...budgetData,
         document_type: "quote",
-        status: "draft", // Estado por defecto para presupuestos
+        status: "draft",
+        companyId,
       };
+
+      console.log("📤 useCreateBudget: Datos completos:", documentData);
 
       // Validar datos
       const validation = documentService.validateDocumentData(documentData);
       if (!validation.isValid) {
-        setError(validation.errors.join(", "));
-        return null;
+        const errorMsg = validation.errors.join(", ");
+        console.error("❌ Validación falló:", errorMsg);
+        throw new Error(errorMsg);
       }
 
+      console.log(
+        "🌐 useCreateBudget: Llamando a documentService.createDocument..."
+      );
+
       const newBudget = await documentService.createDocument(documentData);
+
+      console.log("✅ useCreateBudget: Presupuesto creado:", newBudget);
+
       return newBudget;
     } catch (err) {
+      console.error("🚨 useCreateBudget: Error:", err);
       setError(
         err instanceof Error ? err.message : "Error al crear presupuesto"
       );

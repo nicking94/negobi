@@ -159,6 +159,24 @@ export interface Document {
   server_code?: string;
   delivery_date?: string;
 }
+// AÑADIR ESTAS INTERFACES
+export interface DocumentItem {
+  line_number: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  total_amount?: number;
+}
+
+export interface DocumentPayment {
+  payment_method_code: string;
+  amount: number;
+  reference?: string;
+  exchange_rate?: number;
+  change_amount?: number;
+}
 
 // Datos para crear un documento
 export interface CreateDocumentData {
@@ -168,6 +186,8 @@ export interface CreateDocumentData {
   companyId: number;
 
   // Campos opcionales
+  items?: DocumentItem[]; // Array de items
+  payments?: DocumentPayment[];
   clientId?: number;
   supplierId?: number;
   operationTypeId?: number;
@@ -315,84 +335,126 @@ export const ORDER_TYPES = DOCUMENT_TYPES;
 export const ORDER_STATUSES = DOCUMENT_STATUSES;
 
 export const documentService = {
-  // Crear un nuevo documento
   createDocument: async (
     documentData: CreateDocumentData
   ): Promise<Document> => {
-    const response = await api.post(PostDocument, documentData);
-    return response.data.data;
+    console.log("🌐 documentService.createDocument: Enviando petición...", {
+      url: PostDocument,
+      data: documentData,
+    });
+
+    try {
+      const response = await api.post(PostDocument, documentData);
+
+      console.log("✅ documentService.createDocument: Respuesta recibida:", {
+        status: response.status,
+        data: response.data,
+      });
+
+      return response.data.data;
+    } catch (error) {
+      console.error(
+        "🚨 documentService.createDocument: Error en petición:",
+        error
+      );
+      throw error;
+    }
   },
 
-  // Obtener documentos paginados
   getDocuments: async (params: GetDocumentsParams): Promise<Document[]> => {
-    const queryParams = new URLSearchParams();
+    try {
+      const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
-    queryParams.append("page", params.page?.toString() || "1");
-    queryParams.append("itemsPerPage", params.itemsPerPage?.toString() || "10");
-    queryParams.append("companyId", params.companyId.toString());
-
-    // Parámetros opcionales
-    if (params.document_type) {
-      queryParams.append("document_type", params.document_type);
-    }
-    if (params.search) {
-      queryParams.append("search", params.search);
-    }
-    if (params.order) {
-      queryParams.append("order", params.order);
-    }
-    if (params.document_number) {
-      queryParams.append("document_number", params.document_number);
-    }
-    if (params.startDate) {
-      queryParams.append("startDate", params.startDate);
-    }
-    if (params.endDate) {
-      queryParams.append("endDate", params.endDate);
-    }
-    if (params.clientId) {
-      queryParams.append("clientId", params.clientId.toString());
-    }
-    if (params.supplierId) {
-      queryParams.append("supplierId", params.supplierId.toString());
-    }
-    if (params.sourceWarehouseId) {
+      // Parámetros requeridos
+      queryParams.append("page", params.page?.toString() || "1");
       queryParams.append(
-        "sourceWarehouseId",
-        params.sourceWarehouseId.toString()
+        "itemsPerPage",
+        params.itemsPerPage?.toString() || "10"
       );
-    }
-    if (params.destinationWarehouseId) {
-      queryParams.append(
-        "destinationWarehouseId",
-        params.destinationWarehouseId.toString()
-      );
-    }
-    if (params.responsibleUserId) {
-      queryParams.append(
-        "responsibleUserId",
-        params.responsibleUserId.toString()
-      );
-    }
-    if (params.status) {
-      queryParams.append("status", params.status);
-    }
+      queryParams.append("companyId", params.companyId.toString());
 
-    const response = await api.get(`${GetDocuments}?${queryParams}`);
+      // Parámetros opcionales
+      if (params.document_type) {
+        queryParams.append("document_type", params.document_type);
+      }
+      if (params.search) {
+        queryParams.append("search", params.search);
+      }
+      if (params.order) {
+        queryParams.append("order", params.order);
+      }
+      if (params.startDate) {
+        queryParams.append("startDate", params.startDate);
+      }
+      if (params.endDate) {
+        queryParams.append("endDate", params.endDate);
+      }
+      if (params.status) {
+        queryParams.append("status", params.status);
+      }
 
-    // Manejar diferentes estructuras de respuesta
-    if (
-      response.data &&
-      response.data.data &&
-      Array.isArray(response.data.data)
-    ) {
-      return response.data.data;
-    } else if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    } else {
-      console.warn("Estructura de respuesta inesperada:", response.data);
-      return [];
+      console.log(
+        "🌐 Realizando petición a:",
+        `${GetDocuments}?${queryParams}`
+      );
+
+      const response = await api.get(`${GetDocuments}?${queryParams}`);
+
+      console.log("📨 Respuesta HTTP:", response.status, response.statusText);
+      console.log("📦 Datos de respuesta:", response.data);
+
+      // MANEJO CORREGIDO DE LA RESPUESTA
+      let documents: Document[] = [];
+
+      // La respuesta tiene estructura: { success: true, data: { data: [], ... } }
+      if (
+        response.data &&
+        response.data.data &&
+        response.data.data.data &&
+        Array.isArray(response.data.data.data)
+      ) {
+        documents = response.data.data.data;
+        console.log(
+          `📊 Encontrados ${documents.length} documentos en response.data.data.data`
+        );
+      }
+      // Por si acaso, mantener compatibilidad con otras estructuras
+      else if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        documents = response.data.data;
+        console.log(
+          `📊 Encontrados ${documents.length} documentos en response.data.data`
+        );
+      } else if (response.data && Array.isArray(response.data)) {
+        documents = response.data;
+        console.log(
+          `📊 Encontrados ${documents.length} documentos en response.data`
+        );
+      } else {
+        console.warn("🔄 Estructura de respuesta inesperada:", response.data);
+        documents = [];
+      }
+
+      console.log(`📊 Total de documentos a retornar: ${documents.length}`);
+
+      // Debug: mostrar info del primer documento si existe
+      if (documents.length > 0) {
+        console.log("📝 Primer documento:", {
+          id: documents[0].id,
+          document_type: documents[0].document_type,
+          document_number: documents[0].document_number,
+          client: documents[0].client,
+          company: documents[0].company,
+        });
+      }
+
+      return documents;
+    } catch (error) {
+      console.error("🚨 Error en documentService.getDocuments:", error);
+      throw error;
     }
   },
 
@@ -465,20 +527,15 @@ export const documentService = {
     return `${prefix}-${timestamp}-${random}`;
   },
 
-  // Validar datos del documento
-  validateDocumentData: (
-    documentData: CreateDocumentData
-  ): { isValid: boolean; errors: string[] } => {
+  // En documentService, actualizar la validación
+  validateDocumentData: (documentData: CreateDocumentData) => {
     const errors: string[] = [];
 
     if (!documentData.document_type) {
       errors.push("El tipo de documento es requerido");
     }
 
-    if (
-      !documentData.document_number ||
-      documentData.document_number.trim().length === 0
-    ) {
+    if (!documentData.document_number?.trim()) {
       errors.push("El número de documento es requerido");
     }
 
@@ -490,13 +547,29 @@ export const documentService = {
       errors.push("La compañía es requerida");
     }
 
-    if (documentData.total_amount && documentData.total_amount < 0) {
-      errors.push("El monto total no puede ser negativo");
+    // Validar items si existen
+    if (documentData.items) {
+      documentData.items.forEach((item, index) => {
+        if (!item.product_id) {
+          errors.push(`Item ${index + 1}: product_id es requerido`);
+        }
+        if (!item.quantity || item.quantity <= 0) {
+          errors.push(`Item ${index + 1}: cantidad debe ser mayor a 0`);
+        }
+      });
     }
 
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    // Validar pagos si existen
+    if (documentData.payments) {
+      const totalPayments = documentData.payments.reduce(
+        (sum, payment) => sum + (payment.amount || 0),
+        0
+      );
+      if (totalPayments <= 0) {
+        errors.push("El total de pagos debe ser mayor a 0");
+      }
+    }
+
+    return { isValid: errors.length === 0, errors };
   },
 };

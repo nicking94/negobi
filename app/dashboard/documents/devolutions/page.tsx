@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -10,6 +10,7 @@ import {
   Filter,
   RotateCcw,
   FileText,
+  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,10 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useReturns } from "@/hooks/documents/useReturns";
+import { Document } from "@/services/documents/documents.service";
+import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
+import { SelectSearchable } from "@/components/ui/select-searchable";
 
 export type Devolution = {
   id: string;
@@ -54,9 +59,19 @@ export type Devolution = {
   issued_date: Date;
   total: number;
   seller?: string;
-  status: "pending" | "approved" | "rejected";
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "completed"
+    | "cancelled"
+    | "draft";
   bill_reference: string;
   reason: string;
+  original_invoice?: {
+    id: string;
+    document_number: string;
+  };
 };
 
 const DevolutionsPage = () => {
@@ -75,75 +90,107 @@ const DevolutionsPage = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    null
+  );
 
-  // Datos de ejemplo para devoluciones
-  const [devolutions, setDevolutions] = useState<Devolution[]>([
-    {
-      id: "1",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "DV053044",
-      operation_type: "DÓLARES",
-      location: "Sucursal Principal",
-      issued_date: new Date("2025-09-02T12:24:00"),
-      total: 215.08,
-      seller: "Juan Pérez",
-      status: "approved",
-      bill_reference: "NE053044",
-      reason: "Producto defectuoso",
-    },
-    {
-      id: "2",
-      client: "DISTRIBUIDORA LA ECONOMÍA, C.A.",
-      correlative: "DV053045",
-      operation_type: "BOLÍVARES",
-      location: "Sucursal Norte",
-      issued_date: new Date("2025-09-01T10:15:00"),
-      total: 450.5,
-      seller: "María González",
-      status: "pending",
-      bill_reference: "NE053045",
-      reason: "Producto incorrecto",
-    },
-    {
-      id: "3",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "DV053046",
-      operation_type: "DÓLARES",
-      location: "Sucursal Sur",
-      issued_date: new Date("2025-08-30T15:45:00"),
-      total: 1200.0,
-      seller: "Carlos Rodríguez",
-      status: "rejected",
-      bill_reference: "NE053046",
-      reason: "Solicitud fuera de plazo",
-    },
-    {
-      id: "4",
-      client: "FARMACIAS SALUD Y VIDA, C.A.",
-      correlative: "DV053047",
-      operation_type: "TRANSFERENCIA",
-      location: "Sucursal Este",
-      issued_date: new Date("2025-08-28T09:30:00"),
-      total: 150.75,
-      seller: "Ana Martínez",
-      status: "approved",
-      bill_reference: "NE053047",
-      reason: "Producto vencido",
-    },
-    {
-      id: "5",
-      client: "AUTOMERCADO NIE CENTER, C.A.",
-      correlative: "DV053048",
-      operation_type: "DÓLARES",
-      location: "Sucursal Oeste",
-      issued_date: new Date("2025-08-25T14:20:00"),
-      total: 890.25,
-      seller: "Luis Hernández",
-      status: "pending",
-      bill_reference: "NE053048",
-      reason: "Cambio de talla",
-    },
-  ]);
+  // Obtener las empresas
+  const { companies: companiesResponse, loading: companiesLoading } =
+    useGetAllCompanies();
+
+  const companyOptions = useMemo(() => {
+    return companiesResponse.map((company) => ({
+      value: company.id.toString(),
+      label: company.name,
+    }));
+  }, [companiesResponse]);
+
+  useEffect(() => {
+    if (companiesResponse.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(companiesResponse[0].id);
+    }
+  }, [companiesResponse, selectedCompanyId]);
+
+  // Usar el hook de devoluciones
+  const {
+    returns,
+    loading: returnsLoading,
+    error: returnsError,
+  } = useReturns(
+    selectedCompanyId ? { companyId: selectedCompanyId } : { companyId: -1 }
+  );
+
+  // Mapear los documentos de devolución al tipo Devolution
+  const devolutions: Devolution[] = useMemo(() => {
+    console.log("🔄 Mapeando devoluciones desde API:", returns);
+
+    if (!returns || !Array.isArray(returns)) {
+      return [];
+    }
+
+    return returns.map((returnDoc: Document) => {
+      // Extraer motivo de la devolución de las observaciones
+      const reason =
+        returnDoc.observations?.find(
+          (obs) =>
+            obs.campo.toLowerCase().includes("motivo") ||
+            obs.campo.toLowerCase().includes("reason")
+        )?.valor || "No especificado";
+
+      // Obtener referencia de la factura original
+      const billReference =
+        returnDoc.affected_document_number ||
+        returnDoc.sourceDocumentId?.toString() ||
+        "N/A";
+
+      return {
+        id: returnDoc.id.toString(),
+        client: returnDoc.client?.legal_name || "Cliente no especificado",
+        correlative: returnDoc.document_number,
+        operation_type: getOperationType(returnDoc.document_type),
+        location: returnDoc.company?.name || "Empresa no especificada",
+        issued_date: new Date(returnDoc.document_date),
+        total: parseFloat(returnDoc.total_amount?.toString()) || 0,
+        seller:
+          returnDoc.responsibleUserId?.toString() ||
+          returnDoc.salesperson_external_code ||
+          "No especificado",
+        status: mapReturnStatus(returnDoc.status),
+        bill_reference: billReference,
+        reason: reason,
+        original_invoice: returnDoc.sourceDocumentId
+          ? {
+              id: returnDoc.sourceDocumentId.toString(),
+              document_number: returnDoc.affected_document_number || "N/A",
+            }
+          : undefined,
+      };
+    });
+  }, [returns]);
+
+  // Función para mapear el tipo de operación
+  const getOperationType = (documentType: string): string => {
+    const typeMap: { [key: string]: string } = {
+      sales_return: "Devolución de Venta",
+      return_delivery_note: "Nota de Entrega Devolución",
+      invoice: "Factura",
+      order: "Pedido",
+    };
+    return typeMap[documentType] || documentType;
+  };
+
+  // Función para mapear el estado de la devolución
+  const mapReturnStatus = (status: string): Devolution["status"] => {
+    const statusMap: { [key: string]: Devolution["status"] } = {
+      draft: "draft",
+      pending: "pending",
+      approved: "approved",
+      completed: "completed",
+      cancelled: "cancelled",
+      rejected: "rejected",
+    };
+    return statusMap[status] || "pending";
+  };
 
   const sellers = useMemo(() => {
     const uniqueSellers = Array.from(
@@ -185,21 +232,18 @@ const DevolutionsPage = () => {
           .includes(searchTerm.toLowerCase()) ||
         devolution.bill_reference
           .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+          .includes(searchTerm.toLowerCase()) ||
+        devolution.reason.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtrar por vendedor (si no es "todos")
       const matchesSeller =
         sellerFilter === "all" || devolution.seller === sellerFilter;
 
-      // Filtrar por cliente (si no es "todos")
       const matchesClient =
         clientFilter === "all" || devolution.client === clientFilter;
 
-      // Filtrar por estado (si no es "todos")
       const matchesStatus =
         statusFilter === "all" || devolution.status === statusFilter;
 
-      // Filtrar por rango de fechas
       const matchesDateRange =
         !dateRange?.from ||
         !dateRange?.to ||
@@ -258,14 +302,20 @@ const DevolutionsPage = () => {
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
+      draft: "bg-gray-100 text-gray-800",
       pending: "bg-yellow-100 text-yellow-800",
       approved: "bg-green_xxl text-green_b",
-      rejected: "bg-red_xxl text-red_b",
+      completed: "bg-blue-100 text-blue-800",
+      cancelled: "bg-red_xxl text-red_b",
+      rejected: "bg-red-100 text-red-800",
     };
 
     const statusText = {
+      draft: "Borrador",
       pending: "Pendiente",
       approved: "Aprobada",
+      completed: "Completada",
+      cancelled: "Cancelada",
       rejected: "Rechazada",
     };
 
@@ -299,6 +349,13 @@ const DevolutionsPage = () => {
       ),
     },
     {
+      accessorKey: "bill_reference",
+      header: "Factura Original",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("bill_reference")}</div>
+      ),
+    },
+    {
       accessorKey: "operation_type",
       header: "Tipo de Operación",
       cell: ({ row }) => (
@@ -314,7 +371,7 @@ const DevolutionsPage = () => {
     },
     {
       accessorKey: "issued_date",
-      header: "Emitido",
+      header: "Fecha Devolución",
       cell: ({ row }) => {
         const date = row.getValue("issued_date") as Date;
         return <div className="font-medium">{formatDate(date)}</div>;
@@ -322,7 +379,7 @@ const DevolutionsPage = () => {
     },
     {
       accessorKey: "total",
-      header: "Total",
+      header: "Total Devuelto",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
         return <div className="font-medium">{formatCurrency(total)}</div>;
@@ -351,6 +408,13 @@ const DevolutionsPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
+                  onClick={() => handleViewDevolution(devolution)}
+                  className="cursor-pointer flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Ver Detalles</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => handleViewClientDevolutions(devolution.client)}
                   className="cursor-pointer flex items-center gap-2"
                 >
@@ -370,7 +434,6 @@ const DevolutionsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -390,7 +453,7 @@ const DevolutionsPage = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar por cliente, correlativo, factura o motivo..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -407,23 +470,22 @@ const DevolutionsPage = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[18rem]">
                     <div className="px-2 py-1.5">
-                      <Label htmlFor="seller-filter">Vendedor</Label>
+                      <Label htmlFor="status-filter">Estado</Label>
                       <Select
-                        value={sellerFilter}
-                        onValueChange={setSellerFilter}
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
                       >
-                        <SelectTrigger id="seller-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los vendedores" />
+                        <SelectTrigger id="status-filter" className="mt-1">
+                          <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            Todos los vendedores
-                          </SelectItem>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.name}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="all">Todos los estados</SelectItem>
+                          <SelectItem value="draft">Borrador</SelectItem>
+                          <SelectItem value="pending">Pendiente</SelectItem>
+                          <SelectItem value="approved">Aprobada</SelectItem>
+                          <SelectItem value="completed">Completada</SelectItem>
+                          <SelectItem value="cancelled">Cancelada</SelectItem>
+                          <SelectItem value="rejected">Rechazada</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -480,19 +542,48 @@ const DevolutionsPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+            {/* Selector de empresa */}
+            <div className="flex items-center gap-2 mb-4">
+              <Label htmlFor="company-selector" className="text-sm font-medium">
+                Seleccionar Empresa:
+              </Label>
+              <div className="flex items-center gap-2">
+                <SelectSearchable
+                  value={selectedCompanyId?.toString() || ""}
+                  onValueChange={(value) => setSelectedCompanyId(Number(value))}
+                  placeholder="Buscar empresa..."
+                  options={companyOptions}
+                  emptyMessage="No se encontraron empresas."
+                  searchPlaceholder="Buscar empresa por nombre..."
+                  className="w-full md:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          <DataTable<Devolution, Devolution>
-            columns={columns}
-            data={filteredDevolutions}
-            noResultsText="No se encontraron devoluciones"
-            page={1}
-            setPage={() => {}}
-            totalPage={1}
-            total={filteredDevolutions.length}
-            itemsPerPage={10}
-            setItemsPerPage={() => {}}
-          />
+          {selectedCompanyId ? (
+            <DataTable<Devolution, Devolution>
+              columns={columns}
+              data={filteredDevolutions}
+              noResultsText="No se encontraron devoluciones"
+              page={1}
+              setPage={() => {}}
+              totalPage={1}
+              total={filteredDevolutions.length}
+              itemsPerPage={10}
+              setItemsPerPage={() => {}}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Selecciona una compañía para ver las devoluciones
+            </div>
+          )}
+
+          {returnsError && (
+            <div className="text-center py-4 text-red-600">
+              Error: {returnsError}
+            </div>
+          )}
         </main>
       </div>
 

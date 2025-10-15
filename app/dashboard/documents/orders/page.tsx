@@ -676,7 +676,7 @@ const OrdersPage = () => {
 
             <div className="flex items-center gap-2">
               <Label htmlFor="company-selector" className="text-sm font-medium">
-                Empresa:
+                Seleccionar empresa:
               </Label>
               <div className="flex items-center gap-2">
                 <SelectSearchable
@@ -692,18 +692,6 @@ const OrdersPage = () => {
                   searchPlaceholder="Buscar empresa por nombre..."
                   className="w-full md:w-64"
                 />
-                {selectedCompanyId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log("🟢 Mostrando todas las compañías");
-                      setSelectedCompanyId(null);
-                    }}
-                  >
-                    Todas
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -726,11 +714,6 @@ const OrdersPage = () => {
             </div>
           ) : (
             <div>
-              <div className="mb-4 text-sm text-gray-600">
-                {selectedCompanyId
-                  ? `Mostrando ${filteredOrders.length} pedidos de la compañía seleccionada`
-                  : `Mostrando ${filteredOrders.length} pedidos de todas las compañías`}
-              </div>
               <DataTable<Order, Order>
                 columns={columns}
                 data={filteredOrders}

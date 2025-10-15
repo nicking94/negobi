@@ -53,11 +53,13 @@ import { useDocumentDetails } from "@/hooks/documents/useDocumentDetails";
 import { es } from "date-fns/locale";
 import { registerLocale } from "react-datepicker";
 import { useUserCompany } from "@/hooks/auth/useUserCompany";
+import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
 
 import {
   Document,
   DocumentStatus,
   CreateDocumentData,
+  documentService,
 } from "@/services/documents/documents.service";
 
 // Importar el hook de clientes
@@ -82,7 +84,13 @@ export type Budget = Document & {
 };
 
 const BudgetsPage = () => {
-  const { companyId, isLoading: companyLoading, hasCompany } = useUserCompany();
+  const {
+    companyId,
+    selectedCompanyId,
+    setSelectedCompanyId,
+    isLoading: companyLoading,
+  } = useUserCompany();
+
   const { createBudget, loading: creating } = useCreateBudget();
   const { getDocumentDetails } = useDocumentDetails();
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -125,10 +133,11 @@ const BudgetsPage = () => {
     });
 
   // Usar el hook de clientes
-  const { clientsResponse: clients, loading: clientsLoading } = useGetClients({
+  const { clientsResponse: clients } = useGetClients({
     companyId: companyId || undefined,
     itemsPerPage: 100,
   });
+  const { companies } = useGetAllCompanies();
 
   // Cargar presupuestos al montar el componente
   useEffect(() => {
@@ -140,6 +149,34 @@ const BudgetsPage = () => {
       refetch();
     }
   }, [companyId, companyLoading]);
+  useEffect(() => {
+    if (selectedCompanyId && !companyLoading) {
+      refetch();
+    }
+  }, [selectedCompanyId, companyLoading]);
+
+  const companyOptions = useMemo(() => {
+    if (!companies || companies.length === 0) {
+      console.log("⚠️ No hay empresas disponibles");
+      return [];
+    }
+
+    const options = companies
+      .filter((company) => company.id != null)
+      .map((company) => ({
+        value: company.id!.toString(),
+        label: `${company.name || "Empresa sin nombre"}${
+          company.legal_tax_id ? ` - ${company.legal_tax_id}` : ""
+        }`,
+      }));
+
+    console.log("✅ Opciones de empresas generadas:", {
+      totalCompanies: companies.length,
+      optionsCount: options.length,
+    });
+
+    return options;
+  }, [companies]);
 
   const clientOptions = useMemo(() => {
     if (!clients || clients.length === 0) {
@@ -294,6 +331,14 @@ const BudgetsPage = () => {
     setIsEditDialogOpen(true);
   };
 
+  const handleCompanyChange = (value: string) => {
+    const newCompanyId = parseInt(value);
+    setSelectedCompanyId(newCompanyId);
+
+    // Recargar los datos con la nueva empresa
+    refetch();
+  };
+
   // Función para manejar cambio de cliente
   const handleClientChange = (value: string) => {
     setFormData({
@@ -352,20 +397,32 @@ const BudgetsPage = () => {
   };
 
   const handleCreateSubmit = async () => {
-    // Verificar que tenemos companyId
-    if (!companyId) {
-      toast.error("No se puede crear el presupuesto: Empresa no configurada");
+    // Verificar que tenemos companyId seleccionado
+    if (!selectedCompanyId) {
+      toast.error("No se puede crear el presupuesto: Empresa no seleccionada");
+      return;
+    }
+
+    // Verificar que tenemos cliente seleccionado
+    if (!formData.clientId) {
+      toast.error("No se puede crear el presupuesto: Cliente no seleccionado");
       return;
     }
 
     try {
+      console.log("🟡 Iniciando creación de presupuesto...", {
+        companyId: selectedCompanyId,
+        clientId: formData.clientId,
+        formData,
+      });
+
       const budgetData: Omit<CreateDocumentData, "document_type"> = {
         document_number: formData.document_number,
         document_date: new Date(
           formData.document_date + "T00:00:00"
         ).toISOString(),
-        companyId: companyId, // ← Usar el companyId dinámico aquí
-        clientId: formData.clientId ? parseInt(formData.clientId) : undefined,
+        companyId: selectedCompanyId,
+        clientId: parseInt(formData.clientId),
         notes: formData.notes,
         status: formData.status,
         control_number: formData.control_number || undefined,
@@ -380,14 +437,42 @@ const BudgetsPage = () => {
           : undefined,
       };
 
+      console.log("📦 Datos a enviar:", budgetData);
+
+      // Validar datos antes de enviar
+      const validation = documentService.validateDocumentData({
+        ...budgetData,
+        document_type: "quote",
+      });
+
+      if (!validation.isValid) {
+        console.error("❌ Validación falló:", validation.errors);
+        toast.error(`Errores de validación: ${validation.errors.join(", ")}`);
+        return;
+      }
+
+      console.log("✅ Datos validados, llamando a createBudget...");
+
+      // AÑADIR AWAIT AQUÍ - ESTE ERA EL PROBLEMA PRINCIPAL
       const result = await createBudget(budgetData);
+
+      console.log("📨 Resultado de createBudget:", result);
+
       if (result) {
         toast.success("Presupuesto creado exitosamente");
         setIsCreateDialogOpen(false);
         refetch();
+      } else {
+        console.error("❌ createBudget retornó null/undefined");
+        toast.error("Error al crear el presupuesto: resultado vacío");
       }
     } catch (err) {
-      toast.error("Error al crear el presupuesto");
+      console.error("🚨 Error en handleCreateSubmit:", err);
+      toast.error(
+        err instanceof Error
+          ? `Error al crear presupuesto: ${err.message}`
+          : "Error desconocido al crear presupuesto"
+      );
     }
   };
 
@@ -1095,7 +1180,18 @@ const BudgetsPage = () => {
                 </div>
               </div>
             </div>
-
+            <div className="space-y-2">
+              <Label htmlFor="company-select">Empresa *</Label>
+              <SelectSearchable
+                value={selectedCompanyId?.toString() || ""}
+                onValueChange={handleCompanyChange}
+                placeholder="Seleccionar empresa..."
+                options={companyOptions}
+                emptyMessage="No se encontraron empresas."
+                searchPlaceholder="Buscar empresa..."
+                className="w-full"
+              />
+            </div>
             {/* SELECTOR DE CLIENTES CON SELECTSEARCHABLE */}
             <div className="space-y-2">
               <Label htmlFor="client-select">Cliente *</Label>
@@ -1336,7 +1432,18 @@ const BudgetsPage = () => {
                 />
               </div>
             </div>
-
+            <div className="space-y-2">
+              <Label htmlFor="company-select">Empresa *</Label>
+              <SelectSearchable
+                value={selectedCompanyId?.toString() || ""}
+                onValueChange={handleCompanyChange}
+                placeholder="Seleccionar empresa..."
+                options={companyOptions}
+                emptyMessage="No se encontraron empresas."
+                searchPlaceholder="Buscar empresa..."
+                className="w-full"
+              />
+            </div>
             {/* SELECTOR DE CLIENTES CON SELECTSEARCHABLE PARA EDITAR */}
             <div className="space-y-2">
               <Label htmlFor="edit-client-select">Cliente *</Label>

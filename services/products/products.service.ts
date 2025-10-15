@@ -521,26 +521,27 @@ export const productService = {
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getProductsByCompany: async (
     companyId: number,
     params?: Partial<GetProductsParams>
   ): Promise<Product[]> => {
-    return productService.getAllProducts({
+    const response = await productService.getProducts({
       companyId,
       ...params,
     });
+    return response.data; // Extraer el array de productos de la respuesta paginada
   },
 
   getActiveProducts: async (
     companyId: number,
     params?: Partial<GetProductsParams>
   ): Promise<Product[]> => {
-    return productService.getAllProducts({
+    const response = await productService.getProducts({
       companyId,
       is_active: true,
       ...params,
     });
+    return response.data;
   },
 
   searchProducts: async (
@@ -548,11 +549,12 @@ export const productService = {
     searchTerm: string,
     params?: Partial<GetProductsParams>
   ): Promise<Product[]> => {
-    return productService.getAllProducts({
+    const response = await productService.getProducts({
       companyId,
       search: searchTerm,
       ...params,
     });
+    return response.data;
   },
 
   getProductsByCategory: async (
@@ -560,23 +562,22 @@ export const productService = {
     categoryId: number,
     params?: Partial<GetProductsParams>
   ): Promise<Product[]> => {
-    return productService.getAllProducts({
+    const response = await productService.getProducts({
       companyId,
       categoryId: categoryId,
       ...params,
     });
+    return response.data;
   },
 
-  // Método para obtener productos con impuestos
   getProductsWithTaxes: async (
     companyId: number,
     params?: Partial<GetProductsParams>
   ): Promise<Product[]> => {
-    const products = await productService.getAllProducts({
+    const response = await productService.getProducts({
       companyId,
       ...params,
     });
-
-    return products;
+    return response.data;
   },
 };

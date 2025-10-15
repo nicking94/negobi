@@ -107,11 +107,36 @@ const BillsPage = () => {
     }
   }, [companiesResponse, selectedCompanyId]);
 
-  // Usar el hook con filtro para facturas - incluir companyId
-  const { documents } = useDocuments({
-    document_type: "invoice",
-    companyId: selectedCompanyId || 0,
-  });
+  const {
+    documents,
+    loading: documentsLoading,
+    error: documentsError,
+  } = useDocuments(
+    selectedCompanyId
+      ? {
+          document_type: "invoice",
+          companyId: selectedCompanyId,
+        }
+      : {
+          document_type: "invoice",
+          companyId: -1,
+        }
+  );
+
+  // En BillsPage.tsx - Actualiza el useEffect
+  useEffect(() => {
+    console.log("🏢 Empresa seleccionada cambiada:", selectedCompanyId);
+    console.log("📋 Estado actual de documentos:", documents.length);
+  }, [selectedCompanyId]);
+
+  // También agrega este useEffect para debug
+  useEffect(() => {
+    console.log("🔄 Estado de loading cambiado:", documentsLoading);
+  }, [documentsLoading]);
+
+  useEffect(() => {
+    console.log("❌ Estado de error cambiado:", documentsError);
+  }, [documentsError]);
 
   const mapDocumentStatusToBillStatus = (
     docStatus: string
@@ -130,7 +155,9 @@ const BillsPage = () => {
   };
 
   const bills: Bill[] = useMemo(() => {
-    // Verificar que documents sea un array antes de usar map
+    console.log("🔄 Mapeando documentos a bills...");
+    console.log("📋 Documentos recibidos:", documents);
+
     if (!documents || !Array.isArray(documents)) {
       console.warn("⚠️ documents no es un array o está vacío:", documents);
       return [];
@@ -151,7 +178,7 @@ const BillsPage = () => {
       status: mapDocumentStatusToBillStatus(doc.status), // Ahora la función está definida
     }));
   }, [documents]);
-
+  console.log("ID de empresa seleccionada:", selectedCompanyId);
   const clients = useMemo(() => {
     const uniqueClients = Array.from(new Set(bills.map((bill) => bill.client)));
     return uniqueClients.map((client, index) => ({
