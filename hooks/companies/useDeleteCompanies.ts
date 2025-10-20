@@ -8,11 +8,9 @@ const useDeleteCompanies = () => {
   const deleteCompany = async (id: string) => {
     try {
       setLoading(true);
-      console.log("🚀 DELETE API CALL - ID:", id);
 
       const response = await CompaniesService.deleteCompany(id);
 
-      console.log("✅ DELETE RESPONSE:", response);
       return {
         data: response.data,
         status: response.status,

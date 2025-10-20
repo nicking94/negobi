@@ -31,7 +31,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetExchangeRatesParams = {
         ...filters,
         ...customFilters,
@@ -39,15 +38,9 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para tipos de cambio:",
-        combinedFilters
-      );
-
       const exchangeRatesData = await exchangeRateService.getExchangeRates(
         combinedFilters
       );
-      console.log("🟢 Datos de tipos de cambio recibidos:", exchangeRatesData);
 
       if (Array.isArray(exchangeRatesData)) {
         setExchangeRates(exchangeRatesData);

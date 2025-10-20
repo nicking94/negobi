@@ -28,7 +28,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetBankAccountsParams = {
         ...filters,
         ...customFilters,
@@ -36,15 +35,9 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para cuentas bancarias:",
-        combinedFilters
-      );
-
       const accountsData = await bankAccountService.getBankAccounts(
         combinedFilters
       );
-      console.log("🟢 Datos de cuentas bancarias recibidos:", accountsData);
 
       if (Array.isArray(accountsData)) {
         setBankAccounts(accountsData);

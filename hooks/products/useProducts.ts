@@ -65,42 +65,24 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
           safeNumber(filters.categoryId),
       };
 
-      // Remover valores undefined
       Object.keys(combinedFilters).forEach((key) => {
         if (combinedFilters[key as keyof GetProductsParams] === undefined) {
           delete combinedFilters[key as keyof GetProductsParams];
         }
       });
 
-      console.log("🔵 Loading products with filters:", combinedFilters);
-
       const productsData = await productService.getProducts(combinedFilters);
-      console.log("🟢 Products data received:", productsData);
 
       if (
         productsData &&
         typeof productsData === "object" &&
         "data" in productsData
       ) {
-        // DEBUG: Verificar estructura de productos recibidos
-        console.log("📦 Estructura de productos recibidos:", {
-          total: productsData.total,
-          count: productsData.data.length,
-          firstProduct: productsData.data[0]
-            ? {
-                id: productsData.data[0].id,
-                name: productsData.data[0].product_name,
-                categoryId: productsData.data[0].categoryId,
-                categoryObject: productsData.data[0].category,
-              }
-            : "No products",
-        });
-
         setProducts(productsData.data);
         setTotal(productsData.total);
         setTotalPage(productsData.totalPages);
       } else {
-        console.warn("⚠️ Unexpected data structure:", productsData);
+        console.warn("Estructura inesperada:", productsData);
         setProducts([]);
         setTotal(0);
         setTotalPage(0);
@@ -118,7 +100,6 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Crear producto (MEJORADO)
   const createProduct = async (
     productData: CreateProductData
   ): Promise<Product | null> => {

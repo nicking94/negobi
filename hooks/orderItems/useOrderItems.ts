@@ -32,7 +32,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetOrderItemsParams = {
         ...filters,
         ...customFilters,
@@ -40,15 +39,9 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para items de pedido:",
-        combinedFilters
-      );
-
       const orderItemsData = await orderItemService.getOrderItems(
         combinedFilters
       );
-      console.log("🟢 Datos de items de pedido recibidos:", orderItemsData);
 
       if (Array.isArray(orderItemsData)) {
         setOrderItems(orderItemsData);

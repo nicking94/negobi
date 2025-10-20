@@ -36,7 +36,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       const currentCompanyId = customFilters?.companyId || filters?.companyId;
 
       if (!currentCompanyId || currentCompanyId === 0) {
-        console.log("⚠️ companyId no válido, omitiendo carga");
         setDocuments([]);
         return;
       }
@@ -49,24 +48,10 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
         companyId: currentCompanyId,
       };
 
-      console.log("📋 Cargando documentos con filtros:", combinedFilters);
-
       const documentsData = await documentService.getDocuments(combinedFilters);
-
-      console.log("📄 Datos recibidos del servicio:", documentsData);
-      console.log("🔢 Número de documentos:", documentsData.length);
 
       if (Array.isArray(documentsData)) {
         setDocuments(documentsData);
-        console.log(
-          `✅ ${documentsData.length} documentos cargados en el estado`
-        );
-
-        // Filtrar solo facturas para debug
-        const invoices = documentsData.filter(
-          (doc) => doc.document_type === "invoice"
-        );
-        console.log(`🧾 ${invoices.length} facturas encontradas`);
       } else {
         console.warn("⚠️ documentsData no es array:", documentsData);
         setDocuments([]);
@@ -82,7 +67,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     }
   };
 
-  // Crear documento
   const createDocument = async (
     documentData: CreateDocumentData
   ): Promise<Document | null> => {
@@ -90,7 +74,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos
       const validation = documentService.validateDocumentData(documentData);
       if (!validation.isValid) {
         setError(validation.errors.join(", "));

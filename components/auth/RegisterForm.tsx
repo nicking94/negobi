@@ -107,7 +107,7 @@ export function RegisterForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const result = await onRegister(values);
-    console.log("Resultado del registro:", result);
+
     if (result?.success) {
       setTimeout(() => {
         router.push("/login");

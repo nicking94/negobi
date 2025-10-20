@@ -11,12 +11,10 @@ const useAddCompanies = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Creando nueva empresa:", data);
 
       const response = await CompaniesService.createCompany(data);
 
-      console.log("🟢 Respuesta de creación:", response);
-      return response; // Devuelve la respuesta completa
+      return response;
     } catch (err) {
       const apiError = err as ApiError;
       console.error("🔴 Error creando empresa:", apiError);

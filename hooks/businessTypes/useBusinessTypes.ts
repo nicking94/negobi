@@ -28,7 +28,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetBusinessTypesParams = {
         ...filters,
         ...customFilters,
@@ -36,15 +35,9 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para tipos de negocio:",
-        combinedFilters
-      );
-
       const businessTypesData = await businessTypeService.getBusinessTypes(
         combinedFilters
       );
-      console.log("🟢 Datos de tipos de negocio recibidos:", businessTypesData);
 
       if (Array.isArray(businessTypesData)) {
         setBusinessTypes(businessTypesData);

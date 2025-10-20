@@ -30,7 +30,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetProductTaxTypesParams = {
         ...filters,
         ...customFilters,
@@ -38,17 +37,8 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para relaciones producto-impuesto:",
-        combinedFilters
-      );
-
       const productTaxTypesData =
         await productTaxTypeService.getProductTaxTypes(combinedFilters);
-      console.log(
-        "🟢 Datos de relaciones producto-impuesto recibidos:",
-        productTaxTypesData
-      );
 
       if (Array.isArray(productTaxTypesData)) {
         setProductTaxTypes(productTaxTypesData);

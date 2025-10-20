@@ -30,8 +30,6 @@ export class ClientsService {
       }
     });
 
-    console.log("🚀 DEBUG - API Request params:", cleanQuery);
-
     const response = await api.get(ClientsRoute.GetClients, {
       params: cleanQuery,
     });
@@ -48,13 +46,7 @@ export class ClientsService {
   }
 
   static async updateClient(id: string, data: Partial<Client>) {
-    console.log(`Making PATCH request to: ${ClientsRoute.GetClients}/${id}`);
-    console.log("Update data:", data);
-
     const response = await api.patch(`${ClientsRoute.GetClients}/${id}`, data);
-
-    console.log("Update response status:", response.status);
-    console.log("Update response data:", response.data);
 
     return response;
   }
@@ -63,12 +55,10 @@ export class ClientsService {
     return await api.delete(`${ClientsRoute.GetClients}/${id}`);
   }
 
-  // NUEVOS MÉTODOS PARA TIPOS DE CLIENTE
   static async getClientTypes(): Promise<ClientTypesResponse> {
     try {
-      console.log("Fetching client types from:", ClientsRoute.GetClientTypes);
       const response = await api.get(ClientsRoute.GetClientTypes);
-      console.log("Client types response:", response.data);
+
       return response.data;
     } catch (error) {
       console.error("Error fetching client types:", error);

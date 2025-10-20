@@ -213,7 +213,7 @@ export const goalService = {
         end_date: new Date(goalData.end_date).toISOString(),
         status: goalData.status,
         companyId: goalData.companyId,
-        // Solo incluir si tienen valor, no enviar null
+
         ...(goalData.userId && { userId: goalData.userId }),
         ...(goalData.zoneId && { zoneId: goalData.zoneId }),
         ...(goalData.external_code && {
@@ -221,18 +221,12 @@ export const goalService = {
         }),
       };
 
-      console.log(
-        "🔍 Payload formateado:",
-        JSON.stringify(formattedData, null, 2)
-      );
-
       const response = await api.post(PostGoal, formattedData);
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Error al crear objetivo");
       }
 
-      console.log("✅ Objetivo creado exitosamente:", response.data);
       return response.data.data;
     } catch (error: any) {
       console.error("❌ Error en createGoal:", error);

@@ -18,12 +18,8 @@ const useUpdateClient = ({ onSuccess, onError }: UseUpdateClientProps = {}) => {
     setIsLoading(true);
     setError(null);
 
-    console.log("Updating client with ID:", id);
-    console.log("Data to update:", clientData);
-
     try {
       const response = await ClientsService.updateClient(id, clientData);
-      console.log("Update response:", response);
 
       if (response.status === 200) {
         const updatedClient = response.data.data;

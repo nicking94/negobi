@@ -28,7 +28,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetPaymentMethodsParams = {
         ...filters,
         ...customFilters,
@@ -36,15 +35,9 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para métodos de pago:",
-        combinedFilters
-      );
-
       const paymentMethodsData = await paymentMethodService.getPaymentMethods(
         combinedFilters
       );
-      console.log("🟢 Datos de métodos de pago recibidos:", paymentMethodsData);
 
       if (Array.isArray(paymentMethodsData)) {
         setPaymentMethods(paymentMethodsData);

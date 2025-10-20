@@ -187,9 +187,6 @@ const InstancesPage = () => {
           show_in_ecommerce: processedData.show_in_ecommerce,
           show_in_sales_app: processedData.show_in_sales_app,
         };
-
-        console.log("📤 Enviando datos de creación:", createData);
-
         const result = await createProductCategory(createData);
 
         if (result) {
@@ -210,18 +207,6 @@ const InstancesPage = () => {
       toast.error("Error al guardar la categoría");
     }
   };
-
-  useEffect(() => {
-    console.log("📊 Estado actual de categorías:", {
-      productCategories,
-      loading,
-      error,
-      total,
-      totalPage,
-      page,
-      itemsPerPage,
-    });
-  }, [productCategories, loading, error, total, totalPage, page, itemsPerPage]);
 
   const handleDelete = async (category: ProductCategory) => {
     if (!category.id) {

@@ -54,11 +54,9 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
         companyId,
       };
 
-      // Agregar filtro por rol si está presente
       if (roleFilter) {
         params.role = roleFilter;
       }
-      console.log("🔍 Params enviados al backend:", params);
 
       const response: UsersListResponse = await UsersService.getUsers(params);
 

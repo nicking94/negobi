@@ -168,9 +168,6 @@ const GoalsPage = () => {
 
   const handleCreateGoal = async () => {
     try {
-      console.log("📝 Intentando crear meta con:", formData);
-
-      // Preparar datos según el tipo de objetivo
       const goalData: CreateGoalData = {
         goal_type: formData.goal_type,
         period_type: formData.period_type,
@@ -180,7 +177,7 @@ const GoalsPage = () => {
         end_date: formData.end_date,
         status: formData.status,
         companyId: formData.companyId || 1,
-        // Solo incluir userId y zoneId si son necesarios según el tipo
+
         ...(formData.goal_type === GOAL_TYPES.SALES_PERSON &&
           formData.userId && {
             userId: formData.userId,
@@ -195,13 +192,10 @@ const GoalsPage = () => {
         }),
       };
 
-      console.log("🎯 Datos completos para crear:", goalData);
-
       const result = await createGoal(goalData);
       if (result) {
         setIsCreateDialogOpen(false);
         resetForm();
-        console.log("✅ Meta creada exitosamente:", result);
       }
     } catch (error) {
       console.error("❌ Error en handleCreateGoal:", error);

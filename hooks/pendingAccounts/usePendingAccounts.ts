@@ -37,7 +37,6 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetPendingAccountsParams = {
         ...filters,
         ...customFilters,
@@ -45,17 +44,8 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para cuentas pendientes:",
-        combinedFilters
-      );
-
       const pendingAccountsData =
         await pendingAccountService.getPendingAccounts(combinedFilters);
-      console.log(
-        "🟢 Datos de cuentas pendientes recibidos:",
-        pendingAccountsData
-      );
 
       if (Array.isArray(pendingAccountsData)) {
         setPendingAccounts(pendingAccountsData);

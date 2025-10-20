@@ -40,13 +40,7 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para códigos de barras:",
-        combinedFilters
-      );
-
       const barCodesData = await barCodeService.getBarCodes(combinedFilters);
-      console.log("🟢 Datos de códigos de barras recibidos:", barCodesData);
 
       if (Array.isArray(barCodesData)) {
         setBarCodes(barCodesData);

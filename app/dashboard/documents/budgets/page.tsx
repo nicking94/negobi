@@ -156,11 +156,6 @@ const BudgetsPage = () => {
   }, [selectedCompanyId, companyLoading]);
 
   const companyOptions = useMemo(() => {
-    if (!companies || companies.length === 0) {
-      console.log("⚠️ No hay empresas disponibles");
-      return [];
-    }
-
     const options = companies
       .filter((company) => company.id != null)
       .map((company) => ({
@@ -170,20 +165,10 @@ const BudgetsPage = () => {
         }`,
       }));
 
-    console.log("✅ Opciones de empresas generadas:", {
-      totalCompanies: companies.length,
-      optionsCount: options.length,
-    });
-
     return options;
   }, [companies]);
 
   const clientOptions = useMemo(() => {
-    if (!clients || clients.length === 0) {
-      console.log("⚠️ No hay clientes disponibles para companyId:", companyId);
-      return [];
-    }
-
     const options = clients
       .filter((client) => client.id != null)
       .map((client) => ({
@@ -192,15 +177,8 @@ const BudgetsPage = () => {
           client.tax_id ? ` - ${client.tax_id}` : ""
         }${client.email ? ` - ${client.email}` : ""}`,
       }));
-
-    console.log("✅ Opciones de clientes generadas:", {
-      companyId,
-      totalClients: clients.length,
-      optionsCount: options.length,
-    });
-
     return options;
-  }, [clients, companyId]);
+  }, [clients]);
 
   // Mapear documentos a formato Budget
   const mappedBudgets: Budget[] = useMemo(() => {
@@ -403,19 +381,12 @@ const BudgetsPage = () => {
       return;
     }
 
-    // Verificar que tenemos cliente seleccionado
     if (!formData.clientId) {
       toast.error("No se puede crear el presupuesto: Cliente no seleccionado");
       return;
     }
 
     try {
-      console.log("🟡 Iniciando creación de presupuesto...", {
-        companyId: selectedCompanyId,
-        clientId: formData.clientId,
-        formData,
-      });
-
       const budgetData: Omit<CreateDocumentData, "document_type"> = {
         document_number: formData.document_number,
         document_date: new Date(
@@ -437,9 +408,6 @@ const BudgetsPage = () => {
           : undefined,
       };
 
-      console.log("📦 Datos a enviar:", budgetData);
-
-      // Validar datos antes de enviar
       const validation = documentService.validateDocumentData({
         ...budgetData,
         document_type: "quote",
@@ -450,13 +418,7 @@ const BudgetsPage = () => {
         toast.error(`Errores de validación: ${validation.errors.join(", ")}`);
         return;
       }
-
-      console.log("✅ Datos validados, llamando a createBudget...");
-
-      // AÑADIR AWAIT AQUÍ - ESTE ERA EL PROBLEMA PRINCIPAL
       const result = await createBudget(budgetData);
-
-      console.log("📨 Resultado de createBudget:", result);
 
       if (result) {
         toast.success("Presupuesto creado exitosamente");

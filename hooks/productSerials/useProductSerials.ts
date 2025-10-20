@@ -38,17 +38,8 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para seriales de productos:",
-        combinedFilters
-      );
-
       const productSerialsData = await productSerialService.getProductSerials(
         combinedFilters
-      );
-      console.log(
-        "🟢 Datos de seriales de productos recibidos:",
-        productSerialsData
       );
 
       if (Array.isArray(productSerialsData)) {

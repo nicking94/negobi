@@ -85,21 +85,18 @@ export const companyBranchService = {
     try {
       const queryParams = new URLSearchParams();
 
-      // Parámetros básicos
       queryParams.append("page", params?.page?.toString() || "1");
       queryParams.append(
         "itemsPerPage",
         params?.itemsPerPage?.toString() || "1000"
       );
 
-      // SOLUCIÓN: Solo agregar companyId si está definido y es mayor que 0
       if (params.companyId && params.companyId > 0) {
         queryParams.append("companyId", params.companyId.toString());
       } else {
         console.log("🔵 Solicitando TODAS las sucursales (sin companyId)");
       }
 
-      // Parámetros opcionales
       if (params?.search) {
         queryParams.append("search", params.search);
       }
@@ -113,20 +110,11 @@ export const companyBranchService = {
         queryParams.append("code", params.code);
       }
 
-      console.log(
-        "🔵 Solicitando sucursales con params:",
-        Object.fromEntries(queryParams)
-      );
-
       const response = await api.get(`${GetCompanyBranches}?${queryParams}`);
       const responseData = response.data;
 
-      console.log("📦 Respuesta completa del servidor:", responseData);
-
       if (responseData.success) {
         const branches = responseData.data?.data || responseData.data || [];
-
-        console.log(`✅ ${branches.length} sucursales cargadas`);
         return branches;
       } else {
         console.warn("⚠️ Respuesta no exitosa:", responseData);
@@ -138,7 +126,6 @@ export const companyBranchService = {
     }
   },
 
-  // Crear una nueva sucursal - CORREGIDO
   createCompanyBranch: async (
     branchData: CreateCompanyBranchData
   ): Promise<CompanyBranch> => {

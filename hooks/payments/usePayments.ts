@@ -35,7 +35,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetPaymentsParams = {
         ...filters,
         ...customFilters,
@@ -43,10 +42,7 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔵 Enviando parámetros para pagos:", combinedFilters);
-
       const paymentsData = await paymentService.getPayments(combinedFilters);
-      console.log("🟢 Datos de pagos recibidos:", paymentsData);
 
       if (Array.isArray(paymentsData)) {
         setPayments(paymentsData);

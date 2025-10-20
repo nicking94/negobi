@@ -31,7 +31,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetVisitsParams = {
         ...filters,
         ...customFilters,
@@ -39,10 +38,7 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔵 Enviando parámetros para visitas:", combinedFilters);
-
       const visitsData = await visitService.getVisits(combinedFilters);
-      console.log("🟢 Datos de visitas recibidos:", visitsData);
 
       if (Array.isArray(visitsData)) {
         setVisits(visitsData);

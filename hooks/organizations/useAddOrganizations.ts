@@ -11,11 +11,9 @@ const useAddOrganizations = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Creando nueva organización:", data);
 
       const response = await OrganizationsService.createOrganization(data);
 
-      console.log("🟢 Respuesta de creación:", response);
       return response;
     } catch (err) {
       const apiError = err as ApiError;

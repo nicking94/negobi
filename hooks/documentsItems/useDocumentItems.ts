@@ -39,15 +39,9 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para items de documento:",
-        combinedFilters
-      );
-
       const itemsData = await documentItemService.getDocumentItems(
         combinedFilters
       );
-      console.log("🟢 Datos de items recibidos:", itemsData);
 
       if (Array.isArray(itemsData)) {
         setDocumentItems(itemsData);

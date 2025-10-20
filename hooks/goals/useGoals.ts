@@ -51,7 +51,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetGoalsParams = {
         ...filters,
         ...customFilters,
@@ -59,10 +58,7 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
         itemsPerPage: pagination.itemsPerPage,
       };
 
-      console.log("🔵 Enviando parámetros para objetivos:", combinedFilters);
-
       const response = await goalService.getGoals(combinedFilters);
-      console.log("🟢 Datos de objetivos recibidos:", response);
 
       if (response && Array.isArray(response.data)) {
         setGoals(response.data);
@@ -110,12 +106,9 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
         return null;
       }
 
-      console.log("🎯 Creando objetivo con datos:", goalData);
-
       const newGoal = await goalService.createGoal(goalData);
 
       if (newGoal) {
-        // Recargar la lista después de crear
         await loadGoals();
         toast.success("Meta creada exitosamente");
         return newGoal;

@@ -236,10 +236,7 @@ const OrdersPage = () => {
   useEffect(() => {
     if (companiesResponse.length > 0 && !selectedCompanyId) {
       const firstCompany = companiesResponse[0];
-      console.log(
-        "🟢 Seleccionando primera compañía automáticamente:",
-        firstCompany
-      );
+
       setSelectedCompanyId(firstCompany.id);
     }
   }, [companiesResponse, selectedCompanyId]);
@@ -683,7 +680,6 @@ const OrdersPage = () => {
                   value={selectedCompanyId?.toString() || ""}
                   onValueChange={(value) => {
                     const companyId = value ? Number(value) : null;
-                    console.log("🟢 Usuario seleccionó compañía:", companyId);
                     setSelectedCompanyId(companyId);
                   }}
                   placeholder="Buscar empresa..."

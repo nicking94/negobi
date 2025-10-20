@@ -31,7 +31,6 @@ export const useStockByWarehouse = (
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetStockByWarehouseParams = {
         ...filters,
         ...customFilters,
@@ -39,15 +38,9 @@ export const useStockByWarehouse = (
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para stock por almacén:",
-        combinedFilters
-      );
-
       const stocksData = await stockByWarehouseService.getStockByWarehouse(
         combinedFilters
       );
-      console.log("🟢 Datos de stock por almacén recibidos:", stocksData);
 
       if (Array.isArray(stocksData)) {
         setStocks(stocksData);

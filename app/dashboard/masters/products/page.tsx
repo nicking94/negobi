@@ -165,29 +165,6 @@ const ProductsPage = () => {
     },
   });
 
-  useEffect(() => {
-    console.log("🔍 Current products state:", {
-      products,
-      productsCount: products.length,
-      loading: productsLoading,
-      error: productsError,
-    });
-
-    // DEBUG DETALLADO DE CATEGORÍAS EN PRODUCTOS
-    if (products.length > 0) {
-      console.log(
-        "📋 Detalle de categorías en productos:",
-        products.map((p) => ({
-          id: p.id,
-          name: p.product_name,
-          categoryId: p.categoryId,
-          categoryObject: p.category,
-          hasCategory: !!(p.categoryId || p.category?.id),
-        }))
-      );
-    }
-  }, [products, productsLoading, productsError]);
-
   const displayProducts = products;
 
   const brandOptions = brands.map((brand) => ({
@@ -206,10 +183,6 @@ const ProductsPage = () => {
         toast.error("No se ha seleccionado una compañía");
         return;
       }
-
-      console.log("📝 Datos del formulario:", data);
-
-      // Preparar datos comunes - USAR category_id en lugar de categoryId
       const commonData = {
         product_name: data.product_name,
         sku: data.sku,
@@ -232,7 +205,6 @@ const ProductsPage = () => {
           ...commonData,
         };
 
-        console.log("🔄 Actualizando producto:", updateData);
         const result = await updateProduct(
           editingProduct.id.toString(),
           updateData
@@ -271,7 +243,6 @@ const ProductsPage = () => {
           price_level_5: 0,
         };
 
-        console.log("🆕 Creando producto:", createData);
         const result = await createProduct(createData);
         if (result) {
           toast.success("Producto creado exitosamente");
@@ -394,26 +365,13 @@ const ProductsPage = () => {
   };
 
   const getCategoryName = (product: ProductType) => {
-    // DEBUG: Verificar qué datos tenemos
-    console.log(`🔍 Buscando categoría para producto ${product.id}:`, {
-      productName: product.product_name,
-      categoryId: product.categoryId,
-      categoryObject: product.category,
-    });
-
     if (product.category?.category_name) {
-      console.log(
-        `✅ Encontrado en category object: ${product.category.category_name}`
-      );
       return product.category.category_name;
     }
     const categoryId = product.categoryId || product.category?.id;
     if (categoryId) {
       const category = categories.find((c) => c.id === categoryId);
       if (category) {
-        console.log(
-          `✅ Encontrado en categorías globales: ${category.category_name}`
-        );
         return category.category_name;
       } else {
         console.log(
@@ -422,7 +380,6 @@ const ProductsPage = () => {
       }
     }
 
-    console.log(`❌ Sin categoría para producto ${product.id}`);
     return "Sin categoría";
   };
 

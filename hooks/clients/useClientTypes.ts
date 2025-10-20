@@ -21,28 +21,24 @@ export const useClientTypes = (): UseClientTypesReturn => {
       setError(null);
 
       const response = await ClientsService.getClientTypes();
-      console.log("📋 Raw client types response:", response);
 
       let types: ClientType[] = [];
 
-      // Manejar diferentes estructuras de respuesta
       if (response.success && Array.isArray(response.data)) {
-        // Si response.data es un array de strings, convertirlos a objetos ClientType
         types = response.data.map((type, index) => {
           if (typeof type === "string") {
             return {
-              id: index + 1, // ID temporal basado en índice
+              id: index + 1,
               name: type,
-              description: "", // Descripción vacía por defecto
+              description: "",
               is_active: true,
             };
           }
-          // Si ya es un objeto, mantenerlo como está
+
           return type;
         });
       }
 
-      console.log("📋 Processed client types:", types);
       setClientTypes(types);
     } catch (err) {
       console.error("❌ Error fetching client types:", err);

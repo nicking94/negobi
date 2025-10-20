@@ -11,11 +11,9 @@ const useUpdateCompanies = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Actualizando empresa ID:", id, "Data:", data);
 
       const response = await CompaniesService.patchCompany(id, data);
 
-      console.log("🟢 Respuesta de actualización:", response);
       return response;
     } catch (err) {
       const apiError = err as ApiError;

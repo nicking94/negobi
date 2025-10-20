@@ -328,7 +328,6 @@ export const DOCUMENT_STATUSES = {
   CLOSED: "closed",
 } as const;
 
-// Alias para mantener compatibilidad con código existente
 export type OrderType = DocumentType;
 export type OrderStatus = DocumentStatus;
 export const ORDER_TYPES = DOCUMENT_TYPES;
@@ -338,18 +337,8 @@ export const documentService = {
   createDocument: async (
     documentData: CreateDocumentData
   ): Promise<Document> => {
-    console.log("🌐 documentService.createDocument: Enviando petición...", {
-      url: PostDocument,
-      data: documentData,
-    });
-
     try {
       const response = await api.post(PostDocument, documentData);
-
-      console.log("✅ documentService.createDocument: Respuesta recibida:", {
-        status: response.status,
-        data: response.data,
-      });
 
       return response.data.data;
     } catch (error) {
@@ -393,20 +382,10 @@ export const documentService = {
         queryParams.append("status", params.status);
       }
 
-      console.log(
-        "🌐 Realizando petición a:",
-        `${GetDocuments}?${queryParams}`
-      );
-
       const response = await api.get(`${GetDocuments}?${queryParams}`);
 
-      console.log("📨 Respuesta HTTP:", response.status, response.statusText);
-      console.log("📦 Datos de respuesta:", response.data);
-
-      // MANEJO CORREGIDO DE LA RESPUESTA
       let documents: Document[] = [];
 
-      // La respuesta tiene estructura: { success: true, data: { data: [], ... } }
       if (
         response.data &&
         response.data.data &&
@@ -414,41 +393,17 @@ export const documentService = {
         Array.isArray(response.data.data.data)
       ) {
         documents = response.data.data.data;
-        console.log(
-          `📊 Encontrados ${documents.length} documentos en response.data.data.data`
-        );
-      }
-      // Por si acaso, mantener compatibilidad con otras estructuras
-      else if (
+      } else if (
         response.data &&
         response.data.data &&
         Array.isArray(response.data.data)
       ) {
         documents = response.data.data;
-        console.log(
-          `📊 Encontrados ${documents.length} documentos en response.data.data`
-        );
       } else if (response.data && Array.isArray(response.data)) {
         documents = response.data;
-        console.log(
-          `📊 Encontrados ${documents.length} documentos en response.data`
-        );
       } else {
         console.warn("🔄 Estructura de respuesta inesperada:", response.data);
         documents = [];
-      }
-
-      console.log(`📊 Total de documentos a retornar: ${documents.length}`);
-
-      // Debug: mostrar info del primer documento si existe
-      if (documents.length > 0) {
-        console.log("📝 Primer documento:", {
-          id: documents[0].id,
-          document_type: documents[0].document_type,
-          document_number: documents[0].document_number,
-          client: documents[0].client,
-          company: documents[0].company,
-        });
       }
 
       return documents;
@@ -458,7 +413,6 @@ export const documentService = {
     }
   },
 
-  // Obtener todos los documentos sin paginación (para reportes)
   getAllDocuments: async (
     companyId: number,
     startDate?: string,

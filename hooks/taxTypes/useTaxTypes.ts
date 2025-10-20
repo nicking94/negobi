@@ -30,7 +30,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetTaxTypesParams = {
         ...filters,
         ...customFilters,
@@ -38,13 +37,7 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para tipos de impuesto:",
-        combinedFilters
-      );
-
       const taxTypesData = await taxTypeService.getTaxTypes(combinedFilters);
-      console.log("🟢 Datos de tipos de impuesto recibidos:", taxTypesData);
 
       if (Array.isArray(taxTypesData)) {
         setTaxTypes(taxTypesData);

@@ -34,20 +34,15 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
         params.companyId = filters.companyId;
       }
 
-      // Agregar filtros opcionales
       if (filters.search) params.search = filters.search;
       if (filters.name) params.name = filters.name;
       if (filters.code) params.code = filters.code;
-
-      console.log("🔵 Cargando sucursales con filtros:", filters);
-      console.log("🔵 Parámetros enviados al servicio:", params);
 
       const branchesData = await companyBranchService.getCompanyBranches(
         params
       );
 
       setCompanyBranches(branchesData);
-      console.log(`✅ ${branchesData.length} sucursales cargadas`);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Error al cargar sucursales";
@@ -87,9 +82,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       }
 
       setCompanyBranches(allBranches);
-      console.log(
-        `✅ ${allBranches.length} sucursales cargadas de ${companyIds.length} empresas`
-      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Error al cargar sucursales";

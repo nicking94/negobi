@@ -14,11 +14,9 @@ const useUpdateOrganizations = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Actualizando organización ID:", id, "Data:", data);
 
       const response = await OrganizationsService.patchOrganization(id, data);
 
-      console.log("🟢 Respuesta de actualización:", response);
       return response;
     } catch (err) {
       const apiError = err as ApiError;

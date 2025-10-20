@@ -11,11 +11,9 @@ const useDeleteOrganizations = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🚀 DELETE ORGANIZATION API CALL - ID:", id);
 
       const response = await OrganizationsService.deleteOrganization(id);
 
-      console.log("✅ DELETE ORGANIZATION RESPONSE:", response);
       return {
         data: response.data,
         status: response.status,

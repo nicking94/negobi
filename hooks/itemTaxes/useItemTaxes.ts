@@ -29,7 +29,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetItemTaxesParams = {
         ...filters,
         ...customFilters,
@@ -37,13 +36,7 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para impuestos de items:",
-        combinedFilters
-      );
-
       const itemTaxesData = await itemTaxService.getItemTaxes(combinedFilters);
-      console.log("🟢 Datos de impuestos de items recibidos:", itemTaxesData);
 
       if (Array.isArray(itemTaxesData)) {
         setItemTaxes(itemTaxesData);

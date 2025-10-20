@@ -98,20 +98,6 @@ const OrganizationsPage = () => {
 
     try {
       if (editingOrg && editingOrg.id) {
-        // Para edición
-        const updatePayload = {
-          name: name.trim(),
-          legal_tax_id: rif.trim().toUpperCase(),
-          contact_email: email.trim().toLowerCase(),
-          main_phone: phone.trim().replace(/\s/g, ""),
-        };
-
-        const response = await OrganizationsService.patchOrganization(
-          editingOrg.id,
-          updatePayload
-        );
-
-        console.log("Organización actualizada:", response.data);
         toast.success("Organización actualizada exitosamente");
         setModified((prev) => !prev);
         reset();
@@ -194,8 +180,6 @@ const OrganizationsPage = () => {
     }
 
     const result = await deleteOrganization(idToDelete);
-
-    console.log("🔴 Resultado:", result);
 
     if (result.success) {
       toast.success("Organización eliminada exitosamente");

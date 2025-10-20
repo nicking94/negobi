@@ -124,16 +124,10 @@ const CompaniesPage = () => {
     }
 
     try {
-      console.log("🔍 Obteniendo detalles completos de la empresa...");
-
-      // Obtener los detalles completos de la empresa
       const companyDetails = await getCompanyById(company.id.toString());
-
-      console.log("🔍 Datos completos de empresa:", companyDetails);
 
       setSelectedCompany(companyDetails);
 
-      // Resetear el formulario SOLO con datos de la empresa (sin admin)
       form.reset({
         name: companyDetails.name,
         code: companyDetails.code,
@@ -180,10 +174,7 @@ const CompaniesPage = () => {
           return;
         }
 
-        // Para edición, solo enviar datos de la empresa (sin admin)
         const editData = data as EditCompanyFormValues;
-
-        console.log("🟡 Actualizando empresa con datos:", editData);
 
         const response = await updateCompany(
           selectedCompany.id.toString(),

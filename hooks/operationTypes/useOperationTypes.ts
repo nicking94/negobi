@@ -32,7 +32,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetOperationTypesParams = {
         ...filters,
         ...customFilters,
@@ -40,17 +39,8 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para tipos de operación:",
-        combinedFilters
-      );
-
       const operationTypesData = await operationTypeService.getOperationTypes(
         combinedFilters
-      );
-      console.log(
-        "🟢 Datos de tipos de operación recibidos:",
-        operationTypesData
       );
 
       if (Array.isArray(operationTypesData)) {

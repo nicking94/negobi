@@ -302,17 +302,6 @@ const ClientsPage = () => {
       toast.error("Error al cargar los tipos de cliente");
     }
   }, [clientTypesError]);
-  useEffect(() => {
-    console.log("🔍 DEBUG - Estado actual de clientsResponse:", {
-      clientsResponse,
-      selectedSeller,
-      filteredCount: clientsResponse.filter(
-        (client) =>
-          selectedSeller === "all" ||
-          client.salespersonUserId?.toString() === selectedSeller
-      ).length,
-    });
-  }, [clientsResponse, selectedSeller]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -367,8 +356,6 @@ const ClientsPage = () => {
   });
 
   const onSubmit = async (values: ClientForm) => {
-    console.log("Form submitted with values:", values);
-
     try {
       const isSpecialTaxpayer = values.client_type === "special_taxpayer";
 
@@ -437,8 +424,6 @@ const ClientsPage = () => {
           cleanData[field] = cleanedValue;
         }
       });
-
-      console.log("Final data to send:", cleanData);
 
       if (editingClient && editingClient.id) {
         await updateClient(editingClient.id, cleanData);
@@ -858,23 +843,16 @@ const ClientsPage = () => {
 
                 try {
                   const isValid = await form.trigger();
-                  console.log("Form validation result:", isValid);
 
                   if (!isValid) {
-                    const errors = form.formState.errors;
-                    console.log("Form errors:", errors);
                     toast.error(
                       "Por favor, corrige los errores en el formulario"
                     );
                     return;
                   }
 
-                  // Obtener valores directamente
                   const values = form.getValues();
-                  console.log("Form values:", values);
-                  console.log("Editing client:", editingClient);
 
-                  // Llamar a onSubmit manualmente
                   await onSubmit(values);
                 } catch (error) {
                   console.error("Form submission error:", error);

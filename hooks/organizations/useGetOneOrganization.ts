@@ -14,13 +14,10 @@ const useGetOneOrganization = (id: string) => {
     try {
       setLoading(true);
       setError(null);
-      console.log("🟡 Obteniendo organización ID:", organizationId);
 
       const response = await OrganizationsService.getOrganization(
         organizationId
       );
-
-      console.log("🟢 Respuesta de organización:", response);
 
       const transformedOrganization: OrganizationType = {
         id: response.data.data.id?.toString() || "",

@@ -63,14 +63,9 @@ export const useProductCategories = (
         ...customFilters,
       };
 
-      console.log("🔵 Enviando parámetros para categorías:", combinedFilters);
-
       const response: PaginatedProductCategoriesResponse =
         await productCategoryService.getProductCategories(combinedFilters);
 
-      console.log("🟢 Respuesta completa de categorías:", response);
-
-      // Ahora response tiene la estructura correcta
       if (response && Array.isArray(response.data)) {
         setProductCategories(response.data);
         setTotal(response.total);

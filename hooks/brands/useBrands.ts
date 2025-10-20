@@ -25,18 +25,14 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetBrandsParams = {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 100, // Aumentar items para mejor búsqueda
+        itemsPerPage: 100,
       };
 
-      console.log("🔵 Enviando parámetros para marcas:", combinedFilters);
-
       const brandsData = await brandService.getBrands(combinedFilters);
-      console.log("🟢 Datos de marcas recibidos:", brandsData);
 
       if (Array.isArray(brandsData)) {
         setBrands(brandsData);

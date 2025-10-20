@@ -31,7 +31,6 @@ export const useServices = (filters: UseServicesFilters) => {
         return;
       }
 
-      // Combinar filtros
       const combinedFilters: GetServicesParams = {
         ...filters,
         ...customFilters,
@@ -40,10 +39,7 @@ export const useServices = (filters: UseServicesFilters) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔵 Enviando parámetros para servicios:", combinedFilters);
-
       const servicesData = await serviceService.getServices(combinedFilters);
-      console.log("🟢 Datos de servicios recibidos:", servicesData);
 
       if (Array.isArray(servicesData)) {
         setServices(servicesData);

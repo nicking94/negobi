@@ -440,7 +440,6 @@ export const barCodeService = {
     return []; // Retornar array vacío como placeholder
   },
 
-  // Generar códigos de barras secuenciales
   generateSequentialBarCodes: (
     startCode: string,
     count: number,

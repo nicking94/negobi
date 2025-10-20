@@ -106,35 +106,20 @@ const UsersPage = () => {
     error: rolesError,
   } = useUserRoles();
 
-  // DEBUG: Ver qué devuelve exactamente la API
-  useEffect(() => {
-    console.log("🔍 rolesData:", rolesData);
-    console.log("🔍 rolesLoading:", rolesLoading);
-    console.log("🔍 rolesError:", rolesError);
-  }, [rolesData, rolesLoading, rolesError]);
-
-  // Obtener los nombres de los roles disponibles de forma más robusta
   const getAvailableRoles = () => {
     if (!rolesData) return [];
 
     try {
-      // Según el Swagger, la respuesta es: { success: true, data: { message: "Operación completada exitosamente" } }
-      // Pero esto no parece contener los roles. Necesitamos ver qué devuelve realmente.
-
-      // Si la respuesta contiene un array de roles en data.message
       if (rolesData.data?.message) {
         const parsed = JSON.parse(rolesData.data.message);
         return Array.isArray(parsed) ? parsed : [];
       }
 
-      // Si los roles vienen en otra propiedad
       if (Array.isArray(rolesData.data)) {
         return rolesData.data;
       }
 
-      // Si los roles vienen directamente en data
       if (rolesData.data && typeof rolesData.data === "object") {
-        // Intentar extraer roles de diferentes formas
         const rolesArray = Object.values(rolesData.data).flat();
         return Array.isArray(rolesArray) ? rolesArray : [];
       }
@@ -148,12 +133,6 @@ const UsersPage = () => {
 
   const availableRoles = getAvailableRoles();
 
-  // DEBUG: Ver los roles disponibles
-  useEffect(() => {
-    console.log("🎯 Available roles:", availableRoles);
-  }, [availableRoles]);
-
-  // Crear schema basado en los roles disponibles
   const userSchema = createUserSchema(availableRoles);
 
   // Usar los hooks
@@ -229,11 +208,6 @@ const UsersPage = () => {
     },
   });
 
-  useEffect(() => {
-    console.log("rolesData:", rolesData);
-  }, [rolesData]);
-
-  // Actualizar form cuando cambian los roles disponibles
   useEffect(() => {
     if (availableRoles.length > 0 && !selectedUser) {
       form.reset({

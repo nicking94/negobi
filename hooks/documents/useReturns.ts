@@ -29,7 +29,6 @@ export const useReturns = (filters: UseReturnsFilters) => {
       const currentCompanyId = customFilters?.companyId || filters.companyId;
 
       if (!currentCompanyId || currentCompanyId === 0) {
-        console.log("⚠️ companyId no válido, omitiendo carga de devoluciones");
         setReturns([]);
         return;
       }
@@ -57,12 +56,7 @@ export const useReturns = (filters: UseReturnsFilters) => {
         apiFilters.companyId = currentCompanyId;
       }
 
-      console.log("📋 Cargando devoluciones con filtros:", apiFilters);
-
       const returnsData = await documentService.getDocuments(apiFilters);
-
-      console.log("📄 Devoluciones recibidas:", returnsData);
-      console.log(`🔢 ${returnsData.length} devoluciones encontradas`);
 
       if (Array.isArray(returnsData)) {
         setReturns(returnsData);

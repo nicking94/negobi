@@ -122,14 +122,11 @@ const DevolutionsPage = () => {
 
   // Mapear los documentos de devolución al tipo Devolution
   const devolutions: Devolution[] = useMemo(() => {
-    console.log("🔄 Mapeando devoluciones desde API:", returns);
-
     if (!returns || !Array.isArray(returns)) {
       return [];
     }
 
     return returns.map((returnDoc: Document) => {
-      // Extraer motivo de la devolución de las observaciones
       const reason =
         returnDoc.observations?.find(
           (obs) =>

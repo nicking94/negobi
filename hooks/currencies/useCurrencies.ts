@@ -30,7 +30,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetCurrenciesParams = {
         ...filters,
         ...customFilters,
@@ -38,12 +37,9 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔵 Enviando parámetros para monedas:", combinedFilters);
-
       const currenciesData = await currencyService.getCurrencies(
         combinedFilters
       );
-      console.log("🟢 Datos de monedas recibidos:", currenciesData);
 
       if (Array.isArray(currenciesData)) {
         setCurrencies(currenciesData);

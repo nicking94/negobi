@@ -25,7 +25,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetZonesParams = {
         ...filters,
         ...customFilters,
@@ -33,10 +32,7 @@ export const useZones = (filters: UseZonesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔵 Enviando parámetros para zonas:", combinedFilters);
-
       const zonesData = await zoneService.getZones(combinedFilters);
-      console.log("🟢 Datos de zonas recibidos:", zonesData);
 
       if (Array.isArray(zonesData)) {
         setZones(zonesData);

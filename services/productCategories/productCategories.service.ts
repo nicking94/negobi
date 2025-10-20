@@ -194,12 +194,9 @@ export const productCategoryService = {
       );
     }
 
-    console.log("📡 URL final:", `${GetProductCategories}?${queryParams}`);
-
     const response = await api.get<ProductCategoriesApiResponse>(
       `${GetProductCategories}?${queryParams}`
     );
-    console.log("📦 Respuesta cruda de la API:", response.data);
 
     return response.data.data;
   },

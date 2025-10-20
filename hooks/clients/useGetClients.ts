@@ -35,21 +35,12 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
         queryParams.salespersonUserId = params.salespersonUserId;
       }
 
-      // ✅ Solo incluye companyId si tiene valor
       if (params.companyId) {
         queryParams.companyId = params.companyId;
       }
 
-      console.log("🔍 DEBUG - Fetching clients with params:", queryParams);
-
       const { data } = await ClientsService.getClients(queryParams);
 
-      console.log("📋 DEBUG - API Response:", {
-        dataStructure: data,
-        firstClient: data.data?.data?.[0],
-      });
-
-      // ✅ Mapeo mejorado con tipo explícito Client
       const mappedClients: Client[] = data.data.data.map((client: any) => ({
         ...client,
         payment_term_id: client.payment_term_id || client.paymentTermId,
@@ -57,12 +48,6 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
         salespersonUserId:
           client.salespersonUserId || client.salesperson_user_id,
       }));
-
-      console.log("🔄 DEBUG - Clientes mapeados:", mappedClients);
-      console.log(
-        "👤 DEBUG - Vendedor del primer cliente:",
-        mappedClients[0]?.salespersonUserId
-      );
 
       setClientsResponse(mappedClients);
       setTotalPage(data.data.totalPages);

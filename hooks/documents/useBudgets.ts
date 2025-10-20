@@ -29,9 +29,8 @@ export const useBudgets = (
 export const useCreateBudget = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { companyId, isLoading: companyLoading, hasCompany } = useUserCompany();
+  const { companyId } = useUserCompany();
 
-  // hooks/documents/useBudgets.ts - Actualizar createBudget
   const createBudget = async (
     budgetData: Omit<CreateDocumentData, "document_type">
   ): Promise<Document | null> => {
@@ -39,9 +38,6 @@ export const useCreateBudget = () => {
       setLoading(true);
       setError(null);
 
-      console.log("🟡 useCreateBudget: Iniciando...", { budgetData });
-
-      // Validar que tenemos companyId
       if (!companyId) {
         const errorMsg =
           "No se puede crear el presupuesto: Empresa no configurada";
@@ -56,9 +52,6 @@ export const useCreateBudget = () => {
         companyId,
       };
 
-      console.log("📤 useCreateBudget: Datos completos:", documentData);
-
-      // Validar datos
       const validation = documentService.validateDocumentData(documentData);
       if (!validation.isValid) {
         const errorMsg = validation.errors.join(", ");
@@ -66,13 +59,7 @@ export const useCreateBudget = () => {
         throw new Error(errorMsg);
       }
 
-      console.log(
-        "🌐 useCreateBudget: Llamando a documentService.createDocument..."
-      );
-
       const newBudget = await documentService.createDocument(documentData);
-
-      console.log("✅ useCreateBudget: Presupuesto creado:", newBudget);
 
       return newBudget;
     } catch (err) {

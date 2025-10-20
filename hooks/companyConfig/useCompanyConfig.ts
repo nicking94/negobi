@@ -32,7 +32,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetCompanyConfigsParams = {
         ...filters,
         ...customFilters,
@@ -40,15 +39,9 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
         itemsPerPage: 100,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para configuraciones:",
-        combinedFilters
-      );
-
       const configsData = await companyConfigService.getCompanyConfigs(
         combinedFilters
       );
-      console.log("🟢 Datos de configuraciones recibidos:", configsData);
 
       if (Array.isArray(configsData)) {
         setCompanyConfigs(configsData);

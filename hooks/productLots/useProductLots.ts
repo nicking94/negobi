@@ -30,7 +30,6 @@ export const useProductLots = (filters: UseProductLotsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetProductLotsParams = {
         ...filters,
         ...customFilters,
@@ -38,15 +37,9 @@ export const useProductLots = (filters: UseProductLotsFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log(
-        "🔵 Enviando parámetros para lotes de productos:",
-        combinedFilters
-      );
-
       const productLotsData = await productLotService.getProductLots(
         combinedFilters
       );
-      console.log("🟢 Datos de lotes de productos recibidos:", productLotsData);
 
       if (Array.isArray(productLotsData)) {
         setProductLots(productLotsData);

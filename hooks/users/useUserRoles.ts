@@ -14,10 +14,8 @@ export const useUserRoles = () => {
       try {
         setLoading(true);
         setError(null);
-        console.log("🔄 Fetching user roles...");
 
         const response = await UsersService.getUserRoles();
-        console.log("✅ Roles response:", response);
 
         setData(response);
       } catch (err) {

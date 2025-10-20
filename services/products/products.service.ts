@@ -389,12 +389,6 @@ export const productService = {
         });
       }
 
-      console.log("🔵 Fetching products with cleaned params:", cleanParams);
-      console.log(
-        "🔵 URL params:",
-        new URLSearchParams(cleanParams).toString()
-      );
-
       const response = await api.get<PaginatedProductsResponse>(GetProducts, {
         params: cleanParams,
       });
