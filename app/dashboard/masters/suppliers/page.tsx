@@ -11,7 +11,6 @@ import {
   Filter,
   Building,
   Phone,
-  Mail,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,7 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
 
-import { useForm } from "react-hook-form";
+import { Resolver, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
@@ -65,7 +64,7 @@ import usePutSupplier from "@/hooks/suppliers/usePutSupplier";
 import useDeleteSupplier from "@/hooks/suppliers/useDeleteSupplier";
 import useGetOneSupplier from "@/hooks/suppliers/useGetOneSupplier";
 import { useAuth } from "@/context/AuthContext";
-import { SupplierCreatePayload, SupplierType } from "@/types";
+import { SupplierCreatePayload, SupplierType, ApiError } from "@/types";
 
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
 import useGetPaymentTermsForSelect from "@/hooks/paymentTerms/useGetPaymentTermsForSelect";
@@ -73,8 +72,9 @@ import useGetCompaniesForSelect from "@/hooks/companies/useGetCompaniesForSelect
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import { supplierService } from "@/services/suppliers/suppliers.service";
 
-// PRIMERO define el esquema de Zod SIN el satisfies
+// Esquema de Zod - REESTRUCTURADO
 const supplierSchema = z.object({
+  // Campos requeridos
   supplier_code: z.string().min(1, "El código es requerido"),
   legal_name: z
     .string()
@@ -83,7 +83,7 @@ const supplierSchema = z.object({
   tax_document_number: z.string().min(1, "El número de documento es requerido"),
   person_type: z.string().min(1, "El tipo de persona es requerido"),
 
-  // Campos opcionales
+  // Campos opcionales con valores por defecto explícitos
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   main_phone: z.string().optional().or(z.literal("")),
   mobile_phone: z.string().optional().or(z.literal("")),
@@ -96,22 +96,52 @@ const supplierSchema = z.object({
   external_code: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
 
-  // Campos numéricos
-  paymentTermId: z.number().nullable().optional(),
-  credit_limit: z.coerce
-    .number()
-    .min(0, "El límite de crédito no puede ser negativo")
+  // Campos numéricos con transformación explícita
+  paymentTermId: z.union([z.number(), z.null()]).optional(),
+  credit_limit: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number().min(0, "El límite de crédito no puede ser negativo"))
     .default(0),
-  credit_days: z.coerce
-    .number()
-    .min(0, "Los días de crédito no pueden ser negativos")
+  credit_days: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number().min(0, "Los días de crédito no pueden ser negativos"))
     .default(0),
-  balance_due: z.coerce.number().default(0),
-  advance_balance: z.coerce.number().default(0),
-  last_purchase_amount: z.coerce.number().default(0),
-  last_payment_amount: z.coerce.number().default(0),
+  balance_due: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number())
+    .default(0),
+  advance_balance: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number())
+    .default(0),
+  last_purchase_amount: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number())
+    .default(0),
+  last_payment_amount: z
+    .union([
+      z.string().transform((val) => (val === "" ? 0 : Number(val))),
+      z.number(),
+    ])
+    .pipe(z.number())
+    .default(0),
 
-  // Campos de texto opcionales
+  // Campos de fecha y texto
   last_purchase_date: z.string().optional().or(z.literal("")),
   last_payment_date: z.string().optional().or(z.literal("")),
   last_purchase_number: z.string().optional().or(z.literal("")),
@@ -126,6 +156,16 @@ const supplierSchema = z.object({
 });
 
 type SupplierFormData = z.infer<typeof supplierSchema>;
+
+// Tipo para el campo del formulario
+interface FormFieldProps {
+  field: {
+    value: unknown;
+    onChange: (value: unknown) => void;
+    onBlur: () => void;
+    name: string;
+  };
+}
 
 const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -160,8 +200,7 @@ const SuppliersPage = () => {
 
   const { paymentTerms: realPaymentTerms, loading: paymentTermsLoading } =
     useGetPaymentTermsForSelect();
-  const { companyOptions, loading: companiesLoading } =
-    useGetCompaniesForSelect();
+  const { companyOptions } = useGetCompaniesForSelect();
 
   const filteredSuppliers = useMemo(() => {
     if (!suppliersResponse) return [];
@@ -186,15 +225,15 @@ const SuppliersPage = () => {
   // Función para verificar posibles duplicados
   const checkForDuplicateFields = async (
     supplierData: SupplierCreatePayload
-  ) => {
+  ): Promise<string | null> => {
     try {
       const checks = [
         {
-          field: "tax_document_number",
+          field: "tax_document_number" as const,
           value: supplierData.tax_document_number,
         },
-        { field: "external_code", value: supplierData.external_code },
-        { field: "email", value: supplierData.email },
+        { field: "external_code" as const, value: supplierData.external_code },
+        { field: "email" as const, value: supplierData.email },
       ];
 
       for (const check of checks) {
@@ -258,10 +297,9 @@ const SuppliersPage = () => {
 
       const response = await supplierService.getSuppliers(params);
 
-      // Diferentes formas de verificar la estructura de la respuesta
       console.log("📡 Respuesta completa:", response);
 
-      // Opción 1: Si la respuesta tiene data.data (array)
+      // Verificar diferentes estructuras de respuesta
       if (
         response.data &&
         response.data.data &&
@@ -272,14 +310,12 @@ const SuppliersPage = () => {
         return exists;
       }
 
-      // Opción 2: Si la respuesta tiene data directamente (array)
       if (response.data && Array.isArray(response.data)) {
         const exists = response.data.length > 0;
         console.log("✅ Existe en API (data):", exists);
         return exists;
       }
 
-      // Opción 3: Si la respuesta es el array directamente
       if (Array.isArray(response)) {
         const exists = response.length > 0;
         console.log("✅ Existe en API (array directo):", exists);
@@ -295,7 +331,9 @@ const SuppliersPage = () => {
   };
 
   const form = useForm<SupplierFormData>({
-    resolver: zodResolver(supplierSchema as any),
+    resolver: zodResolver(
+      supplierSchema
+    ) as unknown as Resolver<SupplierFormData>,
     defaultValues: {
       supplier_code: "",
       legal_name: "",
@@ -306,7 +344,6 @@ const SuppliersPage = () => {
       main_phone: "",
       mobile_phone: "",
       contact_person: "",
-
       contact_phone: "",
       commercial_name: "",
       address: "",
@@ -392,13 +429,15 @@ const SuppliersPage = () => {
 
       console.log("🏢 Usando companyId del usuario:", userCompanyId);
 
-      const cleanValue = (value: any) => (value === "" ? undefined : value);
+      const cleanValue = (
+        value: string | number | undefined
+      ): string | number | undefined => (value === "" ? undefined : value);
 
       // Si es un nuevo proveedor, verificar duplicados
       if (!editingSupplierId) {
         // Verificar código de proveedor
         const codeExists = await checkSupplierCodeExists(
-          userCompanyId, // ← Usar el companyId del usuario directamente
+          userCompanyId,
           data.supplier_code
         );
         if (codeExists) {
@@ -410,14 +449,14 @@ const SuppliersPage = () => {
 
         // Preparar datos para verificar otros campos únicos
         const supplierDataForCheck: SupplierCreatePayload = {
-          companyId: userCompanyId, // ← Usar el companyId del usuario
+          companyId: userCompanyId,
           supplier_code: data.supplier_code,
           legal_name: data.legal_name,
           tax_document_type: data.tax_document_type,
           tax_document_number: data.tax_document_number,
           person_type: data.person_type,
-          email: cleanValue(data.email),
-          external_code: cleanValue(data.external_code),
+          email: cleanValue(data.email) as string | undefined,
+          external_code: cleanValue(data.external_code) as string | undefined,
         };
 
         // Verificar otros campos únicos
@@ -441,23 +480,23 @@ const SuppliersPage = () => {
       }
 
       const supplierData: SupplierCreatePayload = {
-        companyId: userCompanyId, // ← USAR DIRECTAMENTE el companyId del usuario
+        companyId: userCompanyId,
         supplier_code: data.supplier_code,
         legal_name: data.legal_name,
         tax_document_type: data.tax_document_type,
         tax_document_number: data.tax_document_number,
         person_type: data.person_type,
-        email: cleanValue(data.email),
-        main_phone: cleanValue(data.main_phone),
-        mobile_phone: cleanValue(data.mobile_phone),
-        contact_person: cleanValue(data.contact_person),
-        contact_phone: cleanValue(data.contact_phone),
-        commercial_name: cleanValue(data.commercial_name),
-        address: cleanValue(data.address),
-        fiscal_address: cleanValue(data.fiscal_address),
-        zip_code: cleanValue(data.zip_code),
-        external_code: cleanValue(data.external_code),
-        notes: cleanValue(data.notes),
+        email: cleanValue(data.email) as string | undefined,
+        main_phone: cleanValue(data.main_phone) as string | undefined,
+        mobile_phone: cleanValue(data.mobile_phone) as string | undefined,
+        contact_person: cleanValue(data.contact_person) as string | undefined,
+        contact_phone: cleanValue(data.contact_phone) as string | undefined,
+        commercial_name: cleanValue(data.commercial_name) as string | undefined,
+        address: cleanValue(data.address) as string | undefined,
+        fiscal_address: cleanValue(data.fiscal_address) as string | undefined,
+        zip_code: cleanValue(data.zip_code) as string | undefined,
+        external_code: cleanValue(data.external_code) as string | undefined,
+        notes: cleanValue(data.notes) as string | undefined,
 
         // Términos de pago
         paymentTermId: data.paymentTermId || null,
@@ -471,10 +510,16 @@ const SuppliersPage = () => {
         last_payment_amount: data.last_payment_amount,
 
         // Campos de fecha
-        last_purchase_date: cleanValue(data.last_purchase_date) || null,
-        last_payment_date: cleanValue(data.last_payment_date) || null,
-        last_purchase_number: cleanValue(data.last_purchase_number),
-        last_payment_number: cleanValue(data.last_payment_number),
+        last_purchase_date:
+          (cleanValue(data.last_purchase_date) as string | undefined) || null,
+        last_payment_date:
+          (cleanValue(data.last_payment_date) as string | undefined) || null,
+        last_purchase_number: cleanValue(data.last_purchase_number) as
+          | string
+          | undefined,
+        last_payment_number: cleanValue(data.last_payment_number) as
+          | string
+          | undefined,
 
         // Información del sistema
         is_active: data.is_active,
@@ -495,13 +540,12 @@ const SuppliersPage = () => {
       resetForm();
       setIsModalOpen(false);
       setModified((prev) => !prev);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error completo:", error);
-
-      // Manejo mejorado de errores de duplicado
+      const apiError = error as ApiError;
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
+        apiError?.response?.data?.message ||
+        apiError?.message ||
         "Error al guardar el proveedor";
 
       console.log("🔍 Mensaje de error:", errorMessage);
@@ -574,6 +618,7 @@ const SuppliersPage = () => {
     setEditingSupplierId(supplierId);
     setIsModalOpen(true);
   };
+
   const handleCreateNew = () => {
     resetForm();
 
@@ -588,12 +633,17 @@ const SuppliersPage = () => {
     setIsModalOpen(true);
   };
 
-  const renderNumberInput = (field: any, isSubmitting: boolean) => (
+  const renderNumberInput = (
+    field: FormFieldProps["field"],
+    isSubmitting: boolean
+  ) => (
     <Input
       type="number"
       min="0"
       step="0.01"
-      {...field}
+      value={field.value as number}
+      onChange={field.onChange}
+      onBlur={field.onBlur}
       className="w-full"
       disabled={isSubmitting}
     />
@@ -610,7 +660,6 @@ const SuppliersPage = () => {
       main_phone: "",
       mobile_phone: "",
       contact_person: "",
-
       contact_phone: "",
       commercial_name: "",
       address: "",
@@ -940,7 +989,7 @@ const SuppliersPage = () => {
                             onBlur={async (e) => {
                               if (!editingSupplierId && field.value) {
                                 const exists = await checkSupplierCodeExists(
-                                  user?.company_id || 1, // ← Usar el companyId del usuario
+                                  user?.company_id || 1,
                                   field.value
                                 );
                                 if (exists) {

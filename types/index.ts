@@ -253,8 +253,6 @@ export type SupplierType = {
   is_active: boolean;
   created_by: string;
   updated_by: string;
-
-  // Additional fields from responses
   external_code?: string;
   sync_with_erp?: boolean;
   created_at?: string;
@@ -274,7 +272,6 @@ export type SupplierCreatePayload = {
   main_phone?: string;
   mobile_phone?: string;
   contact_person?: string;
-
   contact_phone?: string;
   commercial_name?: string;
   address?: string;
