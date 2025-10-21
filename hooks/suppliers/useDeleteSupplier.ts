@@ -1,3 +1,4 @@
+// hooks/suppliers/useDeleteSupplier.ts - VERSIÓN MEJORADA
 import { supplierService } from "@/services/suppliers/suppliers.service";
 import { useState } from "react";
 
@@ -10,13 +11,24 @@ const useDeleteSupplier = () => {
     try {
       setLoading(true);
       setError(null);
+
+      console.log("Eliminando proveedor:", id); // Debug
+
       const response = await supplierService.deleteSupplier(id);
-      setData(response.data);
-      return response.data;
+
+      if (response.success && response.data) {
+        setData(response.data);
+        return response.data;
+      } else {
+        throw new Error("No se pudo eliminar el proveedor");
+      }
     } catch (e: any) {
       const errorMessage =
-        e.response?.data?.message || "Error al eliminar el proveedor";
+        e.response?.data?.message ||
+        e.message ||
+        "Error al eliminar el proveedor";
       setError(errorMessage);
+      console.error("Error deleting supplier:", e);
       throw e;
     } finally {
       setLoading(false);

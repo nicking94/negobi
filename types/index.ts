@@ -238,16 +238,16 @@ export type SupplierType = {
   address: string;
   fiscal_address: string;
   zip_code: string;
-  paymentTermId: number;
+  paymentTermId?: number | null;
   credit_limit: number;
   credit_days: number;
   notes: string;
   balance_due: number;
   advance_balance: number;
-  last_purchase_date: string;
+  last_purchase_date?: string | null;
   last_purchase_number: string;
   last_purchase_amount: number;
-  last_payment_date: string;
+  last_payment_date?: string | null;
   last_payment_number: string;
   last_payment_amount: number;
   is_active: boolean;
@@ -262,15 +262,41 @@ export type SupplierType = {
   deleted_at?: string | null;
 };
 
-export type SupplierCreatePayload = Omit<
-  SupplierType,
-  | "id"
-  | "external_code"
-  | "sync_with_erp"
-  | "created_at"
-  | "updated_at"
-  | "deleted_at"
->;
+// En tu archivo de tipos, asegúrate de que SupplierCreatePayload tenga esto:
+export type SupplierCreatePayload = {
+  companyId: number;
+  supplier_code: string;
+  legal_name: string;
+  tax_document_type: string;
+  tax_document_number: string;
+  person_type: string;
+  email?: string;
+  main_phone?: string;
+  mobile_phone?: string;
+  contact_person?: string;
+
+  contact_phone?: string;
+  commercial_name?: string;
+  address?: string;
+  fiscal_address?: string;
+  zip_code?: string;
+  paymentTermId?: number | null;
+  credit_limit?: number;
+  credit_days?: number;
+  notes?: string;
+  balance_due?: number;
+  advance_balance?: number;
+  last_purchase_date?: string | null;
+  last_purchase_number?: string;
+  last_purchase_amount?: number;
+  last_payment_date?: string | null;
+  last_payment_number?: string;
+  last_payment_amount?: number;
+  is_active?: boolean;
+  created_by?: string;
+  updated_by?: string;
+  external_code?: string;
+};
 
 export type SupplierUpdatePayload = Partial<SupplierCreatePayload>;
 

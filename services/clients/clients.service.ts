@@ -15,6 +15,7 @@ interface ClientsQueryType {
 }
 
 export class ClientsService {
+  // services/clients/clients.service.ts
   static async getClients(query: ClientsQueryType = {}) {
     const cleanQuery: Record<string, any> = {};
 
@@ -30,9 +31,13 @@ export class ClientsService {
       }
     });
 
+    console.log("🔍 ClientsService - Query:", cleanQuery); // ✅ DEBUG
+
     const response = await api.get(ClientsRoute.GetClients, {
       params: cleanQuery,
     });
+
+    console.log("📊 ClientsService - Response:", response.data); // ✅ DEBUG
 
     return response;
   }
@@ -46,7 +51,16 @@ export class ClientsService {
   }
 
   static async updateClient(id: string, data: Partial<Client>) {
+    console.log("🔄 Actualizando cliente:", {
+      id,
+      data,
+      salespersonUserId: data.salespersonUserId,
+      tipo: typeof data.salespersonUserId,
+    });
+
     const response = await api.patch(`${ClientsRoute.GetClients}/${id}`, data);
+
+    console.log("✅ Cliente actualizado - Response:", response.data);
 
     return response;
   }

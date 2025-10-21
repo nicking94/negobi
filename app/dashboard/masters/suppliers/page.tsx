@@ -67,9 +67,14 @@ import useGetOneSupplier from "@/hooks/suppliers/useGetOneSupplier";
 import { useAuth } from "@/context/AuthContext";
 import { SupplierCreatePayload, SupplierType } from "@/types";
 
-// Schema de validación actualizado según el swagger
+import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
+import useGetPaymentTermsForSelect from "@/hooks/paymentTerms/useGetPaymentTermsForSelect";
+import useGetCompaniesForSelect from "@/hooks/companies/useGetCompaniesForSelect";
+import { SelectSearchable } from "@/components/ui/select-searchable";
+import { supplierService } from "@/services/suppliers/suppliers.service";
+
+// PRIMERO define el esquema de Zod SIN el satisfies
 const supplierSchema = z.object({
-  companyId: z.number().min(1, "La compañía es requerida"),
   supplier_code: z.string().min(1, "El código es requerido"),
   legal_name: z
     .string()
@@ -77,49 +82,50 @@ const supplierSchema = z.object({
   tax_document_type: z.string().min(1, "El tipo de documento es requerido"),
   tax_document_number: z.string().min(1, "El número de documento es requerido"),
   person_type: z.string().min(1, "El tipo de persona es requerido"),
+
+  // Campos opcionales
   email: z.string().email("Email inválido").optional().or(z.literal("")),
-  main_phone: z.string().optional(),
-  mobile_phone: z.string().optional(),
-  contact_person: z.string().optional(),
-  contact_email: z
-    .string()
-    .email("Email de contacto inválido")
-    .optional()
-    .or(z.literal("")),
-  contact_phone: z.string().optional(),
-  commercial_name: z.string().optional(),
-  address: z.string().optional(),
-  fiscal_address: z.string().optional(),
-  zip_code: z.string().optional(),
-  paymentTermId: z.number().optional(),
-  credit_limit: z
+  main_phone: z.string().optional().or(z.literal("")),
+  mobile_phone: z.string().optional().or(z.literal("")),
+  contact_person: z.string().optional().or(z.literal("")),
+  contact_phone: z.string().optional().or(z.literal("")),
+  commercial_name: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  fiscal_address: z.string().optional().or(z.literal("")),
+  zip_code: z.string().optional().or(z.literal("")),
+  external_code: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+
+  // Campos numéricos
+  paymentTermId: z.number().nullable().optional(),
+  credit_limit: z.coerce
     .number()
     .min(0, "El límite de crédito no puede ser negativo")
-    .optional(),
-  credit_days: z
+    .default(0),
+  credit_days: z.coerce
     .number()
     .min(0, "Los días de crédito no pueden ser negativos")
-    .optional(),
-  notes: z.string().optional(),
-  balance_due: z.number().optional(),
-  advance_balance: z.number().optional(),
-  is_active: z.boolean(),
-  created_by: z.string().optional(),
-  updated_by: z.string().optional(),
+    .default(0),
+  balance_due: z.coerce.number().default(0),
+  advance_balance: z.coerce.number().default(0),
+  last_purchase_amount: z.coerce.number().default(0),
+  last_payment_amount: z.coerce.number().default(0),
+
+  // Campos de texto opcionales
+  last_purchase_date: z.string().optional().or(z.literal("")),
+  last_payment_date: z.string().optional().or(z.literal("")),
+  last_purchase_number: z.string().optional().or(z.literal("")),
+  last_payment_number: z.string().optional().or(z.literal("")),
+
+  // Campos de usuario
+  created_by: z.string().optional().or(z.literal("")),
+  updated_by: z.string().optional().or(z.literal("")),
+
+  // Campo booleano
+  is_active: z.boolean().default(true),
 });
 
 type SupplierFormData = z.infer<typeof supplierSchema>;
-
-// Interfaces para los datos locales
-interface PaymentTerm {
-  id: number;
-  name: string;
-}
-
-interface Company {
-  id: number;
-  name: string;
-}
 
 const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -152,26 +158,145 @@ const SuppliersPage = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Datos de ejemplo para selects (deberías obtener estos de la API)
-  const [paymentTerms] = useState<PaymentTerm[]>([
-    { id: 1, name: "Contado" },
-    { id: 2, name: "15 días" },
-    { id: 3, name: "30 días" },
-    { id: 4, name: "45 días" },
-    { id: 5, name: "60 días" },
-  ]);
+  const { paymentTerms: realPaymentTerms, loading: paymentTermsLoading } =
+    useGetPaymentTermsForSelect();
+  const { companyOptions, loading: companiesLoading } =
+    useGetCompaniesForSelect();
 
-  const [companies] = useState<Company[]>([
-    { id: 1, name: "Instancia Principal" },
-    { id: 2, name: "Sucursal Norte" },
-    { id: 3, name: "Sucursal Sur" },
-  ]);
+  const filteredSuppliers = useMemo(() => {
+    if (!suppliersResponse) return [];
+    return suppliersResponse.filter((supplier: SupplierType) => {
+      let matchesStatus = true;
+      if (statusFilter === "active") {
+        matchesStatus = supplier.is_active;
+      } else if (statusFilter === "inactive") {
+        matchesStatus = !supplier.is_active;
+      }
+      return matchesStatus;
+    });
+  }, [suppliersResponse, statusFilter]);
 
-  // Configurar form
+  const taxDocumentTypes = useMemo(() => {
+    return TAX_DOCUMENT_TYPES.map((type) => ({
+      value: type,
+      name: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase(),
+    }));
+  }, []);
+
+  // Función para verificar posibles duplicados
+  const checkForDuplicateFields = async (
+    supplierData: SupplierCreatePayload
+  ) => {
+    try {
+      const checks = [
+        {
+          field: "tax_document_number",
+          value: supplierData.tax_document_number,
+        },
+        { field: "external_code", value: supplierData.external_code },
+        { field: "email", value: supplierData.email },
+      ];
+
+      for (const check of checks) {
+        if (check.value) {
+          const params = {
+            companyId: supplierData.companyId,
+            [check.field]: check.value,
+            page: 1,
+            itemsPerPage: 1,
+          };
+
+          const response = await supplierService.getSuppliers(params);
+          const exists =
+            response.success &&
+            response.data &&
+            response.data.data &&
+            response.data.data.length > 0;
+
+          if (exists) {
+            console.log(
+              `⚠️  Campo duplicado encontrado: ${check.field} = ${check.value}`
+            );
+            return check.field;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error checking duplicate fields:", error);
+      return null;
+    }
+  };
+
+  const checkSupplierCodeExists = async (
+    companyId: number,
+    supplierCode: string
+  ): Promise<boolean> => {
+    try {
+      console.log("🔍 Verificando código:", { companyId, supplierCode });
+
+      // Primero verifica localmente
+      if (suppliersResponse && suppliersResponse.length > 0) {
+        const exists = suppliersResponse.some(
+          (supplier: SupplierType) =>
+            supplier.companyId === companyId &&
+            supplier.supplier_code === supplierCode
+        );
+
+        console.log("✅ Existe localmente:", exists);
+        if (exists) return true;
+      }
+
+      // Consulta a la API
+      const params = {
+        companyId,
+        supplier_code: supplierCode,
+        page: 1,
+        itemsPerPage: 1,
+      };
+
+      const response = await supplierService.getSuppliers(params);
+
+      // Diferentes formas de verificar la estructura de la respuesta
+      console.log("📡 Respuesta completa:", response);
+
+      // Opción 1: Si la respuesta tiene data.data (array)
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        const exists = response.data.data.length > 0;
+        console.log("✅ Existe en API (data.data):", exists);
+        return exists;
+      }
+
+      // Opción 2: Si la respuesta tiene data directamente (array)
+      if (response.data && Array.isArray(response.data)) {
+        const exists = response.data.length > 0;
+        console.log("✅ Existe en API (data):", exists);
+        return exists;
+      }
+
+      // Opción 3: Si la respuesta es el array directamente
+      if (Array.isArray(response)) {
+        const exists = response.length > 0;
+        console.log("✅ Existe en API (array directo):", exists);
+        return exists;
+      }
+
+      console.log("❌ No se encontró en ninguna estructura");
+      return false;
+    } catch (error) {
+      console.error("❌ Error checking supplier code:", error);
+      return false;
+    }
+  };
+
   const form = useForm<SupplierFormData>({
-    resolver: zodResolver(supplierSchema),
+    resolver: zodResolver(supplierSchema as any),
     defaultValues: {
-      companyId: 1, // Valor por defecto
       supplier_code: "",
       legal_name: "",
       tax_document_type: "",
@@ -181,144 +306,248 @@ const SuppliersPage = () => {
       main_phone: "",
       mobile_phone: "",
       contact_person: "",
-      contact_email: "",
+
       contact_phone: "",
       commercial_name: "",
       address: "",
       fiscal_address: "",
       zip_code: "",
-      paymentTermId: undefined,
+      paymentTermId: null,
       credit_limit: 0,
       credit_days: 0,
       notes: "",
       balance_due: 0,
       advance_balance: 0,
+      last_purchase_date: "",
+      last_payment_date: "",
+      last_purchase_number: "",
+      last_payment_number: "",
+      last_purchase_amount: 0,
+      last_payment_amount: 0,
       is_active: true,
       created_by: user?.username || "admin",
       updated_by: user?.username || "admin",
+      external_code: "",
     },
   });
 
-  // Cuando se selecciona un supplier para editar, cargar sus datos
   useEffect(() => {
     if (currentSupplier && editingSupplierId) {
-      form.reset({
-        companyId: currentSupplier.companyId,
-        supplier_code: currentSupplier.supplier_code,
-        legal_name: currentSupplier.legal_name,
-        tax_document_type: currentSupplier.tax_document_type,
-        tax_document_number: currentSupplier.tax_document_number,
-        person_type: currentSupplier.person_type,
+      console.log("🔄 Setting form data for editing:", {
+        currentSupplier,
+        editingSupplierId,
+      });
+
+      const formData: SupplierFormData = {
+        supplier_code: currentSupplier.supplier_code || "",
+        legal_name: currentSupplier.legal_name || "",
+        tax_document_type: currentSupplier.tax_document_type || "",
+        tax_document_number: currentSupplier.tax_document_number || "",
+        person_type: currentSupplier.person_type || "",
         email: currentSupplier.email || "",
         main_phone: currentSupplier.main_phone || "",
         mobile_phone: currentSupplier.mobile_phone || "",
         contact_person: currentSupplier.contact_person || "",
-        contact_email: currentSupplier.contact_email || "",
         contact_phone: currentSupplier.contact_phone || "",
         commercial_name: currentSupplier.commercial_name || "",
         address: currentSupplier.address || "",
         fiscal_address: currentSupplier.fiscal_address || "",
         zip_code: currentSupplier.zip_code || "",
-        paymentTermId: currentSupplier.paymentTermId,
+        paymentTermId: currentSupplier.paymentTermId || null,
         credit_limit: currentSupplier.credit_limit || 0,
         credit_days: currentSupplier.credit_days || 0,
         notes: currentSupplier.notes || "",
         balance_due: currentSupplier.balance_due || 0,
         advance_balance: currentSupplier.advance_balance || 0,
-        is_active: currentSupplier.is_active,
-        created_by: currentSupplier.created_by,
+        last_purchase_date: currentSupplier.last_purchase_date || "",
+        last_payment_date: currentSupplier.last_payment_date || "",
+        last_purchase_number: currentSupplier.last_purchase_number || "",
+        last_payment_number: currentSupplier.last_payment_number || "",
+        last_purchase_amount: currentSupplier.last_purchase_amount || 0,
+        last_payment_amount: currentSupplier.last_payment_amount || 0,
+        is_active: currentSupplier.is_active ?? true,
+        created_by: currentSupplier.created_by || user?.username || "admin",
         updated_by: user?.username || "admin",
-      });
+        external_code: currentSupplier.external_code || "",
+      };
+
+      console.log("🎯 Final form data to set:", formData);
+
+      setTimeout(() => {
+        form.reset(formData);
+      }, 0);
     }
   }, [currentSupplier, editingSupplierId, form, user]);
 
-  // Filtrar suppliers según los criterios (filtro adicional en frontend si es necesario)
-  const filteredSuppliers = useMemo(() => {
-    if (!suppliersResponse) return [];
+  const onSubmit = async (data: SupplierFormData) => {
+    console.log("🎯 onSubmit triggered", { editingSupplierId, data });
 
-    return suppliersResponse.filter((supplier: SupplierType) => {
-      // Filtrar por estado si es necesario
-      let matchesStatus = true;
-      if (statusFilter === "active") {
-        matchesStatus = supplier.is_active;
-      } else if (statusFilter === "inactive") {
-        matchesStatus = !supplier.is_active;
+    try {
+      const userCompanyId = user?.company_id || 4;
+
+      if (!userCompanyId) {
+        toast.error("No se pudo determinar la compañía del usuario");
+        return;
       }
 
-      return matchesStatus;
-    });
-  }, [suppliersResponse, statusFilter]);
+      console.log("🏢 Usando companyId del usuario:", userCompanyId);
 
-  const onSubmit = async (data: SupplierFormData) => {
-    try {
-      // Preparar datos para enviar con los campos faltantes
+      const cleanValue = (value: any) => (value === "" ? undefined : value);
+
+      // Si es un nuevo proveedor, verificar duplicados
+      if (!editingSupplierId) {
+        // Verificar código de proveedor
+        const codeExists = await checkSupplierCodeExists(
+          userCompanyId, // ← Usar el companyId del usuario directamente
+          data.supplier_code
+        );
+        if (codeExists) {
+          toast.error(
+            "El código de proveedor ya existe. Por favor, usa un código diferente."
+          );
+          return;
+        }
+
+        // Preparar datos para verificar otros campos únicos
+        const supplierDataForCheck: SupplierCreatePayload = {
+          companyId: userCompanyId, // ← Usar el companyId del usuario
+          supplier_code: data.supplier_code,
+          legal_name: data.legal_name,
+          tax_document_type: data.tax_document_type,
+          tax_document_number: data.tax_document_number,
+          person_type: data.person_type,
+          email: cleanValue(data.email),
+          external_code: cleanValue(data.external_code),
+        };
+
+        // Verificar otros campos únicos
+        const duplicateField = await checkForDuplicateFields(
+          supplierDataForCheck
+        );
+        if (duplicateField) {
+          const fieldNames: { [key: string]: string } = {
+            tax_document_number: "número de documento",
+            external_code: "código externo",
+            email: "email",
+          };
+
+          toast.error(
+            `El ${
+              fieldNames[duplicateField] || duplicateField
+            } ya existe. Por favor, usa un valor diferente.`
+          );
+          return;
+        }
+      }
+
       const supplierData: SupplierCreatePayload = {
-        ...data,
-        // Asegurar que los campos opcionales string tengan valores por defecto
-        email: data.email || "",
-        main_phone: data.main_phone || "",
-        mobile_phone: data.mobile_phone || "",
-        contact_person: data.contact_person || "",
-        contact_email: data.contact_email || "",
-        contact_phone: data.contact_phone || "",
-        commercial_name: data.commercial_name || "",
-        address: data.address || "",
-        fiscal_address: data.fiscal_address || "",
-        zip_code: data.zip_code || "",
-        notes: data.notes || "",
+        companyId: userCompanyId, // ← USAR DIRECTAMENTE el companyId del usuario
+        supplier_code: data.supplier_code,
+        legal_name: data.legal_name,
+        tax_document_type: data.tax_document_type,
+        tax_document_number: data.tax_document_number,
+        person_type: data.person_type,
+        email: cleanValue(data.email),
+        main_phone: cleanValue(data.main_phone),
+        mobile_phone: cleanValue(data.mobile_phone),
+        contact_person: cleanValue(data.contact_person),
+        contact_phone: cleanValue(data.contact_phone),
+        commercial_name: cleanValue(data.commercial_name),
+        address: cleanValue(data.address),
+        fiscal_address: cleanValue(data.fiscal_address),
+        zip_code: cleanValue(data.zip_code),
+        external_code: cleanValue(data.external_code),
+        notes: cleanValue(data.notes),
 
-        // Asegurar que los campos numéricos opcionales tengan valores por defecto
-        paymentTermId: data.paymentTermId || 0, // o un valor por defecto apropiado
-        credit_limit: data.credit_limit || 0,
-        credit_days: data.credit_days || 0,
-        balance_due: data.balance_due || 0,
-        advance_balance: data.advance_balance || 0,
+        // Términos de pago
+        paymentTermId: data.paymentTermId || null,
 
-        // Usuario
+        // Campos numéricos
+        credit_limit: data.credit_limit,
+        credit_days: data.credit_days,
+        balance_due: data.balance_due,
+        advance_balance: data.advance_balance,
+        last_purchase_amount: data.last_purchase_amount,
+        last_payment_amount: data.last_payment_amount,
+
+        // Campos de fecha
+        last_purchase_date: cleanValue(data.last_purchase_date) || null,
+        last_payment_date: cleanValue(data.last_payment_date) || null,
+        last_purchase_number: cleanValue(data.last_purchase_number),
+        last_payment_number: cleanValue(data.last_payment_number),
+
+        // Información del sistema
+        is_active: data.is_active,
         created_by: user?.username || "admin",
         updated_by: user?.username || "admin",
-
-        // Campos adicionales requeridos por SupplierCreatePayload
-        last_purchase_date: "", // o null si tu API lo permite
-        last_purchase_number: "",
-        last_purchase_amount: 0,
-        last_payment_date: "", // o null si tu API lo permite
-        last_payment_number: "",
-        last_payment_amount: 0,
       };
 
+      console.log("📤 Payload final para API:", supplierData);
+
       if (editingSupplierId) {
-        // Actualizar supplier existente
         await updateSupplier(editingSupplierId, supplierData);
         toast.success("Proveedor actualizado exitosamente");
       } else {
-        // Crear nuevo supplier
         await createSupplier(supplierData);
         toast.success("Proveedor creado exitosamente");
       }
 
       resetForm();
       setIsModalOpen(false);
-      setModified((prev) => !prev); // Refrescar la lista
-    } catch (error: unknown) {
+      setModified((prev) => !prev);
+    } catch (error: any) {
+      console.error("❌ Error completo:", error);
+
+      // Manejo mejorado de errores de duplicado
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Error al guardar el proveedor";
-      toast.error(errorMessage);
+        error?.response?.data?.message ||
+        error?.message ||
+        "Error al guardar el proveedor";
+
+      console.log("🔍 Mensaje de error:", errorMessage);
+
+      if (
+        errorMessage.includes("duplicate key") ||
+        errorMessage.includes("UQ_") ||
+        errorMessage.includes("unique constraint") ||
+        errorMessage.includes("already exists")
+      ) {
+        // Intentar identificar qué campo está duplicado basado en el mensaje
+        if (
+          errorMessage.includes("tax_document") ||
+          errorMessage.includes("document")
+        ) {
+          toast.error(
+            "El número de documento ya existe. Por favor, usa un número diferente."
+          );
+        } else if (errorMessage.includes("email")) {
+          toast.error("El email ya existe. Por favor, usa un email diferente.");
+        } else if (errorMessage.includes("external")) {
+          toast.error(
+            "El código externo ya existe. Por favor, usa un código diferente."
+          );
+        } else {
+          toast.error(
+            "Ya existe un proveedor con estos datos. Por favor, verifica la información."
+          );
+        }
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
   const handleDelete = async (supplierId: number, supplierName: string) => {
     toast.error(`¿Eliminar el proveedor "${supplierName}"?`, {
       description: "Esta acción no se puede deshacer.",
+      duration: 10000,
       action: {
         label: "Eliminar",
         onClick: async () => {
           try {
             await deleteSupplier(supplierId);
             toast.success("Proveedor eliminado exitosamente");
-            setModified((prev) => !prev); // Refrescar la lista
+            setModified((prev) => !prev);
           } catch (error: unknown) {
             const errorMessage =
               error instanceof Error
@@ -337,19 +566,41 @@ const SuppliersPage = () => {
     });
   };
 
-  const handleEdit = (supplierId: number) => {
+  const handleEdit = async (supplierId: number) => {
+    resetForm();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     setEditingSupplierId(supplierId);
     setIsModalOpen(true);
   };
-
   const handleCreateNew = () => {
     resetForm();
+
+    const generateUniqueCode = () => {
+      const timestamp = new Date().getTime();
+      const random = Math.floor(Math.random() * 1000);
+      return `PROV${timestamp.toString().slice(-6)}${random}`;
+    };
+
+    form.setValue("supplier_code", generateUniqueCode());
+
     setIsModalOpen(true);
   };
 
+  const renderNumberInput = (field: any, isSubmitting: boolean) => (
+    <Input
+      type="number"
+      min="0"
+      step="0.01"
+      {...field}
+      className="w-full"
+      disabled={isSubmitting}
+    />
+  );
+
   const resetForm = () => {
-    form.reset({
-      companyId: 1,
+    const defaultValues: SupplierFormData = {
       supplier_code: "",
       legal_name: "",
       tax_document_type: "",
@@ -359,22 +610,31 @@ const SuppliersPage = () => {
       main_phone: "",
       mobile_phone: "",
       contact_person: "",
-      contact_email: "",
+
       contact_phone: "",
       commercial_name: "",
       address: "",
       fiscal_address: "",
       zip_code: "",
-      paymentTermId: undefined,
+      paymentTermId: null,
       credit_limit: 0,
       credit_days: 0,
       notes: "",
       balance_due: 0,
       advance_balance: 0,
+      last_purchase_date: "",
+      last_payment_date: "",
+      last_purchase_number: "",
+      last_payment_number: "",
+      last_purchase_amount: 0,
+      last_payment_amount: 0,
       is_active: true,
       created_by: user?.username || "admin",
       updated_by: user?.username || "admin",
-    });
+      external_code: "",
+    };
+
+    form.reset(defaultValues);
     setEditingSupplierId(null);
   };
 
@@ -436,12 +696,7 @@ const SuppliersPage = () => {
                 <span>{supplier.contact_person}</span>
               </div>
             )}
-            {supplier.contact_email && (
-              <div className="flex items-center gap-1">
-                <Mail className="h-3 w-3" />
-                <span>{supplier.contact_email}</span>
-              </div>
-            )}
+
             {supplier.contact_phone && (
               <div className="flex items-center gap-1">
                 <Phone className="h-3 w-3" />
@@ -486,7 +741,6 @@ const SuppliersPage = () => {
         const date = row.getValue("last_purchase_date") as string;
         if (!date)
           return <div className="text-sm text-gray_m">Sin compras</div>;
-
         return (
           <div className="text-sm">
             <div>{formatDate(date)}</div>
@@ -551,12 +805,13 @@ const SuppliersPage = () => {
     },
   ];
 
+  const isSubmitting = creating || updating || loadingOne;
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -608,36 +863,26 @@ const SuppliersPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <DropdownMenuSeparator />
 
-                    <div className="px-2 py-1.5">
+                    <div className="w-full px-2 py-1.5">
                       <Label htmlFor="company-filter">Compañía</Label>
-                      <Select
+                      <SelectSearchable
                         value={companyId?.toString() || "all"}
                         onValueChange={(value) =>
                           setCompanyId(
                             value === "all" ? undefined : parseInt(value)
                           )
                         }
-                      >
-                        <SelectTrigger id="company-filter" className="mt-1">
-                          <SelectValue placeholder="Todas las compañías" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todas las compañías
-                          </SelectItem>
-                          {companies.map((company) => (
-                            <SelectItem
-                              key={company.id}
-                              value={company.id.toString()}
-                            >
-                              {company.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Todas las compañías"
+                        options={[
+                          { value: "all", label: "Todas las compañías" },
+                          ...companyOptions,
+                        ]}
+                        emptyMessage="No se encontraron compañías"
+                        searchPlaceholder="Buscar compañía..."
+                        className="w-full mt-1"
+                      />
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -647,7 +892,7 @@ const SuppliersPage = () => {
               <Button
                 onClick={handleCreateNew}
                 className="gap-2 w-full sm:w-auto"
-                disabled={creating || updating}
+                disabled={isSubmitting}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo proveedor</span>
@@ -688,13 +933,49 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Código *</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                            onBlur={async (e) => {
+                              if (!editingSupplierId && field.value) {
+                                const exists = await checkSupplierCodeExists(
+                                  user?.company_id || 1, // ← Usar el companyId del usuario
+                                  field.value
+                                );
+                                if (exists) {
+                                  form.setError("supplier_code", {
+                                    type: "manual",
+                                    message:
+                                      "Este código de proveedor ya existe",
+                                  });
+                                }
+                              }
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="external_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Código Externo </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="person_type"
@@ -704,6 +985,7 @@ const SuppliersPage = () => {
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
+                          disabled={isSubmitting}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -719,35 +1001,61 @@ const SuppliersPage = () => {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="zip_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Código Postal</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="legal_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Razón Social *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="legal_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Razón Social *</FormLabel>
-                      <FormControl>
-                        <Input {...field} className="w-full" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="commercial_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre Comercial (Opcional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} className="w-full" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="commercial_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre Comercial</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
@@ -759,6 +1067,7 @@ const SuppliersPage = () => {
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
+                          disabled={isSubmitting}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -766,10 +1075,11 @@ const SuppliersPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="RIF">RIF</SelectItem>
-                            <SelectItem value="Cédula">Cédula</SelectItem>
-                            <SelectItem value="Pasaporte">Pasaporte</SelectItem>
-                            <SelectItem value="Otro">Otro</SelectItem>
+                            {taxDocumentTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -784,7 +1094,11 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Número de Documento *</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -800,7 +1114,12 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" {...field} className="w-full" />
+                          <Input
+                            type="email"
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -814,7 +1133,11 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Teléfono Principal</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -828,9 +1151,13 @@ const SuppliersPage = () => {
                     name="mobile_phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Teléfono Móvil (Opcional)</FormLabel>
+                        <FormLabel>Teléfono Móvil </FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -842,38 +1169,13 @@ const SuppliersPage = () => {
                     name="contact_person"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Persona de Contacto (Opcional)</FormLabel>
+                        <FormLabel>Persona de Contacto</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="contact_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email de Contacto (Opcional)</FormLabel>
-                        <FormControl>
-                          <Input type="email" {...field} className="w-full" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono de Contacto (Opcional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -889,7 +1191,11 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Dirección</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -903,7 +1209,11 @@ const SuppliersPage = () => {
                       <FormItem>
                         <FormLabel>Dirección Fiscal</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -911,32 +1221,21 @@ const SuppliersPage = () => {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="zip_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Código Postal</FormLabel>
-                      <FormControl>
-                        <Input {...field} className="w-full" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="paymentTermId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Término de Pago (Opcional)</FormLabel>
+                        <FormLabel>Término de Pago</FormLabel>
                         <Select
-                          value={field.value?.toString() || ""}
+                          value={field.value?.toString() || "none"}
                           onValueChange={(value) =>
-                            field.onChange(value ? parseInt(value) : undefined)
+                            field.onChange(
+                              value === "none" ? null : Number(value)
+                            )
                           }
+                          disabled={isSubmitting || paymentTermsLoading}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -944,12 +1243,18 @@ const SuppliersPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {paymentTerms.map((term) => (
+                            <SelectItem value="none">
+                              Sin término de pago
+                            </SelectItem>
+                            {realPaymentTerms.map((term) => (
                               <SelectItem
                                 key={term.id}
                                 value={term.id.toString()}
                               >
-                                {term.name}
+                                {term.term_name}{" "}
+                                {term.number_of_days > 0
+                                  ? `(${term.number_of_days} días)`
+                                  : "(Contado)"}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -958,23 +1263,14 @@ const SuppliersPage = () => {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="credit_days"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Días de Crédito (Opcional)</FormLabel>
+                        <FormLabel>Días de Crédito</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            {...field}
-                            className="w-full"
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                          />
+                          {renderNumberInput(field, isSubmitting)}
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -987,18 +1283,9 @@ const SuppliersPage = () => {
                   name="credit_limit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Límite de Crédito (Opcional)</FormLabel>
+                      <FormLabel>Límite de Crédito</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          {...field}
-                          className="w-full"
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          }
-                        />
+                        {renderNumberInput(field, isSubmitting)}
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1010,12 +1297,14 @@ const SuppliersPage = () => {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notas (Opcional)</FormLabel>
+                      <FormLabel>Notas </FormLabel>
                       <FormControl>
                         <textarea
                           {...field}
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="bg-white flex w-full rounded-md border border-input  px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           rows={3}
+                          placeholder="Escribe algo..."
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1032,6 +1321,7 @@ const SuppliersPage = () => {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1055,16 +1345,16 @@ const SuppliersPage = () => {
                     resetForm();
                   }}
                   className="w-full sm:w-auto"
-                  disabled={creating || updating}
+                  disabled={isSubmitting}
                 >
                   Cerrar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={creating || updating || loadingOne}
+                  disabled={isSubmitting}
                   className="w-full sm:w-auto"
                 >
-                  {creating || updating
+                  {isSubmitting
                     ? "Guardando..."
                     : editingSupplierId
                     ? "Actualizar"

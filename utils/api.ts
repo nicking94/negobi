@@ -33,9 +33,6 @@ api.interceptors.request.use(async (config) => {
       localStorage.removeItem("NEGOBI_USER_DATA");
       localStorage.removeItem("NEGOBI_TOKEN_TIMESTAMP");
 
-      toast.error(
-        "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
-      );
       setTimeout(() => {
         window.location.href = "/login";
       }, 1500);
@@ -76,10 +73,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !url.includes("/auth/login")) {
       // Para sesiones no recordadas, no intentar refresh, redirigir directamente
       if (!rememberMe) {
-        toast.error(
-          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
-        );
-
         localStorage.removeItem("NEGOBI_JWT_TOKEN");
         localStorage.removeItem("NEGOBI_JWT_REFRESH_TOKEN");
         localStorage.removeItem("NEGOBI_USER_DATA");

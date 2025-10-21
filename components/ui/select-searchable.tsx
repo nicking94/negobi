@@ -1,3 +1,4 @@
+// components/ui/select-searchable.tsx
 "use client";
 
 import * as React from "react";
@@ -26,6 +27,7 @@ interface SelectSearchableProps {
   emptyMessage?: string;
   searchPlaceholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function SelectSearchable({
@@ -36,6 +38,7 @@ export function SelectSearchable({
   emptyMessage = "No se encontraron resultados.",
   searchPlaceholder = "Buscar...",
   className,
+  disabled = false,
 }: SelectSearchableProps) {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -51,10 +54,16 @@ export function SelectSearchable({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size={"full"}
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", "flex-1 w-full", className)}
+          disabled={disabled}
+          className={cn(
+            "w-full justify-between",
+            "flex-1 w-full",
+            "min-h-[40px]",
+            disabled && "opacity-50 cursor-not-allowed",
+            className
+          )}
         >
           <div className="flex items-center gap-2 truncate flex-1">
             {selectedOption ? (
@@ -68,7 +77,8 @@ export function SelectSearchable({
           <ChevronDown
             className={cn(
               "h-4 w-4 shrink-0 opacity-50 transition-transform",
-              open && "rotate-180"
+              open && "rotate-180",
+              disabled && "opacity-30"
             )}
           />
         </Button>

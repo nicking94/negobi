@@ -3,7 +3,6 @@ import * as CompaniesRoutes from "./companies.route";
 import api from "@/utils/api";
 import { NewCompanyType, OrganizationQueryType } from "@/types";
 
-// services/companies/companies.service.ts
 export class CompaniesService {
   static createCompany = async (data: NewCompanyType) =>
     await api.post(CompaniesRoutes.PostCompanies, data);

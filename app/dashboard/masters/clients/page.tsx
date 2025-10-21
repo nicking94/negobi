@@ -75,9 +75,9 @@ export type Client = {
   tax_document_number: string;
   client_type: string;
   is_special_taxpayer?: boolean;
-  fiscal_country_id?: number;
-  fiscal_state_id?: number;
-  fiscal_city_id?: number;
+  fiscalCountryId?: number;
+  fiscalStateId?: number;
+  fiscalCityId?: number;
   fiscal_zone_id?: number;
   email?: string;
   main_phone?: string;
@@ -117,7 +117,6 @@ export type Client = {
   tax_id?: string;
 };
 
-// Schema actualizado - eliminamos is_special_taxpayer ya que viene del client_type
 const clientSchema = z.object({
   businessTypeId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   salespersonUserId: z
@@ -135,12 +134,10 @@ const clientSchema = z.object({
     .string()
     .min(1, "El número de documento fiscal es requerido"),
   client_type: z.string().min(1, "El tipo de cliente es requerido"),
-  // Eliminamos is_special_taxpayer del schema
-  fiscal_country_id: z
-    .union([z.number(), z.string(), z.undefined()])
-    .optional(),
-  fiscal_state_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
-  fiscal_city_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  // ✅ CORREGIDO: Usar camelCase
+  fiscalCountryId: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  fiscalStateId: z.union([z.number(), z.string(), z.undefined()]).optional(),
+  fiscalCityId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   fiscal_zone_id: z.union([z.number(), z.string(), z.undefined()]).optional(),
   email: z
     .string()
@@ -218,7 +215,7 @@ const ClientsPage = () => {
     .filter((user) => user.is_active)
     .map((user) => ({
       id: user.id,
-      name: `${user.first_name} ${user.last_name} (${user.username})`,
+      name: `${user.first_name} ${user.last_name}`,
     }));
 
   const {
@@ -256,9 +253,20 @@ const ClientsPage = () => {
   });
 
   const { updateClient, isLoading: isUpdating } = useUpdateClient({
-    onSuccess: () => {
+    onSuccess: (updatedClient) => {
+      console.log("🎉 onSuccess ejecutado:", {
+        id: updatedClient.id,
+        salespersonUserId: updatedClient.salespersonUserId,
+      });
+
       toast.success("Cliente actualizado exitosamente");
+
       setModified((prev) => !prev);
+
+      setTimeout(() => {
+        setModified((prev) => !prev);
+      }, 100);
+
       setIsModalOpen(false);
       resetForm();
     },
@@ -314,9 +322,9 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
-      fiscal_country_id: undefined,
-      fiscal_state_id: undefined,
-      fiscal_city_id: undefined,
+      fiscalCountryId: undefined,
+      fiscalStateId: undefined,
+      fiscalCityId: undefined,
       fiscal_zone_id: undefined,
       email: "",
       main_phone: "",
@@ -354,12 +362,11 @@ const ClientsPage = () => {
       is_active: true,
     },
   });
-
   const onSubmit = async (values: ClientForm) => {
     try {
       const isSpecialTaxpayer = values.client_type === "special_taxpayer";
 
-      // Limpiar datos antes de enviar
+      // ✅ Datos base con nombres CORRECTOS según Swagger
       const cleanData: Record<string, unknown> = {
         client_code: values.client_code,
         legal_name: values.legal_name,
@@ -371,27 +378,61 @@ const ClientsPage = () => {
         is_active: values.is_active ?? true,
       };
 
-      // Función helper para limpiar valores
-      const cleanValue = (value: unknown): unknown => {
-        if (
-          value === undefined ||
-          value === null ||
-          value === "" ||
-          value === "0"
-        ) {
-          return undefined;
+      const cleanValue = (value: unknown, fieldName?: string): unknown => {
+        if (value === undefined || value === null || value === "") {
+          return null;
         }
+
+        if (fieldName === "salespersonUserId") {
+          if (value === "0" || value === 0 || value === null) {
+            return null;
+          }
+          return Number(value);
+        }
+
+        const stringFields = [
+          "main_phone",
+          "mobile_phone",
+          "contact_phone",
+          "zip_code",
+          "email",
+          "contact_email",
+          "contact_person",
+          "commercial_name",
+          "delivery_address",
+          "fiscal_address",
+          "map_link",
+          "notes",
+          "last_sale_number",
+          "last_order_number",
+          "last_payment_number",
+        ];
+
+        if (stringFields.includes(fieldName || "")) {
+          if (typeof value === "number") {
+            return value.toString();
+          }
+          return value;
+        }
+
+        if (
+          typeof value === "string" &&
+          !isNaN(Number(value)) &&
+          value !== ""
+        ) {
+          return Number(value);
+        }
+
         return value;
       };
 
-      // Agregar campos opcionales solo si tienen valor válido
       const optionalFields = [
         "businessTypeId",
         "salespersonUserId",
         "zoneId",
-        "fiscal_country_id",
-        "fiscal_state_id",
-        "fiscal_city_id",
+        "fiscalCountryId",
+        "fiscalStateId",
+        "fiscalCityId",
         "fiscal_zone_id",
         "email",
         "main_phone",
@@ -419,10 +460,16 @@ const ClientsPage = () => {
 
       optionalFields.forEach((field) => {
         const value = values[field as keyof ClientForm];
-        const cleanedValue = cleanValue(value);
-        if (cleanedValue !== undefined) {
+        const cleanedValue = cleanValue(value, field);
+        if (cleanedValue !== undefined && cleanedValue !== null) {
           cleanData[field] = cleanedValue;
         }
+      });
+
+      console.log("🔄 Datos a enviar para actualizar:", {
+        id: editingClient?.id,
+        data: cleanData,
+        camposEnviados: Object.keys(cleanData),
       });
 
       if (editingClient && editingClient.id) {
@@ -436,7 +483,6 @@ const ClientsPage = () => {
   };
 
   const handleDelete = (client: Client) => {
-    // Verificar que el cliente tenga un ID antes de proceder
     if (!client.id) {
       toast.error("No se puede eliminar: Cliente sin ID válido");
       return;
@@ -466,7 +512,11 @@ const ClientsPage = () => {
   const handleEdit = (client: Client) => {
     setEditingClient(client);
 
-    // Función helper para limpiar valores al cargar
+    console.log("📥 Cargando cliente para editar:", {
+      id: client.id,
+      salespersonUserId: client.salespersonUserId,
+    });
+
     const cleanValueForForm = (value: unknown): unknown => {
       if (
         value === undefined ||
@@ -483,22 +533,25 @@ const ClientsPage = () => {
       businessTypeId: cleanValueForForm(client.businessTypeId) as
         | number
         | undefined,
-      salespersonUserId: cleanValueForForm(client.salespersonUserId) as
-        | number
-        | undefined,
+      salespersonUserId:
+        client.salespersonUserId !== undefined &&
+        client.salespersonUserId !== null
+          ? client.salespersonUserId
+          : undefined,
       zoneId: cleanValueForForm(client.zoneId) as number | undefined,
       client_code: client.client_code,
       legal_name: client.legal_name,
       tax_document_type: client.tax_document_type,
       tax_document_number: client.tax_document_number,
       client_type: client.client_type,
-      fiscal_country_id: cleanValueForForm(client.fiscal_country_id) as
+      // ✅ CORREGIDO: Usar camelCase
+      fiscalCountryId: cleanValueForForm(client.fiscalCountryId) as
         | number
         | undefined,
-      fiscal_state_id: cleanValueForForm(client.fiscal_state_id) as
+      fiscalStateId: cleanValueForForm(client.fiscalStateId) as
         | number
         | undefined,
-      fiscal_city_id: cleanValueForForm(client.fiscal_city_id) as
+      fiscalCityId: cleanValueForForm(client.fiscalCityId) as
         | number
         | undefined,
       fiscal_zone_id: cleanValueForForm(client.fiscal_zone_id) as
@@ -569,9 +622,9 @@ const ClientsPage = () => {
       tax_document_type: "",
       tax_document_number: "",
       client_type: "",
-      fiscal_country_id: undefined,
-      fiscal_state_id: undefined,
-      fiscal_city_id: undefined,
+      fiscalCountryId: undefined,
+      fiscalStateId: undefined,
+      fiscalCityId: undefined,
       fiscal_zone_id: undefined,
       email: "",
       main_phone: "",
@@ -648,13 +701,25 @@ const ClientsPage = () => {
         <div className="font-medium">{row.getValue("tax_document_number")}</div>
       ),
     },
+
     {
       accessorKey: "salespersonUserId",
       header: "Vendedor",
       cell: ({ row }) => {
-        const sellerId = row.getValue("salespersonUserId") as number;
-        const seller = sellerOptions.find((s) => s.id === sellerId);
-        return <div className="font-medium">{seller?.name || "-"}</div>;
+        const client = row.original;
+
+        const sellerId = client.salespersonUserId;
+
+        if (sellerId === undefined || sellerId === null || sellerId === 0) {
+          return <div className="font-medium text-gray-500">Sin vendedor</div>;
+        }
+
+        const sellerIdNum = Number(sellerId);
+        const seller = sellerOptions.find((s) => s.id === sellerIdNum);
+
+        if (seller) {
+          return <div className="font-medium">{seller.name}</div>;
+        }
       },
     },
     {
@@ -930,12 +995,19 @@ const ClientsPage = () => {
                         <FormItem>
                           <FormLabel>Vendedor</FormLabel>
                           <Select
-                            value={field.value?.toString() || "0"}
-                            onValueChange={(value) =>
-                              field.onChange(
-                                value === "0" ? undefined : parseInt(value)
-                              )
+                            value={
+                              field.value === null || field.value === undefined
+                                ? "0"
+                                : field.value.toString()
                             }
+                            onValueChange={(value) => {
+                              // ✅ CORRECCIÓN: Usar undefined en lugar de null
+                              if (value === "0") {
+                                field.onChange(undefined);
+                              } else {
+                                field.onChange(Number(value));
+                              }
+                            }}
                             disabled={isSubmitting || sellersLoading}
                           >
                             <FormControl>
@@ -976,20 +1048,19 @@ const ClientsPage = () => {
                       name="tax_document_type"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tipo de Documento Fiscal *</FormLabel>
+                          <FormLabel>Tipo de Documento *</FormLabel>
                           <Select
                             value={field.value}
                             onValueChange={field.onChange}
-                            disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecciona un tipo de documento" />
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona el tipo de documento" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {taxDocumentTypes.map((type) => (
-                                <SelectItem key={type.name} value={type.value}>
+                                <SelectItem key={type.value} value={type.value}>
                                   {type.name}
                                 </SelectItem>
                               ))}
