@@ -1,4 +1,4 @@
-// hooks/clients/useCreateClient.ts
+// hooks/clients/useAddClient.ts - CORREGIDO COMPLETAMENTE
 import { useState } from "react";
 import { Client } from "@/app/dashboard/masters/clients/page";
 import { ClientsService } from "@/services/clients/clients.service";
@@ -9,10 +9,9 @@ interface UseCreateClientProps {
   onError?: (error: ApiError) => void;
 }
 
-export const useAddClient = ({
-  onSuccess,
-  onError,
-}: UseCreateClientProps = {}) => {
+// ✅ SOLO UNA DEFINICIÓN con parámetros opcionales
+const useAddClient = ({ onSuccess, onError }: UseCreateClientProps = {}) => {
+  // ← = {} aquí es crucial
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [data, setData] = useState<Client | null>(null);

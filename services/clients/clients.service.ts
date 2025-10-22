@@ -15,7 +15,6 @@ interface ClientsQueryType {
 }
 
 export class ClientsService {
-  // services/clients/clients.service.ts
   static async getClients(query: ClientsQueryType = {}) {
     const cleanQuery: Record<string, any> = {};
 
@@ -31,13 +30,30 @@ export class ClientsService {
       }
     });
 
-    console.log("🔍 ClientsService - Query:", cleanQuery); // ✅ DEBUG
+    console.log("🔍 ClientsService - Query:", cleanQuery);
 
     const response = await api.get(ClientsRoute.GetClients, {
       params: cleanQuery,
     });
 
-    console.log("📊 ClientsService - Response:", response.data); // ✅ DEBUG
+    console.log("📊 ClientsService - Response COMPLETA:", {
+      data: response.data,
+      primerClienteCompleto: response.data.data?.data?.[0]
+        ? {
+            ...response.data.data.data[0],
+            camposRelevantes: {
+              id: response.data.data.data[0].id,
+              legal_name: response.data.data.data[0].legal_name,
+              salespersonUserId: response.data.data.data[0].salespersonUserId,
+              salesperson_user_id:
+                response.data.data.data[0].salesperson_user_id,
+              salesperson: response.data.data.data[0].salesperson,
+              salespersonUserID: response.data.data.data[0].salespersonUserID,
+              todosLosCampos: Object.keys(response.data.data.data[0]),
+            },
+          }
+        : "No hay clientes",
+    });
 
     return response;
   }

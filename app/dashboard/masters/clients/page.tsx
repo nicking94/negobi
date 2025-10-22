@@ -63,11 +63,17 @@ import { useGetSellers } from "@/hooks/users/useGetSellsers";
 import { useClientTypes } from "@/hooks/clients/useClientTypes";
 import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
+import { SelectSearchable } from "@/components/ui/select-searchable";
 
 export type Client = {
   id?: string;
   businessTypeId?: number;
   salespersonUserId?: number;
+  salesperson?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+  };
   zoneId?: number;
   client_code: string;
   legal_name: string;
@@ -218,6 +224,24 @@ const ClientsPage = () => {
       name: `${user.first_name} ${user.last_name}`,
     }));
 
+  console.log("👥 Vendedores cargados:", {
+    totalSellers: sellers.length,
+    activeSellers: sellerOptions.length,
+    sellerIds: sellerOptions.map((s) => s.id),
+    editingClientSalespersonId: editingClient?.salespersonUserId,
+  });
+
+  const sellerSelectOptions = sellerOptions.map((seller) => ({
+    value: seller.id.toString(),
+    label: seller.name,
+  }));
+
+  // Agregar opción "Sin vendedor"
+  const sellerOptionsWithEmpty = [
+    { value: "0", label: "Sin vendedor" },
+    ...sellerSelectOptions,
+  ];
+
   const {
     paymentTerms,
     loading: paymentTermsLoading,
@@ -233,6 +257,7 @@ const ClientsPage = () => {
     setPage,
     setItemsPerPage,
     setModified,
+    updateClientInState,
   } = useGetClients({
     search: searchTerm,
     salespersonUserId: selectedSeller !== "all" ? selectedSeller : undefined,
@@ -241,7 +266,7 @@ const ClientsPage = () => {
   const { createClient, isLoading: isCreating } = useAddClient({
     onSuccess: () => {
       toast.success("Cliente creado exitosamente");
-      setModified((prev) => !prev);
+      setModified();
       setIsModalOpen(false);
       resetForm();
     },
@@ -251,21 +276,12 @@ const ClientsPage = () => {
       toast.error(errorMessage);
     },
   });
-
   const { updateClient, isLoading: isUpdating } = useUpdateClient({
     onSuccess: (updatedClient) => {
-      console.log("🎉 onSuccess ejecutado:", {
-        id: updatedClient.id,
-        salespersonUserId: updatedClient.salespersonUserId,
-      });
-
+      console.log("🎉 Cliente actualizado exitosamente:", updatedClient);
       toast.success("Cliente actualizado exitosamente");
 
-      setModified((prev) => !prev);
-
-      setTimeout(() => {
-        setModified((prev) => !prev);
-      }, 100);
+      updateClientInState(updatedClient);
 
       setIsModalOpen(false);
       resetForm();
@@ -274,13 +290,17 @@ const ClientsPage = () => {
       const errorMessage =
         error.response?.data?.message || "Error al actualizar el cliente";
       toast.error(errorMessage);
+      console.error("❌ Error actualizando cliente:", error);
+    },
+    onUpdateLocalState: (updatedClient) => {
+      updateClientInState(updatedClient);
     },
   });
 
   const { deleteClient } = useDeleteClient({
     onSuccess: () => {
       toast.success("Cliente eliminado exitosamente");
-      setModified((prev) => !prev);
+      setModified();
     },
     onError: (error) => {
       const errorMessage =
@@ -298,6 +318,7 @@ const ClientsPage = () => {
 
     setTaxDocumentTypes(formattedTypes);
   }, []);
+
   useEffect(() => {
     if (paymentTermsError) {
       console.error("Error loading payment terms:", paymentTermsError);
@@ -362,11 +383,48 @@ const ClientsPage = () => {
       is_active: true,
     },
   });
+
+  useEffect(() => {
+    if (isModalOpen && editingClient) {
+      console.log("🎯 Modal abierto para editar - Datos completos:", {
+        editingClientId: editingClient.id,
+        editingClientSalespersonUserId: editingClient.salespersonUserId,
+        editingClientSalesperson: editingClient.salesperson,
+
+        currentClientInState: clientsResponse.find(
+          (c) => c.id === editingClient.id
+        ),
+      });
+
+      const currentClient = clientsResponse.find(
+        (c) => c.id === editingClient.id
+      );
+
+      if (currentClient) {
+        console.log("🔄 Usando datos frescos del estado global:", {
+          salespersonUserId: currentClient.salespersonUserId,
+          salesperson: currentClient.salesperson,
+        });
+
+        setTimeout(() => {
+          form.setValue(
+            "salespersonUserId",
+            currentClient.salespersonUserId !== undefined &&
+              currentClient.salespersonUserId !== null &&
+              currentClient.salespersonUserId !== 0
+              ? currentClient.salespersonUserId
+              : undefined
+          );
+        }, 100);
+      }
+    }
+  }, [isModalOpen, editingClient, clientsResponse, form]);
+
   const onSubmit = async (values: ClientForm) => {
     try {
       const isSpecialTaxpayer = values.client_type === "special_taxpayer";
 
-      // ✅ Datos base con nombres CORRECTOS según Swagger
+      // ✅ Datos base
       const cleanData: Record<string, unknown> = {
         client_code: values.client_code,
         legal_name: values.legal_name,
@@ -383,6 +441,7 @@ const ClientsPage = () => {
           return null;
         }
 
+        // ✅ MANTENER la lógica de salespersonUserId
         if (fieldName === "salespersonUserId") {
           if (value === "0" || value === 0 || value === null) {
             return null;
@@ -426,9 +485,10 @@ const ClientsPage = () => {
         return value;
       };
 
+      // ✅ INCLUIR salespersonUserId en los campos opcionales
       const optionalFields = [
         "businessTypeId",
-        "salespersonUserId",
+        "salespersonUserId", // ← ESTE ES EL ÚNICO CAMPO PARA EL VENDEDOR
         "zoneId",
         "fiscalCountryId",
         "fiscalStateId",
@@ -466,10 +526,14 @@ const ClientsPage = () => {
         }
       });
 
+      // ❌ ELIMINAR COMPLETAMENTE cualquier manipulación de salesperson
+      // NO agregues cleanData.salesperson en ningún lado
+
       console.log("🔄 Datos a enviar para actualizar:", {
         id: editingClient?.id,
         data: cleanData,
         camposEnviados: Object.keys(cleanData),
+        salespersonUserIdEnviado: cleanData.salespersonUserId, // ← Solo este campo
       });
 
       if (editingClient && editingClient.id) {
@@ -510,12 +574,22 @@ const ClientsPage = () => {
   };
 
   const handleEdit = (client: Client) => {
-    setEditingClient(client);
-
-    console.log("📥 Cargando cliente para editar:", {
+    console.log("📥 Cargando cliente para editar - DATOS COMPLETOS:", {
       id: client.id,
       salespersonUserId: client.salespersonUserId,
+      salesperson: client.salesperson,
+      // Verificar la estructura real del backend
+      tieneSalespersonObject: !!client.salesperson,
+      salespersonId: client.salesperson?.id,
+      // Buscar en el estado global por si hay datos más actualizados
+      clientInGlobalState: clientsResponse.find((c) => c.id === client.id),
     });
+
+    // ✅ USAR SIEMPRE los datos del estado global que son más confiables
+    const currentClient =
+      clientsResponse.find((c) => c.id === client.id) || client;
+
+    setEditingClient(currentClient);
 
     const cleanValueForForm = (value: unknown): unknown => {
       if (
@@ -529,86 +603,119 @@ const ClientsPage = () => {
       return value;
     };
 
+    // ✅ CORRECCIÓN: Obtener el ID del objeto salesperson (como en el ejemplo que muestras)
+    let salespersonUserIdValue = undefined;
+
+    if (currentClient.salesperson && currentClient.salesperson.id) {
+      // ✅ PRIMERA OPCIÓN: Usar el ID del objeto salesperson (estructura correcta)
+      salespersonUserIdValue = currentClient.salesperson.id;
+      console.log(
+        "✅ Usando ID de salesperson object:",
+        salespersonUserIdValue
+      );
+    } else if (
+      currentClient.salespersonUserId !== undefined &&
+      currentClient.salespersonUserId !== null &&
+      currentClient.salespersonUserId !== 0
+    ) {
+      // ✅ SEGUNDA OPCIÓN: Usar salespersonUserId como fallback
+      salespersonUserIdValue = currentClient.salespersonUserId;
+      console.log(
+        "🔄 Usando salespersonUserId como fallback:",
+        salespersonUserIdValue
+      );
+    } else {
+      console.log("❌ No se encontró vendedor asignado");
+    }
+
+    console.log(
+      "🎯 Valor FINAL de salespersonUserId para el formulario:",
+      salespersonUserIdValue
+    );
+
+    // Resetear el formulario con todos los valores
     form.reset({
-      businessTypeId: cleanValueForForm(client.businessTypeId) as
+      businessTypeId: cleanValueForForm(currentClient.businessTypeId) as
         | number
         | undefined,
-      salespersonUserId:
-        client.salespersonUserId !== undefined &&
-        client.salespersonUserId !== null
-          ? client.salespersonUserId
-          : undefined,
-      zoneId: cleanValueForForm(client.zoneId) as number | undefined,
-      client_code: client.client_code,
-      legal_name: client.legal_name,
-      tax_document_type: client.tax_document_type,
-      tax_document_number: client.tax_document_number,
-      client_type: client.client_type,
-      // ✅ CORREGIDO: Usar camelCase
-      fiscalCountryId: cleanValueForForm(client.fiscalCountryId) as
+      salespersonUserId: salespersonUserIdValue, // ← Este valor viene del objeto salesperson
+      zoneId: cleanValueForForm(currentClient.zoneId) as number | undefined,
+      client_code: currentClient.client_code || "",
+      legal_name: currentClient.legal_name || "",
+      tax_document_type: currentClient.tax_document_type || "",
+      tax_document_number: currentClient.tax_document_number || "",
+      client_type: currentClient.client_type || "",
+      fiscalCountryId: cleanValueForForm(currentClient.fiscalCountryId) as
         | number
         | undefined,
-      fiscalStateId: cleanValueForForm(client.fiscalStateId) as
+      fiscalStateId: cleanValueForForm(currentClient.fiscalStateId) as
         | number
         | undefined,
-      fiscalCityId: cleanValueForForm(client.fiscalCityId) as
+      fiscalCityId: cleanValueForForm(currentClient.fiscalCityId) as
         | number
         | undefined,
-      fiscal_zone_id: cleanValueForForm(client.fiscal_zone_id) as
+      fiscal_zone_id: cleanValueForForm(currentClient.fiscal_zone_id) as
         | number
         | undefined,
-      email: client.email || "",
-      main_phone: client.main_phone || "",
-      mobile_phone: client.mobile_phone || "",
-      contact_person: client.contact_person || "",
-      contact_email: client.contact_email || "",
-      contact_phone: client.contact_phone || "",
-      commercial_name: client.commercial_name || "",
-      delivery_address: client.delivery_address || "",
-      fiscal_address: client.fiscal_address || "",
-      zip_code: client.zip_code || "",
-      latitude: cleanValueForForm(client.latitude) as number | undefined,
-      longitude: cleanValueForForm(client.longitude) as number | undefined,
-      map_link: client.map_link || "",
-      payment_term_id: cleanValueForForm(client.payment_term_id) as
+      email: currentClient.email || "",
+      main_phone: currentClient.main_phone || "",
+      mobile_phone: currentClient.mobile_phone || "",
+      contact_person: currentClient.contact_person || "",
+      contact_email: currentClient.contact_email || "",
+      contact_phone: currentClient.contact_phone || "",
+      commercial_name: currentClient.commercial_name || "",
+      delivery_address: currentClient.delivery_address || "",
+      fiscal_address: currentClient.fiscal_address || "",
+      zip_code: currentClient.zip_code || "",
+      latitude: cleanValueForForm(currentClient.latitude) as number | undefined,
+      longitude: cleanValueForForm(currentClient.longitude) as
         | number
         | undefined,
-      credit_limit: cleanValueForForm(client.credit_limit) as
+      map_link: currentClient.map_link || "",
+      payment_term_id: cleanValueForForm(currentClient.payment_term_id) as
         | number
         | undefined,
-      credit_days: cleanValueForForm(client.credit_days) as number | undefined,
-      has_credit: client.has_credit ?? false,
+      credit_limit: cleanValueForForm(currentClient.credit_limit) as
+        | number
+        | undefined,
+      credit_days: cleanValueForForm(currentClient.credit_days) as
+        | number
+        | undefined,
+      has_credit: currentClient.has_credit ?? false,
       default_discount_percentage: cleanValueForForm(
-        client.default_discount_percentage
+        currentClient.default_discount_percentage
       ) as number | undefined,
-      default_price_level: cleanValueForForm(client.default_price_level) as
+      default_price_level: cleanValueForForm(
+        currentClient.default_price_level
+      ) as number | undefined,
+      notes: currentClient.notes || "",
+      balance_due: cleanValueForForm(currentClient.balance_due) as
         | number
         | undefined,
-      notes: client.notes || "",
-      balance_due: cleanValueForForm(client.balance_due) as number | undefined,
-      advance_balance: cleanValueForForm(client.advance_balance) as
+      advance_balance: cleanValueForForm(currentClient.advance_balance) as
         | number
         | undefined,
-      average_payment_days: cleanValueForForm(client.average_payment_days) as
+      average_payment_days: cleanValueForForm(
+        currentClient.average_payment_days
+      ) as number | undefined,
+      last_sale_date: currentClient.last_sale_date || undefined,
+      last_sale_number: currentClient.last_sale_number || "",
+      last_sale_amount: cleanValueForForm(currentClient.last_sale_amount) as
         | number
         | undefined,
-      last_sale_date: client.last_sale_date || undefined,
-      last_sale_number: client.last_sale_number || "",
-      last_sale_amount: cleanValueForForm(client.last_sale_amount) as
+      last_order_date: currentClient.last_order_date || undefined,
+      last_order_number: currentClient.last_order_number || "",
+      last_order_amount: cleanValueForForm(currentClient.last_order_amount) as
         | number
         | undefined,
-      last_order_date: client.last_order_date || undefined,
-      last_order_number: client.last_order_number || "",
-      last_order_amount: cleanValueForForm(client.last_order_amount) as
-        | number
-        | undefined,
-      last_payment_date: client.last_payment_date || undefined,
-      last_payment_number: client.last_payment_number || "",
-      last_payment_amount: cleanValueForForm(client.last_payment_amount) as
-        | number
-        | undefined,
-      is_active: client.is_active ?? true,
+      last_payment_date: currentClient.last_payment_date || undefined,
+      last_payment_number: currentClient.last_payment_number || "",
+      last_payment_amount: cleanValueForForm(
+        currentClient.last_payment_amount
+      ) as number | undefined,
+      is_active: currentClient.is_active ?? true,
     });
+
     setIsModalOpen(true);
   };
 
@@ -714,14 +821,31 @@ const ClientsPage = () => {
           return <div className="font-medium text-gray-500">Sin vendedor</div>;
         }
 
+        // Buscar en sellerOptions usando salespersonUserId
         const sellerIdNum = Number(sellerId);
         const seller = sellerOptions.find((s) => s.id === sellerIdNum);
 
         if (seller) {
           return <div className="font-medium">{seller.name}</div>;
         }
+
+        // Fallback: mostrar datos del objeto salesperson
+        if (client.salesperson) {
+          return (
+            <div className="font-medium">
+              {client.salesperson.first_name} {client.salesperson.last_name}
+            </div>
+          );
+        }
+
+        return (
+          <div className="font-medium text-gray-500">
+            Vendedor no encontrado
+          </div>
+        );
       },
     },
+
     {
       accessorKey: "payment_term_id",
       header: "Término de Pago",
@@ -930,7 +1054,6 @@ const ClientsPage = () => {
                   {/* Información básica */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información Básica</h3>
-
                     <FormField
                       control={form.control}
                       name="legal_name"
@@ -949,7 +1072,6 @@ const ClientsPage = () => {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="commercial_name"
@@ -968,7 +1090,6 @@ const ClientsPage = () => {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="client_code"
@@ -991,51 +1112,54 @@ const ClientsPage = () => {
                     <FormField
                       control={form.control}
                       name="salespersonUserId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Vendedor</FormLabel>
-                          <Select
-                            value={
-                              field.value === null || field.value === undefined
-                                ? "0"
-                                : field.value.toString()
-                            }
-                            onValueChange={(value) => {
-                              // ✅ CORRECCIÓN: Usar undefined en lugar de null
-                              if (value === "0") {
-                                field.onChange(undefined);
-                              } else {
-                                field.onChange(Number(value));
-                              }
-                            }}
-                            disabled={isSubmitting || sellersLoading}
-                          >
+                      render={({ field }) => {
+                        console.log(
+                          "🔘 Campo salespersonUserId en formulario:",
+                          {
+                            value: field.value,
+                            tipo: typeof field.value,
+                          }
+                        );
+
+                        return (
+                          <FormItem>
+                            <FormLabel>Vendedor</FormLabel>
                             <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={
-                                    sellersLoading
-                                      ? "Cargando vendedores..."
-                                      : "Selecciona un vendedor"
+                              <SelectSearchable
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined ||
+                                  field.value === 0
+                                    ? "0"
+                                    : field.value.toString()
+                                }
+                                onValueChange={(value) => {
+                                  console.log(
+                                    "🔘 Vendedor seleccionado:",
+                                    value
+                                  );
+                                  if (value === "0") {
+                                    field.onChange(undefined);
+                                  } else {
+                                    field.onChange(Number(value));
                                   }
-                                />
-                              </SelectTrigger>
+                                }}
+                                placeholder={
+                                  sellersLoading
+                                    ? "Cargando vendedores..."
+                                    : "Buscar vendedor..."
+                                }
+                                options={sellerOptionsWithEmpty}
+                                emptyMessage="No se encontraron vendedores."
+                                searchPlaceholder="Buscar por nombre de vendedor..."
+                                className="w-full"
+                                disabled={isSubmitting || sellersLoading}
+                              />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="0">Sin vendedor</SelectItem>
-                              {sellerOptions.map((seller) => (
-                                <SelectItem
-                                  key={seller.id}
-                                  value={seller.id.toString()}
-                                >
-                                  {seller.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
 

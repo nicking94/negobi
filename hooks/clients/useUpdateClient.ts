@@ -7,14 +7,19 @@ import { ApiError } from "@/types";
 interface UseUpdateClientProps {
   onSuccess?: (client: Client) => void;
   onError?: (error: ApiError) => void;
+  onUpdateLocalState?: (client: Client) => void;
 }
 
-const useUpdateClient = ({ onSuccess, onError }: UseUpdateClientProps = {}) => {
+const useUpdateClient = ({
+  onSuccess,
+  onError,
+  onUpdateLocalState,
+}: UseUpdateClientProps = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [data, setData] = useState<Client | null>(null);
 
-  // hooks/clients/useUpdateClient.ts
+  // hooks/clients/useUpdateClient.ts - MEJORADO
   const updateClient = async (id: string, clientData: Partial<Client>) => {
     setIsLoading(true);
     setError(null);
@@ -32,21 +37,32 @@ const useUpdateClient = ({ onSuccess, onError }: UseUpdateClientProps = {}) => {
       if (response.status === 200) {
         const updatedClient = response.data.data;
 
-        // ✅ Mapeo consistente con useGetClients
-        const effectiveSalespersonUserId =
-          updatedClient.salespersonUserId !== undefined
-            ? Number(updatedClient.salespersonUserId)
-            : undefined;
-
         const mappedClient: Client = {
           ...updatedClient,
-          salespersonUserId: effectiveSalespersonUserId,
+
+          salesperson: updatedClient.salespersonUserId
+            ? {
+                id: updatedClient.salespersonUserId,
+                first_name: "",
+                last_name: "",
+              }
+            : undefined,
+          salespersonUserId: updatedClient.salespersonUserId,
         };
 
         console.log("✅ Cliente actualizado exitosamente:", mappedClient);
 
         setData(mappedClient);
-        onSuccess?.(mappedClient);
+
+        // ✅ ACTUALIZAR INMEDIATAMENTE el estado local
+        if (onUpdateLocalState) {
+          onUpdateLocalState(mappedClient);
+        }
+
+        if (onSuccess) {
+          onSuccess(mappedClient);
+        }
+
         return mappedClient;
       } else {
         throw new Error("Error al actualizar el cliente");
@@ -64,7 +80,11 @@ const useUpdateClient = ({ onSuccess, onError }: UseUpdateClientProps = {}) => {
         message: err.message,
       };
       setError(apiError);
-      onError?.(apiError);
+
+      if (onError) {
+        onError(apiError);
+      }
+
       throw apiError;
     } finally {
       setIsLoading(false);
@@ -84,4 +104,5 @@ const useUpdateClient = ({ onSuccess, onError }: UseUpdateClientProps = {}) => {
     reset,
   };
 };
+
 export default useUpdateClient;
