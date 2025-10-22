@@ -74,15 +74,6 @@ export type Company = {
   created_at: Date;
 };
 
-// Type for admin fields to ensure type safety
-type AdminField =
-  | "admin_first_name"
-  | "admin_last_name"
-  | "admin_username"
-  | "admin_email"
-  | "admin_phone"
-  | "admin_password";
-
 const CompaniesPage = () => {
   const { deleteCompany, loading: deleteLoading } = useDeleteCompanies();
   const { updateCompany, loading: updateLoading } = useUpdateCompanies();
@@ -575,7 +566,7 @@ const CompaniesPage = () => {
           }
         }}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-gray_xxl sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {selectedCompany ? "Editar Empresa" : "Crear Nueva Empresa"}

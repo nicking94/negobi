@@ -1,4 +1,4 @@
-// hooks/auth/useRegister.ts - MEJORADO
+// hooks/auth/useRegister.ts
 import { useState } from "react";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";

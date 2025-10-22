@@ -17,7 +17,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -53,87 +52,71 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 
-type Category = {
-  id: number;
-  category_name: string;
-};
-
-export type Service = {
-  id?: string;
-  name: string;
-  code: string;
-  description?: string;
-  price_level_1: number;
-  price_level_2: number;
-  price_level_3: number;
-  category_id: number;
-  company_id: number;
-  synced_locations?: number;
-  is_active?: boolean;
-};
+// Importar tus servicios y hooks reales
+import { useServices } from "@/hooks/services/useServices";
+import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
+import {
+  Service,
+  CreateServiceData,
+  UpdateServiceData,
+} from "@/services/servicios/services.service";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const serviceSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   code: z.string().min(1, "El código es requerido"),
   description: z.string().optional(),
-  price_level_1: z.number().min(0, "El precio no puede ser negativo"),
-  price_level_2: z.number().min(0, "El precio no puede ser negativo"),
-  price_level_3: z.number().min(0, "El precio no puede ser negativo"),
-  category_id: z.number().min(1, "La categoría es requerida"),
-  is_active: z.boolean().optional(),
+  price_level_1: z
+    .number()
+    .min(0, "El precio nivel 1 debe ser mayor o igual a 0"),
+  price_level_2: z
+    .number()
+    .min(0, "El precio nivel 2 debe ser mayor o igual a 0"),
+  price_level_3: z
+    .number()
+    .min(0, "El precio nivel 3 debe ser mayor o igual a 0"),
+  category_id: z.union([z.number(), z.null()]).optional(),
+  company_id: z.number().min(1, "La compañía es requerida"),
 });
 
 type ServiceFormInputs = z.infer<typeof serviceSchema>;
 
 const ServicesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { formatPrice } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [syncFilter, setSyncFilter] = useState<string>("all");
-  const [instanceFilter, setInstanceFilter] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Datos de ejemplo - en una app real estos vendrían de una API
-  const [categories] = useState([
-    { id: 1, name: "Consultoría" },
-    { id: 2, name: "Desarrollo" },
-    { id: 3, name: "Soporte" },
-  ]);
+  // Company ID activo (debería venir del contexto de autenticación)
+  const activeCompanyId = "4";
 
-  const [instances] = useState([
-    { id: 1, name: "Instancia Principal" },
-    { id: 2, name: "Sucursal Norte" },
-    { id: 3, name: "Sucursal Sur" },
-  ]);
+  // Usar hooks reales
+  const {
+    services,
+    loading: servicesLoading,
+    error: servicesError,
+    createService,
+    updateService,
+    deleteService,
+    refetch: refetchServices,
+  } = useServices({
+    companyId: activeCompanyId,
+    search: searchTerm || undefined,
+    categoryId: selectedCategory !== "all" ? selectedCategory : undefined,
+  });
 
-  const [services] = useState<Service[]>([
-    {
-      id: "1",
-      name: "Desarrollo Web",
-      code: "DEV001",
-      description: "Desarrollo de aplicaciones web modernas",
-      price_level_1: 100,
-      price_level_2: 150,
-      price_level_3: 200,
-      category_id: 2,
-      company_id: 1,
-      synced_locations: 3,
-      is_active: true,
-    },
-    {
-      id: "2",
-      name: "Consultoría IT",
-      code: "CON001",
-      description: "Asesoramiento tecnológico",
-      price_level_1: 80,
-      price_level_2: 120,
-      price_level_3: 160,
-      category_id: 1,
-      company_id: 1,
-      synced_locations: 2,
-      is_active: true,
-    },
-  ]);
+  const {
+    productCategories: categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useProductCategories({
+    is_active: true,
+    page: 1,
+    itemsPerPage: 100,
+  });
 
   const form = useForm<ServiceFormInputs>({
     resolver: zodResolver(serviceSchema),
@@ -144,51 +127,125 @@ const ServicesPage = () => {
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
-      category_id: 0,
-      is_active: true,
+      category_id: null, // ← CAMBIAR A null
+      company_id: parseInt(activeCompanyId),
     },
   });
 
   const onSubmit = async (data: ServiceFormInputs) => {
     try {
-      if (editingService && typeof editingService.id === "number") {
-        toast.success("Servicio actualizado exitosamente");
+      console.log("📝 Datos del formulario:", data);
+      console.log("🔍 category_id value:", data.category_id);
+      console.log("🔍 category_id type:", typeof data.category_id);
+      if (editingService && editingService.id) {
+        // Actualizar servicio existente
+        const updateData: UpdateServiceData = {
+          name: data.name,
+          code: data.code,
+          description: data.description,
+          price_level_1: data.price_level_1,
+          price_level_2: data.price_level_2,
+          price_level_3: data.price_level_3,
+          category_id: data.category_id,
+          company_id: data.company_id,
+        };
+
+        const result = await updateService(
+          editingService.id.toString(),
+          updateData
+        );
+        if (result) {
+          toast.success("Servicio actualizado exitosamente");
+        } else {
+          toast.error("Error al actualizar el servicio");
+          return;
+        }
       } else {
-        toast.success("Servicio creado exitosamente");
+        // Crear nuevo servicio
+        const createData: CreateServiceData = {
+          name: data.name,
+          code: data.code,
+          description: data.description || "",
+          price_level_1: data.price_level_1,
+          price_level_2: data.price_level_2,
+          price_level_3: data.price_level_3,
+          category_id: data.category_id, // ← YA ES number | null
+          company_id: data.company_id,
+          erp_code_inst: "",
+          external_code: "",
+        };
+
+        const result = await createService(createData);
+        if (result) {
+          toast.success("Servicio creado exitosamente");
+        } else {
+          toast.error("Error al crear el servicio");
+          return;
+        }
       }
 
       resetForm();
       setIsModalOpen(false);
+      refetchServices();
     } catch (error) {
+      console.error("❌ Error al guardar el servicio:", error);
       toast.error("Error al guardar el servicio");
     }
   };
 
-  const handleDelete = (service: Service) => {
-    toast.error(`¿Eliminar el servicio "${service.name}"?`, {
-      description: "Esta acción no se puede deshacer.",
-      action: {
-        label: "Eliminar",
-        onClick: async () => {
-          if (!service.id) {
-            toast.error("ID de servicio no válido");
-            return;
-          }
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+  };
 
-          toast.success("Servicio eliminado exitosamente");
-        },
-      },
-      cancel: {
-        label: "Cancelar",
-        onClick: () => {
-          toast.info("Eliminación cancelada");
-        },
-      },
-    });
+  const handleDelete = async (service: Service) => {
+    if (!service.id) {
+      toast.error("Servicio no encontrado");
+      return;
+    }
+
+    toast.custom(
+      (t) => (
+        <div className="bg-white rounded-lg shadow-lg p-4 border">
+          <h3 className="font-semibold mb-2">¿Eliminar servicio?</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {`¿Estás seguro de que quieres eliminar "${service.name}"? Esta acción no se puede deshacer.`}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toast.dismiss(t)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                toast.dismiss(t);
+                const success = await deleteService(service.id!.toString());
+                if (success) {
+                  toast.success("Servicio eliminado exitosamente");
+                  refetchServices();
+                } else {
+                  toast.error("Error al eliminar el servicio");
+                }
+              }}
+            >
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 10000,
+      }
+    );
   };
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
+
     form.reset({
       name: service.name,
       code: service.code,
@@ -196,8 +253,8 @@ const ServicesPage = () => {
       price_level_1: service.price_level_1,
       price_level_2: service.price_level_2,
       price_level_3: service.price_level_3,
-      category_id: service.category_id,
-      is_active: service.is_active ?? true,
+      category_id: service.category_id || null,
+      company_id: service.company_id || parseInt(activeCompanyId),
     });
     setIsModalOpen(true);
   };
@@ -210,17 +267,27 @@ const ServicesPage = () => {
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
-      category_id: 0,
-      is_active: true,
+      category_id: null,
+      company_id: parseInt(activeCompanyId),
     });
     setEditingService(null);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
+  const getCategoryName = (service: Service) => {
+    console.log("🔍 Buscando categoría para servicio:", service);
+    console.log("🔍 category_id del servicio:", service.category_id);
+    console.log("🔍 Todas las categorías disponibles:", categories);
+
+    if (!service.category_id) return "Sin categoría";
+
+    const category = categories.find((c) => c.id === service.category_id);
+    console.log("🔍 Categoría encontrada:", category);
+
+    return category?.category_name || "Sin categoría";
+  };
+
+  const getSyncStatus = (service: Service) => {
+    return service.sync_with_erp ? "Sincronizado" : "No sincronizado";
   };
 
   const columns: ColumnDef<Service>[] = [
@@ -246,16 +313,27 @@ const ServicesPage = () => {
       ),
     },
     {
-      accessorKey: "synced_locations",
-      header: "Sincronizado en",
+      accessorKey: "category_id",
+      header: "Categoría",
       cell: ({ row }) => {
-        const locations = row.getValue("synced_locations") as number;
+        const service = row.original;
+        return <div className="font-medium">{getCategoryName(service)}</div>;
+      },
+    },
+    {
+      accessorKey: "sync_with_erp",
+      header: "Estado Sync",
+      cell: ({ row }) => {
+        const service = row.original;
+        const isSynced = service.sync_with_erp;
         return (
-          <div className="flex items-center gap-1 text-sm">
+          <div
+            className={`flex items-center gap-1 text-sm ${
+              isSynced ? "text-green-600" : "text-yellow-600"
+            }`}
+          >
             <RefreshCw className="h-3 w-3" />
-            <span>
-              {locations} sucursal{locations !== 1 ? "es" : ""}
-            </span>
+            <span>{getSyncStatus(service)}</span>
           </div>
         );
       },
@@ -265,7 +343,7 @@ const ServicesPage = () => {
       header: "Precio 1",
       cell: ({ row }) => {
         const price = row.getValue("price_level_1") as number;
-        return <div className="font-medium">{formatCurrency(price)}</div>;
+        return <div className="font-medium">{formatPrice(price)}</div>;
       },
     },
     {
@@ -273,7 +351,7 @@ const ServicesPage = () => {
       header: "Precio 2",
       cell: ({ row }) => {
         const price = row.getValue("price_level_2") as number;
-        return <div className="font-medium">{formatCurrency(price)}</div>;
+        return <div className="font-medium">{formatPrice(price)}</div>;
       },
     },
     {
@@ -281,7 +359,7 @@ const ServicesPage = () => {
       header: "Precio 3",
       cell: ({ row }) => {
         const price = row.getValue("price_level_3") as number;
-        return <div className="font-medium">{formatCurrency(price)}</div>;
+        return <div className="font-medium">{formatPrice(price)}</div>;
       },
     },
     {
@@ -321,6 +399,56 @@ const ServicesPage = () => {
     },
   ];
 
+  // Mostrar estado de carga
+  if ((servicesLoading && services.length === 0) || categoriesLoading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Cargando servicios...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar estado de error
+  if (servicesError || categoriesError) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center text-red-600">
+              <p>Error: {servicesError || categoriesError}</p>
+              <Button
+                onClick={() => {
+                  refetchServices();
+                  refetchCategories();
+                }}
+                className="mt-4"
+              >
+                Reintentar
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -341,74 +469,52 @@ const ServicesPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex gap-2 w-full max-w-[30rem] ">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar servicios..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="sync-filter">Sincronización</Label>
-                      <Select value={syncFilter} onValueChange={setSyncFilter}>
-                        <SelectTrigger id="sync-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los servicios" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todos los servicios
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[18rem]">
+                  <div className="px-2 py-1.5">
+                    <Label htmlFor="category-filter">Categoría</Label>
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={handleCategoryChange}
+                    >
+                      <SelectTrigger id="category-filter" className="mt-1">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          Todas las categorías
+                        </SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.category_name}
                           </SelectItem>
-                          <SelectItem value="synced">Sincronizados</SelectItem>
-                          <SelectItem value="not-synced">
-                            No sincronizados
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="instance-filter">Instancia</Label>
-                      <Select
-                        value={instanceFilter}
-                        onValueChange={setInstanceFilter}
-                      >
-                        <SelectTrigger id="instance-filter" className="mt-1">
-                          <SelectValue placeholder="Todas las instancias" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todas las instancias
-                          </SelectItem>
-                          {instances.map((instance) => (
-                            <SelectItem
-                              key={instance.id}
-                              value={instance.id.toString()}
-                            >
-                              {instance.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div>
               <Button
@@ -417,6 +523,7 @@ const ServicesPage = () => {
                   setIsModalOpen(true);
                 }}
                 className="gap-2 w-full sm:w-auto"
+                disabled={servicesLoading}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo servicio</span>
@@ -429,7 +536,7 @@ const ServicesPage = () => {
             <DataTable<Service, ColumnDef<Service>[]>
               columns={columns}
               data={services}
-              noResultsText="No hay servicios registrados"
+              noResultsText="No se encontraron servicios"
               page={1}
               setPage={() => {}}
               totalPage={1}
@@ -441,6 +548,7 @@ const ServicesPage = () => {
         </main>
       </div>
 
+      {/* Modal para crear/editar servicio */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -462,7 +570,11 @@ const ServicesPage = () => {
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Consultoría IT"
+                          />
                         </FormControl>
                         <FormMessage />
                       </div>
@@ -480,7 +592,11 @@ const ServicesPage = () => {
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="SERV001"
+                          />
                         </FormControl>
                         <FormMessage />
                       </div>
@@ -500,8 +616,9 @@ const ServicesPage = () => {
                         <FormControl>
                           <textarea
                             {...field}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             rows={3}
+                            placeholder="Descripción del servicio..."
                           />
                         </FormControl>
                         <FormMessage />
@@ -516,27 +633,34 @@ const ServicesPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
                       <FormLabel className="pt-2 sm:text-right">
-                        Categoría *
+                        Categoría
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <Select
-                          value={field.value ? field.value.toString() : ""}
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
+                          value={field.value ? field.value.toString() : "none"} // ← CAMBIA "" por "none"
+                          onValueChange={(value) => {
+                            // Manejar correctamente valores
+                            if (value === "none") {
+                              field.onChange(null);
+                            } else {
+                              field.onChange(parseInt(value));
+                            }
+                          }}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecciona una categoría" />
+                              <SelectValue placeholder="Selecciona una categoría (opcional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            {/* Usar "none" en lugar de string vacío */}
+                            <SelectItem value="none">Sin categoría</SelectItem>
                             {categories.map((category) => (
                               <SelectItem
                                 key={category.id}
                                 value={category.id.toString()}
                               >
-                                {category.name}
+                                {category.category_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -561,9 +685,10 @@ const ServicesPage = () => {
                             {...field}
                             type="number"
                             step="0.01"
+                            min="0"
                             className="w-full"
                             onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
+                              field.onChange(parseFloat(e.target.value) || 0)
                             }
                           />
                         </FormControl>
@@ -587,9 +712,10 @@ const ServicesPage = () => {
                             {...field}
                             type="number"
                             step="0.01"
+                            min="0"
                             className="w-full"
                             onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
+                              field.onChange(parseFloat(e.target.value) || 0)
                             }
                           />
                         </FormControl>
@@ -613,9 +739,10 @@ const ServicesPage = () => {
                             {...field}
                             type="number"
                             step="0.01"
+                            min="0"
                             className="w-full"
                             onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
+                              field.onChange(parseFloat(e.target.value) || 0)
                             }
                           />
                         </FormControl>
@@ -626,7 +753,7 @@ const ServicesPage = () => {
                 />
               </div>
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -640,10 +767,10 @@ const ServicesPage = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || servicesLoading}
                   className="w-full sm:w-auto"
                 >
-                  {form.formState.isSubmitting
+                  {form.formState.isSubmitting || servicesLoading
                     ? "Guardando..."
                     : editingService
                     ? "Actualizar"

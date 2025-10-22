@@ -14,10 +14,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, Building2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import useLogin from "@/hooks/auth/useLogin";
 import { Toaster, toast } from "sonner";
 
@@ -31,7 +31,6 @@ const formSchema = z.object({
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const { onLogin, loading } = useLogin();
-  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,12 +45,11 @@ export function LoginForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const { email, password, taxId, rememberMe } = values;
 
-    // Enviar los datos al hook, el rememberMe se manejará en el frontend
     const result = await onLogin({
       email,
       password,
       legal_tax_id: taxId,
-      rememberMe, // Esto se manejará solo en el frontend
+      rememberMe,
     });
 
     if (result.success) {

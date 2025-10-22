@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Edit, Plus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Edit,
+  Plus,
+  BadgeCheck,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +42,7 @@ import {
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
 import useUserCompany from "@/hooks/auth/useUserCompany";
 
+// Esquema sin is_active (se manejará desde las acciones)
 const categorySchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
   category_name: z.string().min(1, "El nombre es requerido"),
@@ -44,10 +52,11 @@ const categorySchema = z.object({
     .number()
     .min(1, "La longitud debe ser al menos 1")
     .max(10, "La longitud no puede ser mayor a 10"),
-  is_active: z.boolean(),
   show_in_ecommerce: z.boolean(),
   show_in_sales_app: z.boolean(),
 });
+
+type CategoryFormInputs = z.infer<typeof categorySchema>;
 
 const InstancesPage = () => {
   const { companyId } = useUserCompany();
@@ -90,7 +99,6 @@ const InstancesPage = () => {
       description: "",
       prefix: "",
       correlative_length: 5,
-      is_active: true,
       show_in_ecommerce: true,
       show_in_sales_app: true,
     },
@@ -98,37 +106,32 @@ const InstancesPage = () => {
 
   useEffect(() => {
     if (editingCategory) {
-      // Cuando hay una categoría para editar, llena el formulario con sus datos
+      // Cuando hay una instancia para editar, llena el formulario con sus datos
       reset({
         category_code: editingCategory.category_code || "",
         category_name: editingCategory.category_name || "",
         description: editingCategory.description || "",
         prefix: editingCategory.prefix || "",
         correlative_length: editingCategory.correlative_length || 5,
-        is_active: editingCategory.is_active ?? true,
         show_in_ecommerce: editingCategory.show_in_ecommerce ?? true,
         show_in_sales_app: editingCategory.show_in_sales_app ?? true,
       });
     } else {
-      // Cuando no hay categoría para editar, resetea a los valores por defecto
+      // Cuando no hay instancia para editar, resetea a los valores por defecto
       reset({
         category_code: "",
         category_name: "",
         description: "",
         prefix: "",
         correlative_length: 5,
-        is_active: true,
         show_in_ecommerce: true,
         show_in_sales_app: true,
       });
     }
   }, [editingCategory, reset]);
 
-  const isActive = watch("is_active");
   const showInEcommerce = watch("show_in_ecommerce");
   const showInSalesApp = watch("show_in_sales_app");
-
-  type CategoryFormInputs = z.infer<typeof categorySchema>;
 
   // Tipo para los datos procesados
   type CategoryFormValues = {
@@ -137,7 +140,6 @@ const InstancesPage = () => {
     description: string;
     prefix: string;
     correlative_length: number;
-    is_active: boolean;
     show_in_ecommerce: boolean;
     show_in_sales_app: boolean;
   };
@@ -156,7 +158,8 @@ const InstancesPage = () => {
           description: processedData.description,
           prefix: processedData.prefix,
           correlative_length: processedData.correlative_length,
-          is_active: processedData.is_active,
+          // Mantener el estado actual al editar
+          is_active: editingCategory.is_active ?? true,
           show_in_ecommerce: processedData.show_in_ecommerce,
           show_in_sales_app: processedData.show_in_sales_app,
         };
@@ -167,12 +170,11 @@ const InstancesPage = () => {
         );
 
         if (result) {
-          toast.success("Categoría actualizada exitosamente");
           setModified((prev) => !prev);
           resetForm();
           setIsModalOpen(false);
         } else {
-          toast.error("Error al actualizar la categoría");
+          toast.error("Error al actualizar la Instancia");
           return;
         }
       } else {
@@ -183,19 +185,18 @@ const InstancesPage = () => {
           description: processedData.description,
           prefix: processedData.prefix,
           correlative_length: processedData.correlative_length,
-          is_active: processedData.is_active,
+          // Las nuevas instancias se crean activas por defecto
+          is_active: true,
           show_in_ecommerce: processedData.show_in_ecommerce,
           show_in_sales_app: processedData.show_in_sales_app,
         };
         const result = await createProductCategory(createData);
 
         if (result) {
-          toast.success("Categoría creada exitosamente");
+          toast.success("Instancia creada exitosamente");
           setModified((prev) => !prev);
-
-          setTimeout(() => setModified((prev) => !prev), 100);
         } else {
-          toast.error("Error al crear la categoría");
+          toast.error("Error al crear la intancia");
           return;
         }
       }
@@ -203,28 +204,66 @@ const InstancesPage = () => {
       resetForm();
       setIsModalOpen(false);
     } catch (error) {
-      console.error("Error al guardar categoría:", error);
-      toast.error("Error al guardar la categoría");
+      console.error("Error al guardar instancia:", error);
+      toast.error("Error al guardar la instancia");
+    }
+  };
+
+  // Función para cambiar el estado de la categoría (activar/desactivar)
+  const handleToggleStatus = async (category: ProductCategory) => {
+    if (!category.id) {
+      toast.error("No se puede cambiar el estado: ID no disponible");
+      return;
+    }
+
+    try {
+      // Preparar datos para la actualización - solo enviar campos esenciales
+      const updateData: UpdateProductCategoryData = {
+        category_name: category.category_name,
+        category_code: category.category_code,
+        description: category.description,
+        prefix: category.prefix,
+        correlative_length: category.correlative_length,
+        is_active: !category.is_active, // Cambiar el estado
+        show_in_ecommerce: category.show_in_ecommerce,
+        show_in_sales_app: category.show_in_sales_app,
+      };
+
+      console.log("📤 Cambiando estado de categoría:", updateData);
+
+      const result = await updateProductCategory(
+        category.id.toString(),
+        updateData
+      );
+
+      if (result) {
+        setModified((prev) => !prev);
+      } else {
+        toast.error("Error al cambiar el estado de la instancia");
+      }
+    } catch (error) {
+      console.error("🔴 Error cambiando estado de instancia:", error);
+      toast.error("Error al cambiar el estado de la instancia");
     }
   };
 
   const handleDelete = async (category: ProductCategory) => {
     if (!category.id) {
-      toast.error("Categoría no encontrada");
+      toast.error("Instancia no encontrada");
       return;
     }
 
-    toast.error(`¿Eliminar la categoría "${category.category_name}"?`, {
+    toast.error(`¿Eliminar la instancia "${category.category_name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
           const success = await deleteProductCategory(category.id.toString());
           if (success) {
-            toast.success("Categoría eliminada exitosamente");
+            toast.success("Instancia eliminada exitosamente");
             setModified((prev) => !prev);
           } else {
-            toast.error("Error al eliminar la categoría");
+            toast.error("Error al eliminar la instancia");
           }
         },
       },
@@ -244,7 +283,6 @@ const InstancesPage = () => {
       description: "",
       prefix: "",
       correlative_length: 5,
-      is_active: true,
       show_in_ecommerce: true,
       show_in_sales_app: true,
     });
@@ -296,7 +334,7 @@ const InstancesPage = () => {
     },
     {
       accessorKey: "correlative_length",
-      header: "Long. Correlativo",
+      header: "Long. Correlativa",
       cell: ({ row }) => (
         <div className="text-center">{row.getValue("correlative_length")}</div>
       ),
@@ -324,6 +362,8 @@ const InstancesPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const category = row.original;
+        const hasValidId = !!category.id;
+
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -335,20 +375,47 @@ const InstancesPage = () => {
               <DropdownMenuContent align="end">
                 {/* Editar */}
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                   onClick={() => {
                     setEditingCategory(category);
                     setIsModalOpen(true);
                   }}
+                  disabled={!hasValidId}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
 
+                {/* Activar/Desactivar */}
+                <DropdownMenuItem
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  onClick={() => handleToggleStatus(category)}
+                  disabled={!hasValidId}
+                >
+                  {category.is_active ? (
+                    <>
+                      <XCircle className="h-4 w-4" />
+                      <span>Desactivar</span>
+                    </>
+                  ) : (
+                    <>
+                      <BadgeCheck className="h-4 w-4" />
+                      <span>Activar</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+
                 {/* Eliminar */}
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  className={`cursor-pointer flex items-center gap-2 text-red-600 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                   onClick={() => handleDelete(category)}
+                  disabled={!hasValidId}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -374,7 +441,7 @@ const InstancesPage = () => {
           <main className="flex-1 p-8 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando categorías...</p>
+              <p className="mt-4 text-gray-600">Cargando instancias...</p>
             </div>
           </main>
         </div>
@@ -422,8 +489,7 @@ const InstancesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Categorías de Productos{" "}
-              {productCategories.length > 0 && `(${productCategories.length})`}
+              Instancias
             </h1>
             <Button
               onClick={handleOpenCreateModal}
@@ -431,16 +497,15 @@ const InstancesPage = () => {
               disabled={loading}
             >
               <Plus className="h-4 w-4" />
-              <span>Nueva categoría</span>
+              <span>Nueva instancia</span>
             </Button>
           </div>
 
-          {/* Tabla de categorías CON PAGINACIÓN - SIGUIENDO EL PATRÓN DE CLIENTS */}
           <div className="bg-white rounded-lg shadow-sm">
             <DataTable<ProductCategory, ColumnDef<ProductCategory>[]>
               columns={columns}
               data={productCategories}
-              noResultsText="No hay categorías registradas"
+              noResultsText="No hay instancias registradas"
               page={page}
               setPage={setPage}
               totalPage={totalPage}
@@ -452,25 +517,23 @@ const InstancesPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar categoría */}
+      {/* Modal para crear/editar instancia */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? "Editar categoría" : "Nueva categoría"}
+              {editingCategory ? "Editar instancia" : "Nueva instancia"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
-              {/* Nombre de la categoría */}
+              {/* Nombre de la instancia */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="category_name" className="sm:text-right">
-                  Nombre *
-                </Label>
+                <Label htmlFor="category_name">Nombre *</Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="category_name"
-                    placeholder="Nombre de la categoría"
+                    placeholder="Nombre de la instancia"
                     {...register("category_name")}
                   />
                   {errors.category_name && (
@@ -481,11 +544,9 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Código de la categoría */}
+              {/* Código de la instancia */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="category_code" className="sm:text-right">
-                  Código *
-                </Label>
+                <Label htmlFor="category_code">Código *</Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="category_code"
@@ -503,15 +564,13 @@ const InstancesPage = () => {
 
               {/* Descripción */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="sm:text-right">
-                  Descripción *
-                </Label>
+                <Label htmlFor="description">Descripción *</Label>
                 <div className="col-span-1 sm:col-span-3">
                   <textarea
                     id="description"
-                    placeholder="Descripción de la categoría"
+                    placeholder="Descripción de la instancia"
                     {...register("description")}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     rows={3}
                   />
                   {errors.description && (
@@ -524,9 +583,7 @@ const InstancesPage = () => {
 
               {/* Prefijo */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="prefix" className="sm:text-right">
-                  Prefijo *
-                </Label>
+                <Label htmlFor="prefix">Prefijo *</Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="prefix"
@@ -542,9 +599,7 @@ const InstancesPage = () => {
               </div>
               {/* Longitud correlativa */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="correlative_length" className="sm:text-right">
-                  Long. Correlativo *
-                </Label>
+                <Label htmlFor="correlative_length">Long. Correlativa *</Label>
                 <div className="col-span-1 sm:col-span-3">
                   <Input
                     id="correlative_length"
@@ -561,24 +616,10 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Checkboxes para opciones */}
+              {/* Checkboxes para opciones - SIN is_active */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
-                <Label className="sm:text-right pt-2">Opciones</Label>
                 <div className="col-span-1 sm:col-span-3 space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_active"
-                      checked={isActive}
-                      onChange={(e) =>
-                        handleCheckboxChange("is_active", e.target.checked)
-                      }
-                      className="rounded border-gray-300"
-                    />
-                    <Label htmlFor="is_active" className="text-sm">
-                      Categoría activa
-                    </Label>
-                  </div>
+                  {/* Checkbox eliminado: is_active */}
 
                   <div className="flex items-center space-x-2">
                     <input

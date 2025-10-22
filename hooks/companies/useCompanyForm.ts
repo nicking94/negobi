@@ -6,7 +6,7 @@ import { z } from "zod";
 const companySchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   code: z.string().min(1, "El código es requerido"),
-  legal_tax_id: z.string().min(1, "El RIF es requerido"),
+  legal_tax_id: z.string().min(1, "El ID es requerido"),
   contact_email: z.string().email("Correo inválido"),
   main_phone: z.string().min(1, "El teléfono es requerido"),
   fiscal_address: z.string().min(1, "La dirección es requerida"),

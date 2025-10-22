@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -13,6 +13,8 @@ import {
   Phone,
   User,
   MapPin,
+  BadgeCheck,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -57,27 +58,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import {
-  addWarehouse,
-  deleteWarehouse,
-  updateWarehouse,
-} from "@/services/warehouse/warehouse.service";
-import useGetWarehouses from "@/hooks/warehouse/useGetWarehouses";
+import { useWarehouses } from "@/hooks/warehouse/useWarehouses";
+import { Warehouse as WarehouseType } from "@/services/warehouse/warehouse.service";
+import { useCompanyBranches } from "@/hooks/companyBranches/useCompanyBranches";
+import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
 
-export type Warehouse = {
-  id?: string;
-  companyBranchId: number;
-  name: string;
-  code: string;
-  contact_person?: string;
-  contact_phone?: string;
-  location_address?: string;
-  is_active: boolean;
-  created_by?: string;
-  updated_by?: string;
-  created_at?: string;
-  updated_at?: string;
-};
+type Warehouse = WarehouseType;
 
 const warehouseSchema = z.object({
   companyBranchId: z.number().min(1, "La sucursal es requerida"),
@@ -86,7 +72,6 @@ const warehouseSchema = z.object({
   contact_person: z.string().optional(),
   contact_phone: z.string().optional(),
   location_address: z.string().optional(),
-  is_active: z.boolean(),
 });
 
 type WarehouseForm = z.infer<typeof warehouseSchema>;
@@ -100,74 +85,180 @@ const WarehousesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    null
+  );
 
-  const [branches, setBranches] = useState([
-    { id: 1, name: "Sucursal Principal" },
-    { id: 2, name: "Sucursal Norte" },
-    { id: 3, name: "Sucursal Sur" },
-  ]);
+  // Obtener empresas
+  const {
+    companies,
+    loading: companiesLoading,
+    error: companiesError,
+  } = useGetAllCompanies();
 
-  const form = useForm<z.infer<typeof warehouseSchema>>({
+  // Obtener sucursales basadas en la empresa seleccionada
+  const {
+    companyBranches: branches,
+    loading: branchesLoading,
+    error: branchesError,
+  } = useCompanyBranches({
+    companyId: selectedCompanyId,
+  });
+
+  // Usa el nuevo hook con filtros
+  const {
+    warehouses,
+    loading,
+    error,
+    createWarehouse,
+    updateWarehouse,
+    deleteWarehouse,
+    refetch: refetchWarehouses,
+  } = useWarehouses({
+    search: searchTerm,
+    companyId: selectedCompanyId || undefined,
+  });
+
+  const form = useForm<WarehouseForm>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: {
-      companyBranchId: 1,
+      companyBranchId: 0,
       name: "",
       code: "",
       contact_person: "",
       contact_phone: "",
       location_address: "",
-      is_active: true,
     },
   });
 
-  const {
-    warehousesResponse,
-    totalPage,
-    total,
-    setPage,
-    setItemsPerPage,
-    page,
-    itemsPerPage,
-  } = useGetWarehouses();
+  useEffect(() => {
+    if (companies.length > 0 && !selectedCompanyId) {
+      const firstCompanyId = companies[0].id;
+      console.log("Estableciendo primera empresa:", firstCompanyId);
+      setSelectedCompanyId(firstCompanyId);
+    }
+  }, [companies, selectedCompanyId]);
+
+  // CORRECCIÓN: Recargar almacenes cuando cambia la empresa seleccionada
+  useEffect(() => {
+    if (selectedCompanyId) {
+      console.log(
+        "🔄 Empresa cambiada, recargando almacenes para:",
+        selectedCompanyId
+      );
+      // El hook useWarehouses se recargará automáticamente porque companyId cambió
+    }
+  }, [selectedCompanyId]);
+
+  useEffect(() => {
+    const companyBranches = getBranchesForSelectedCompany();
+    const currentBranchId = form.getValues("companyBranchId");
+
+    if (
+      companyBranches.length > 0 &&
+      (!currentBranchId || currentBranchId === 0)
+    ) {
+      form.setValue("companyBranchId", companyBranches[0].id);
+    }
+  }, [branches, selectedCompanyId, form]);
 
   const onSubmit = async (values: WarehouseForm) => {
     try {
-      if (editingWarehouse && typeof editingWarehouse.id === "string") {
-        // Lógica para actualizar
-        const { id } = editingWarehouse;
-        try {
-          await updateWarehouse(id, values);
-        } catch (error) {
-          toast.error("Error al actualizar el almacén: " + error);
-        }
-        toast.success("Almacén actualizado exitosamente");
-      } else {
-        // Lógica para crear
-        const newWarehouse: Warehouse = {
+      let result;
+
+      if (editingWarehouse && editingWarehouse.id) {
+        // Actualizar almacén
+        const updateData = {
           ...values,
+          is_active: editingWarehouse.is_active,
         };
-        try {
-          await addWarehouse(newWarehouse);
-          toast.success("Almacén creado exitosamente");
-        } catch (error) {
-          toast.error("Error al crear el almacén: " + error);
-        }
+        result = await updateWarehouse(
+          editingWarehouse.id.toString(),
+          updateData
+        );
+      } else {
+        // Crear nuevo almacén
+        const createData = {
+          ...values,
+          is_active: true,
+        };
+        result = await createWarehouse(createData);
       }
 
-      resetForm();
-      setIsModalOpen(false);
+      if (result) {
+        toast.success(
+          editingWarehouse
+            ? "Almacén actualizado exitosamente"
+            : "Almacén creado exitosamente"
+        );
+
+        // ✅ CORRECCIÓN: Recargar la lista de almacenes
+        await refetchWarehouses();
+
+        resetForm();
+        setIsModalOpen(false);
+      } else {
+        toast.error(
+          editingWarehouse
+            ? "Error al actualizar el almacén"
+            : "Error al crear el almacén"
+        );
+      }
     } catch (error) {
       toast.error("Error al guardar el almacén: " + error);
     }
   };
 
-  const handleDelete = (warehouse: Warehouse) => {
+  const handleToggleStatus = async (warehouse: Warehouse) => {
+    if (!warehouse.id) {
+      toast.error("No se puede cambiar el estado: ID no disponible");
+      return;
+    }
+
+    try {
+      const updateData = {
+        companyBranchId: warehouse.companyBranchId,
+        name: warehouse.name,
+        code: warehouse.code,
+        contact_person: warehouse.contact_person || "",
+        contact_phone: warehouse.contact_phone || "",
+        location_address: warehouse.location_address || "",
+        is_active: !warehouse.is_active,
+      };
+
+      const result = await updateWarehouse(warehouse.id.toString(), updateData);
+
+      if (result) {
+        toast.success(
+          `Almacén ${
+            !warehouse.is_active ? "activado" : "desactivado"
+          } exitosamente`
+        );
+
+        await refetchWarehouses();
+      } else {
+        toast.error("Error al cambiar el estado del almacén");
+      }
+    } catch (error) {
+      console.error("Error cambiando estado de almacén:", error);
+      toast.error("Error al cambiar el estado del almacén");
+    }
+  };
+
+  const handleDelete = async (warehouse: Warehouse) => {
     toast.error(`¿Eliminar el almacén "${warehouse.name}"?`, {
       description: "Esta acción no se puede deshacer.",
       action: {
         label: "Eliminar",
         onClick: async () => {
-          deleteWarehouse(warehouse.id as string);
+          const success = await deleteWarehouse(warehouse.id.toString());
+          if (success) {
+            toast.success("Almacén eliminado exitosamente");
+            // ✅ CORRECCIÓN: Recargar la lista
+            await refetchWarehouses();
+          } else {
+            toast.error("Error al eliminar el almacén");
+          }
         },
       },
       cancel: {
@@ -188,20 +279,19 @@ const WarehousesPage = () => {
       contact_person: warehouse.contact_person || "",
       contact_phone: warehouse.contact_phone || "",
       location_address: warehouse.location_address || "",
-      is_active: warehouse.is_active,
     });
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
+    const defaultBranchId = branches.length > 0 ? branches[0].id : 0;
     form.reset({
-      companyBranchId: 1,
+      companyBranchId: defaultBranchId,
       name: "",
       code: "",
       contact_person: "",
       contact_phone: "",
       location_address: "",
-      is_active: true,
     });
     setEditingWarehouse(null);
   };
@@ -209,6 +299,57 @@ const WarehousesPage = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES");
   };
+
+  const getBranchName = (branchId: number) => {
+    console.log("🔍 Buscando sucursal ID:", branchId);
+    console.log("📍 Sucursales disponibles:", branches);
+
+    // Si branchId es 0, significa que no hay sucursal asignada
+    if (!branchId || branchId === 0) {
+      return "Sin sucursal asignada";
+    }
+
+    // Buscar directamente en las sucursales disponibles
+    const branch = branches.find((b) => b.id === branchId);
+
+    if (!branch) {
+      console.warn(`❌ Sucursal no encontrada para ID: ${branchId}`);
+      return `Sucursal ${branchId}`; // Mostrar el ID si no se encuentra
+    }
+
+    return branch.name;
+  };
+
+  const getBranchesForSelectedCompany = () => {
+    console.log("Filtrando sucursales para empresa:", selectedCompanyId);
+    console.log("Todas las sucursales:", branches);
+
+    if (!selectedCompanyId) {
+      return [];
+    }
+
+    const filteredBranches = branches.filter((branch) => {
+      return branch.companyId && branch.companyId === selectedCompanyId;
+    });
+
+    console.log("✅ Sucursales filtradas:", filteredBranches);
+    return filteredBranches;
+  };
+
+  // Aplica filtros adicionales
+  const filteredWarehouses = warehouses.filter((warehouse) => {
+    // Filtro por estado
+    if (statusFilter === "active" && !warehouse.is_active) return false;
+    if (statusFilter === "inactive" && warehouse.is_active) return false;
+
+    // Filtro por sucursal
+    if (branchFilter !== "all") {
+      const branchId = parseInt(branchFilter);
+      if (warehouse.companyBranchId !== branchId) return false;
+    }
+
+    return true;
+  });
 
   const columns: ColumnDef<Warehouse>[] = [
     {
@@ -231,10 +372,9 @@ const WarehousesPage = () => {
       header: "Sucursal",
       cell: ({ row }) => {
         const branchId = row.getValue("companyBranchId") as number;
-        const branch = branches.find((b) => b.id === branchId);
-        return (
-          <div className="font-medium">{branch?.name || "Desconocida"}</div>
-        );
+        const branchName = getBranchName(branchId);
+
+        return <div className="font-medium">{branchName}</div>;
       },
     },
     {
@@ -295,13 +435,12 @@ const WarehousesPage = () => {
       cell: ({ row }) => {
         const isActive = row.original.is_active;
         return (
-          <div className="flex items-center">
-            <div
-              className={`h-2.5 w-2.5 rounded-full mr-2 ${
-                isActive ? "bg-green_m" : "bg-gray_m"
-              }`}
-            ></div>
-            <span className="text-sm">{isActive ? "Activo" : "Inactivo"}</span>
+          <div
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              isActive ? "bg-green_xxl text-green_b" : "bg-red_xxl text-red_b"
+            }`}
+          >
+            {isActive ? "Activo" : "Inactivo"}
           </div>
         );
       },
@@ -311,6 +450,8 @@ const WarehousesPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const warehouse = row.original;
+        const hasValidId = !!warehouse.id;
+
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -323,14 +464,43 @@ const WarehousesPage = () => {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => handleEdit(warehouse)}
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleToggleStatus(warehouse)}
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
+                >
+                  {warehouse.is_active ? (
+                    <>
+                      <XCircle className="h-4 w-4" />
+                      <span>Desactivar</span>
+                    </>
+                  ) : (
+                    <>
+                      <BadgeCheck className="h-4 w-4" />
+                      <span>Activar</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
                 <DropdownMenuItem
                   onClick={() => handleDelete(warehouse)}
-                  className="cursor-pointer flex items-center gap-2 text-red_m"
+                  className={`cursor-pointer flex items-center gap-2 text-red_m ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -342,6 +512,54 @@ const WarehousesPage = () => {
       },
     },
   ];
+
+  // Muestra errores del hook
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+    if (branchesError) {
+      toast.error(branchesError);
+    }
+    if (companiesError) {
+      toast.error(companiesError);
+    }
+  }, [error, branchesError, companiesError]);
+
+  // En page.tsx - useEffect de debug
+  useEffect(() => {
+    console.log("=== DEBUG WAREHOUSES ===");
+    console.log("📦 Warehouses cargados:", warehouses);
+    console.log("📍 Sucursales disponibles:", branches);
+
+    // Verificar la estructura de los warehouses
+    warehouses.forEach((warehouse, index) => {
+      console.log(`🔍 Warehouse ${index + 1}:`, {
+        id: warehouse.id,
+        name: warehouse.name,
+        companyBranchId: warehouse.companyBranchId,
+      });
+
+      // Verificar coincidencia con sucursales
+      const branchExists = branches.some(
+        (b) => b.id === warehouse.companyBranchId
+      );
+
+      if (!branchExists && warehouse.companyBranchId) {
+        console.warn(
+          `⚠️ Warehouse "${warehouse.name}" tiene companyBranchId ${warehouse.companyBranchId} que NO existe en branches`
+        );
+      } else if (branchExists) {
+        console.log(
+          `✅ Warehouse "${warehouse.name}" tiene sucursal válida: ${warehouse.companyBranchId}`
+        );
+      }
+    });
+
+    console.log("=== FIN DEBUG ===");
+  }, [warehouses, branches]);
+
+  const isLoading = loading || branchesLoading || companiesLoading;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -361,13 +579,14 @@ const WarehousesPage = () => {
               Almacenes
             </h1>
           </div>
+
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex gap-2 w-full max-w-[30rem] ">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="Buscar por nombre, código..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -407,6 +626,7 @@ const WarehousesPage = () => {
                       <Select
                         value={branchFilter}
                         onValueChange={setBranchFilter}
+                        disabled={branches.length === 0}
                       >
                         <SelectTrigger id="branch-filter" className="mt-1">
                           <SelectValue placeholder="Todas las sucursales" />
@@ -430,13 +650,53 @@ const WarehousesPage = () => {
                 </DropdownMenu>
               </div>
             </div>
-            <div>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="company-selector"
+                  className="text-sm font-medium whitespace-nowrap"
+                >
+                  Seleccionar Empresa:
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={selectedCompanyId?.toString() || ""}
+                    onValueChange={(value) => {
+                      console.log("Cambiando empresa a:", value);
+                      setSelectedCompanyId(Number(value));
+
+                      setBranchFilter("all");
+                      setStatusFilter("all");
+                      setSearchTerm("");
+                    }}
+                  >
+                    <SelectTrigger
+                      id="company-selector"
+                      className="w-full md:w-64"
+                    >
+                      <SelectValue placeholder="Selecciona una empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((company) => (
+                        <SelectItem
+                          key={company.id}
+                          value={company.id.toString()}
+                        >
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Button
                 onClick={() => {
                   resetForm();
                   setIsModalOpen(true);
                 }}
-                className="gap-2 w-full sm:w-auto"
+                className="flex items-center gap-2 whitespace-nowrap"
+                disabled={branches.length === 0}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo almacén</span>
@@ -444,17 +704,27 @@ const WarehousesPage = () => {
             </div>
           </div>
 
-          <DataTable<Warehouse, Warehouse>
-            columns={columns}
-            data={warehousesResponse || []}
-            noResultsText="No hay almacenes registrados"
-            page={page}
-            setPage={setPage}
-            totalPage={totalPage}
-            total={total}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-          />
+          {selectedCompanyId && branches.length === 0 && !branchesLoading && (
+            <div className="text-center py-8 text-gray-500">
+              No hay sucursales disponibles para la empresa seleccionada. Debes
+              crear sucursales antes de poder agregar almacenes.
+            </div>
+          )}
+
+          {/* DataTable actualizado */}
+          {selectedCompanyId && branches.length > 0 && (
+            <DataTable<Warehouse, Warehouse>
+              columns={columns}
+              data={filteredWarehouses}
+              noResultsText="No hay almacenes registrados"
+              page={1}
+              setPage={() => {}}
+              totalPage={1}
+              total={filteredWarehouses.length}
+              itemsPerPage={50}
+              setItemsPerPage={() => {}}
+            />
+          )}
         </main>
       </div>
 
@@ -475,9 +745,13 @@ const WarehousesPage = () => {
                     name="code"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Código</FormLabel>
+                        <FormLabel>Código *</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Ej: ALM-001"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -489,20 +763,29 @@ const WarehousesPage = () => {
                     name="companyBranchId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sucursal</FormLabel>
+                        <FormLabel>Sucursal *</FormLabel>
                         <Select
                           value={field.value?.toString()}
                           onValueChange={(value) =>
                             field.onChange(parseInt(value))
                           }
+                          disabled={
+                            getBranchesForSelectedCompany().length === 0
+                          }
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona la sucursal" />
+                              <SelectValue
+                                placeholder={
+                                  getBranchesForSelectedCompany().length === 0
+                                    ? "No hay sucursales disponibles para esta empresa"
+                                    : "Selecciona la sucursal"
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {branches.map((branch) => (
+                            {getBranchesForSelectedCompany().map((branch) => (
                               <SelectItem
                                 key={branch.id}
                                 value={branch.id.toString()}
@@ -523,9 +806,13 @@ const WarehousesPage = () => {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre</FormLabel>
+                      <FormLabel>Nombre *</FormLabel>
                       <FormControl>
-                        <Input {...field} className="w-full" />
+                        <Input
+                          {...field}
+                          className="w-full"
+                          placeholder="Ej: Almacén Principal"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -538,9 +825,13 @@ const WarehousesPage = () => {
                     name="contact_person"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Persona de Contacto (Opcional)</FormLabel>
+                        <FormLabel>Persona de Contacto</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Ej: Juan Pérez"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -552,9 +843,13 @@ const WarehousesPage = () => {
                     name="contact_phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Teléfono de Contacto (Opcional)</FormLabel>
+                        <FormLabel>Teléfono de Contacto</FormLabel>
                         <FormControl>
-                          <Input {...field} className="w-full" />
+                          <Input
+                            {...field}
+                            className="w-full"
+                            placeholder="Ej: +58 412-1234567"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -567,12 +862,13 @@ const WarehousesPage = () => {
                   name="location_address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Dirección de Ubicación (Opcional)</FormLabel>
+                      <FormLabel>Dirección de Ubicación</FormLabel>
                       <FormControl>
                         <textarea
                           {...field}
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          rows={2}
+                          className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          rows={3}
+                          placeholder="Ej: Av. Principal, Edificio Comercial, Piso 2, Oficina 201..."
                         />
                       </FormControl>
                       <FormMessage />
@@ -580,27 +876,8 @@ const WarehousesPage = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Almacén activo</FormLabel>
-                        <FormDescription className="text-xs sm:text-sm">
-                          Los almacenes inactivos no estarán disponibles para
-                          operaciones
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                {/* NOTA: Se elimina el checkbox de is_active del formulario */}
+                {/* El estado ahora se maneja desde las acciones con los botones Activar/Desactivar */}
               </div>
 
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">
@@ -617,10 +894,14 @@ const WarehousesPage = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  disabled={
+                    form.formState.isSubmitting ||
+                    loading ||
+                    branches.length === 0
+                  }
                   className="w-full sm:w-auto"
                 >
-                  {form.formState.isSubmitting
+                  {form.formState.isSubmitting || loading
                     ? "Guardando..."
                     : editingWarehouse
                     ? "Actualizar"

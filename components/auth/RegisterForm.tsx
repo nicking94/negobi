@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import useRegister from "@/hooks/auth/useRegister";
 import { useRouter } from "next/navigation";
-import { toast, Toaster } from "sonner";
+import { Toaster } from "sonner";
 import {
   Eye,
   EyeOff,

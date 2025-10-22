@@ -1,4 +1,4 @@
-// components/auth/NewPasswordForm.tsx
+// components/auth/NewPasswordForm.tsx - ACTUALIZADO
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,10 +15,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import axios from "axios";
 import { toast, Toaster } from "sonner";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, CheckCircle, XCircle } from "lucide-react";
+import useChangePassword from "@/hooks/auth/useChangePassword";
 
 const formSchema = z
   .object({
@@ -45,17 +44,16 @@ const formSchema = z
     path: ["confirmPassword"],
   });
 
-type newPasswordType = {
+type NewPasswordType = {
   email: string;
   legal_tax_id: string;
 };
 
-export function NewPasswordForm({ legal_tax_id }: newPasswordType) {
-  const NEGOBI_API = process.env.NEXT_PUBLIC_API_BACK;
+export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const route = useRouter();
+
+  const { onChangePassword, loading } = useChangePassword();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,47 +64,19 @@ export function NewPasswordForm({ legal_tax_id }: newPasswordType) {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      setLoading(true);
-      const { password } = values;
-      const token = localStorage.getItem("tempToken");
+    const token = localStorage.getItem("tempToken");
+    const result = await onChangePassword({
+      new_password: values.password,
+      legal_tax_id,
+      token,
+    });
 
-      const response = await axios.put(
-        `${NEGOBI_API}/auth/change-password`,
-        {
-          new_password: password,
-          legal_tax_id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        localStorage.clear();
-        toast.success("🎉 ¡Contraseña actualizada! Redirigiendo al login...");
-        setTimeout(() => {
-          route.push(`/login`);
-        }, 2000);
-      }
-    } catch (e: unknown) {
-      if (axios.isAxiosError(e)) {
-        toast.error(
-          e.response?.data?.message || "Error al cambiar la contraseña"
-        );
-      } else if (e instanceof Error) {
-        toast.error(e.message);
-      } else {
-        toast.error("Error al cambiar la contraseña");
-      }
-    } finally {
-      setLoading(false);
+    if (result?.success) {
+      toast.success("🎉 ¡Contraseña actualizada! Redirigiendo al login...");
     }
   };
 
-  // Función para verificar la fortaleza de la contraseña
+  // Función para verificar la fortaleza de la contraseña (mantener igual)
   const checkPasswordStrength = (password: string) => {
     const requirements = [
       { test: (p: string) => p.length >= 6, text: "Mínimo 6 caracteres" },

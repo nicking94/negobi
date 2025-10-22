@@ -100,7 +100,7 @@ input {
 button {
   @apply cursor-pointer;
 }
-/* En tu archivo global.css */
+
 [cmdk-input] {
   outline: none !important;
   box-shadow: none !important;
@@ -111,4 +111,52 @@ button {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--color-gray_l);
+  border-radius: 0.25rem;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--color-green_l);
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--color-green_m);
+  border-color: var(--color-green_m);
+}
+
+input[type="checkbox"]:checked::before {
+  content: "✓";
+  position: absolute;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-green_xxl);
+}
+
+/* Para checkboxes más grandes si es necesario */
+input[type="checkbox"].checkbox-lg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+input[type="checkbox"].checkbox-lg:checked::before {
+  font-size: 0.875rem;
 }

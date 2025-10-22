@@ -2,7 +2,6 @@ import api from "../../utils/api";
 import {
   PostService,
   GetServices,
-  GetServiceById,
   PatchService,
   DeleteService,
 } from "../servicios/services.route";
@@ -52,7 +51,7 @@ export interface CreateServiceData {
   description: string;
   name: string;
   code: string;
-  category_id?: number;
+  category_id?: number | null;
   company_id?: number;
   erp_code_inst?: string;
   external_code?: string;
@@ -66,7 +65,7 @@ export interface UpdateServiceData {
   description?: string;
   name?: string;
   code?: string;
-  category_id?: number;
+  category_id?: number | null;
   company_id?: number;
   erp_code_inst?: string;
   external_code?: string;
@@ -141,13 +140,7 @@ export const serviceService = {
     }
 
     const response = await api.get(`${GetServices}?${queryParams}`);
-    return response.data.data.data; // Acceder a data.data por la estructura de respuesta
-  },
-
-  // Obtener un servicio por ID
-  getServiceById: async (id: string): Promise<Service> => {
-    const response = await api.get(`${GetServiceById}/${id}`);
-    return response.data.data;
+    return response.data.data.data;
   },
 
   // Actualizar un servicio

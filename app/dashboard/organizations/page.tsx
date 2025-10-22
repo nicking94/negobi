@@ -160,7 +160,6 @@ const OrganizationsPage = () => {
     }
   };
 
-  // ✅ Función para manejar el clic en eliminar
   const handleDeleteClick = (org: OrganizationType) => {
     if (!org.id) {
       toast.error("No se puede eliminar: ID no disponible");
@@ -170,7 +169,6 @@ const OrganizationsPage = () => {
     setDeleteConfirmOpen(true);
   };
 
-  // ✅ Función para eliminar organización
   const handleDeleteOrganization = async (orgId?: string) => {
     const idToDelete = orgId || organizationToDelete?.id;
 
@@ -191,7 +189,6 @@ const OrganizationsPage = () => {
     }
   };
 
-  // ✅ Editar organización
   const handleEdit = (org: OrganizationType) => {
     if (!org.id) {
       toast.error("Error: La organización no tiene ID válido");
@@ -270,7 +267,7 @@ const OrganizationsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDeleteClick(org)}
-                  className={`cursor-pointer flex items-center gap-2 text-red-600 ${
+                  className={`cursor-pointer flex items-center gap-2 text-red_b ${
                     !hasValidId ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                   disabled={!hasValidId}

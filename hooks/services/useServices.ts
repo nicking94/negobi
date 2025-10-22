@@ -93,8 +93,28 @@ export const useServices = (filters: UseServicesFilters) => {
       }
 
       const newService = await serviceService.createService(serviceData);
-      setServices((prev) => [...prev, newService]);
-      return newService;
+
+      // Normalizar el servicio creado
+      const normalizedService: Service = {
+        id: newService.id,
+        price_level_1: newService.price_level_1,
+        price_level_2: newService.price_level_2,
+        price_level_3: newService.price_level_3,
+        description: newService.description,
+        name: newService.name,
+        code: newService.code,
+        erp_code_inst: newService.erp_code_inst || "",
+        category_id: newService.category_id, // ← Esto es lo importante
+        company_id: newService.company_id,
+        external_code: newService.external_code || "",
+        sync_with_erp: newService.sync_with_erp,
+        created_at: newService.created_at,
+        updated_at: newService.updated_at,
+        deleted_at: newService.deleted_at,
+      };
+
+      setServices((prev) => [...prev, normalizedService]);
+      return normalizedService;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear servicio");
       return null;
@@ -143,12 +163,32 @@ export const useServices = (filters: UseServicesFilters) => {
       }
 
       const updatedService = await serviceService.updateService(id, updates);
+
+      // Extraer solo los campos necesarios del servicio actualizado
+      const normalizedService: Service = {
+        id: updatedService.id,
+        price_level_1: updatedService.price_level_1,
+        price_level_2: updatedService.price_level_2,
+        price_level_3: updatedService.price_level_3,
+        description: updatedService.description,
+        name: updatedService.name,
+        code: updatedService.code,
+        erp_code_inst: updatedService.erp_code_inst || "",
+        category_id: updatedService.category_id, // ← Esto es lo importante
+        company_id: updatedService.company_id,
+        external_code: updatedService.external_code || "",
+        sync_with_erp: updatedService.sync_with_erp,
+        created_at: updatedService.created_at,
+        updated_at: updatedService.updated_at,
+        deleted_at: updatedService.deleted_at,
+      };
+
       setServices((prev) =>
         prev.map((service) =>
-          service.id.toString() === id ? updatedService : service
+          service.id.toString() === id ? normalizedService : service
         )
       );
-      return updatedService;
+      return normalizedService;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al actualizar servicio"
@@ -174,23 +214,6 @@ export const useServices = (filters: UseServicesFilters) => {
         err instanceof Error ? err.message : "Error al eliminar servicio"
       );
       return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Obtener servicio por ID
-  const getServiceById = async (id: string): Promise<Service | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const service = await serviceService.getServiceById(id);
-      return service;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al obtener servicio"
-      );
-      return null;
     } finally {
       setLoading(false);
     }
@@ -329,7 +352,6 @@ export const useServices = (filters: UseServicesFilters) => {
     createService,
     updateService,
     deleteService,
-    getServiceById,
     updateServicePrices,
     checkServiceCodeExists,
     checkServiceNameExists,

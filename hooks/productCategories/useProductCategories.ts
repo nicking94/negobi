@@ -6,7 +6,7 @@ import {
   CreateProductCategoryData,
   UpdateProductCategoryData,
   GetProductCategoriesParams,
-  PaginatedProductCategoriesResponse, // Importar la interfaz corregida
+  PaginatedProductCategoriesResponse,
 } from "../../services/productCategories/productCategories.service";
 
 export interface UseProductCategoriesFilters {

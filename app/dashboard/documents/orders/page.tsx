@@ -144,7 +144,7 @@ const OrdersPage = () => {
         ? `Operación ${doc.operationTypeId}`
         : "Venta",
       operation_type_id: doc.operationTypeId,
-      items: [], // Los items vendrían en otro endpoint
+      items: [],
       total: doc.total_amount,
       total_amount: doc.total_amount,
       status: mapApiStatusToLocalStatus(doc.status),

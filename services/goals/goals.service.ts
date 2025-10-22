@@ -336,7 +336,7 @@ export const goalService = {
       const response = await goalService.getGoals({
         end_date_from: now, // Objetivos que aún no han vencido
         status: GOAL_STATUSES.NOT_REACHED,
-        itemsPerPage: 50,
+        itemsPerPage: 10,
       });
       return response?.data || []; // Extraer el array de goals con validación
     } catch (error) {
@@ -484,7 +484,7 @@ export const goalService = {
   > => {
     try {
       const response = await goalService.getGoals({
-        itemsPerPage: 50, // Aumentar para obtener más opciones
+        itemsPerPage: 10, // Aumentar para obtener más opciones
         status: GOAL_STATUSES.NOT_REACHED, // Solo objetivos activos
       });
 

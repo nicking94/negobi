@@ -70,13 +70,15 @@ export type OrganizationPayload = {
   roles?: string[];
 };
 
-export type RegisterType = {
+export interface RegisterType {
+  organizationId?: number;
   name: string;
   legal_tax_id: string;
+  api_key_duration_days?: number;
+  code: string;
   contact_email: string;
   main_phone: string;
   fiscal_address: string;
-  code?: string;
   is_active?: boolean;
   admin_email: string;
   admin_password: string;
@@ -84,9 +86,8 @@ export type RegisterType = {
   admin_username: string;
   admin_first_name: string;
   admin_last_name: string;
-  organizationId?: number;
-  api_key_duration_days?: number;
-};
+  external_code?: string;
+}
 
 export type ApiKeyType = {
   id: string;
@@ -129,16 +130,28 @@ export type RegisterResponse = {
   data: RegisterResponseData;
 };
 
-export type LoginType = {
+export interface LoginType {
   email: string;
   password: string;
-  legal_tax_id?: string;
-};
+  legal_tax_id: string;
+}
 
-export type RecoveryPasswordType = {
+export interface RecoveryPasswordType {
   email: string;
   legal_tax_id: string;
-};
+}
+
+export interface ValidateOtpType {
+  email: string;
+  legal_tax_id: string;
+  otp: string;
+}
+
+export interface ChangePasswordType {
+  new_password: string;
+  legal_tax_id: string;
+  token?: string | null;
+}
 export interface OrganizationResponse {
   success: boolean;
   data: {

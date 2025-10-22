@@ -33,6 +33,7 @@ interface AuthContextType {
   ) => void;
   logout: () => void;
   refreshUserProfile: () => Promise<void>;
+  updateToken: (accessToken: string, refreshToken?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching user profile:", error);
       return null;
     }
+  };
+
+  const updateToken = (accessToken: string, refreshToken?: string) => {
+    localStorage.setItem(NEGOBI_JWT_TOKEN, accessToken);
+    if (refreshToken) {
+      localStorage.setItem(NEGOBI_JWT_REFRESH_TOKEN, refreshToken);
+    }
+
+    // Disparar evento para notificar cambios
+    window.dispatchEvent(new Event("storage"));
   };
 
   // Verificar autenticación al cargar
@@ -180,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     refreshUserProfile,
+    updateToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

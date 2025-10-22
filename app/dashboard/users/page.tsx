@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
-  Eye,
   Edit,
   Trash2,
   Search,
@@ -94,7 +93,7 @@ const UsersPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   // ✅ Usar el hook de traducción
   const { translateRole } = useTranslation();
@@ -240,17 +239,19 @@ const UsersPage = () => {
       });
     }
   }, [selectedUser, isEditDialogOpen, form, availableRoles]);
+  // Agrega esto temporalmente para debuggear
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      console.log("Click en:", e.target);
+      console.log(
+        "Dropdown abiertos:",
+        document.querySelectorAll('[data-state="open"]').length
+      );
+    };
 
-  // Status options para filtros
-  const statusOptions = [
-    { id: "1", name: "active", label: "Activo" },
-    { id: "2", name: "inactive", label: "Inactivo" },
-  ];
-
-  const handleViewUser = (user: UserType) => {
-    setSelectedUser(user);
-    setIsViewDialogOpen(true);
-  };
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
 
   const handleEditUser = (user: UserType) => {
     setSelectedUser(user);
@@ -264,7 +265,6 @@ const UsersPage = () => {
 
   const handleSaveUser = async (data: UserFormValues) => {
     if (selectedUser) {
-      // ✅ Actualizar solo campos modificados y evitar conflictos de email
       const updateData: UpdateUserPayload = {
         username: data.username,
         first_name: data.first_name,
@@ -274,14 +274,12 @@ const UsersPage = () => {
         seller_code: data.seller_code,
       };
 
-      // ✅ Solo incluir email si realmente cambió
       if (data.email !== selectedUser.email) {
         updateData.email = data.email;
       }
 
       await updateUserHook(selectedUser.id, updateData);
     } else {
-      // Crear nuevo usuario (tu código existente)
       const createData: CreateUserPayload = {
         email: data.email,
         password: data.password || "",
@@ -327,17 +325,10 @@ const UsersPage = () => {
     }
   };
 
-  // ✅ Eliminada la función getRoleLabel y reemplazada por translateRole
-
-  // Filtrar usuarios basado en los filtros
   const filteredUsers = users.filter((user) => {
     const roleMatch = roleFilter === "all" || user.role === roleFilter;
-    const statusMatch =
-      statusFilter === "all" ||
-      (statusFilter === "active" && user.is_active) ||
-      (statusFilter === "inactive" && !user.is_active);
 
-    return roleMatch && statusMatch;
+    return roleMatch;
   });
 
   const columns: ColumnDef<UserType>[] = [
@@ -386,22 +377,7 @@ const UsersPage = () => {
         </div>
       ),
     },
-    {
-      accessorKey: "is_active",
-      header: "Estado",
-      cell: ({ row }) => {
-        const status = row.getValue("is_active") as boolean;
-        return (
-          <div
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              status ? "bg-green_xxl text-green_b" : "bg-red_xxl text-red_b"
-            }`}
-          >
-            {status ? "Activo" : "Inactivo"}
-          </div>
-        );
-      },
-    },
+
     {
       accessorKey: "created_at",
       header: "Creado",
@@ -415,6 +391,8 @@ const UsersPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const user = row.original;
+        const hasValidId = !!user.id;
+
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -426,23 +404,24 @@ const UsersPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => handleViewUser(user)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>Ver Detalles</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onClick={() => handleEditUser(user)}
-                  className="cursor-pointer flex items-center gap-2"
+                  className={`cursor-pointer flex items-center gap-2 ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar</span>
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
+
                 <DropdownMenuItem
                   onClick={() => handleDeleteUser(user)}
-                  className="cursor-pointer flex items-center gap-2 text-red_b"
+                  className={`cursor-pointer flex items-center gap-2 text-red_b ${
+                    !hasValidId ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasValidId}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -470,7 +449,7 @@ const UsersPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Gestión de Usuarios
+              Usuarios
             </h1>
           </div>
 
@@ -501,48 +480,55 @@ const UsersPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu>
+                <DropdownMenu
+                  open={isFilterDropdownOpen}
+                  onOpenChange={setIsFilterDropdownOpen}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-[18rem]"
+                    // ✅ Prevenir que el Select interfiera con el cierre
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => {
+                      // ✅ Permitir que el clic fuera cierre el dropdown
+                      const target = e.target as HTMLElement;
+                      if (!target.closest("[data-radix-select-content]")) {
+                        setIsFilterDropdownOpen(false);
+                      }
+                    }}
+                  >
                     <div className="px-2 py-1.5">
                       <Label htmlFor="role-filter">Rol</Label>
-                      <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <Select
+                        value={roleFilter}
+                        onValueChange={(value) => {
+                          setRoleFilter(value);
+                        }}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setTimeout(() => {
+                              document.body.style.pointerEvents = "";
+                              document.documentElement.style.pointerEvents = "";
+                            }, 100);
+                          }
+                        }}
+                      >
                         <SelectTrigger id="role-filter" className="mt-1">
                           <SelectValue placeholder="Todos los roles" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent
+                          onCloseAutoFocus={(e) => e.stopPropagation()}
+                        >
                           <SelectItem value="all">Todos los roles</SelectItem>
                           {availableRoles.map((role: string, index: number) => (
                             <SelectItem key={index} value={role}>
-                              {/* ✅ Usar translateRole aquí también */}
                               {translateRole(role)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estados</SelectItem>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status.id} value={status.name}>
-                              {status.label}
                             </SelectItem>
                           ))}
                         </SelectContent>

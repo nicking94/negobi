@@ -8,7 +8,7 @@ import {
 } from "../../services/companyBranches/companyBranches.service";
 
 export interface UseCompanyBranchesFilters {
-  companyId: number;
+  companyId: number | null;
   search?: string;
   name?: string;
   code?: string;
@@ -19,28 +19,40 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Función principal para cargar sucursales
+  // En useCompanyBranches.ts - función loadCompanyBranches
   const loadCompanyBranches = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      if (!filters.companyId || filters.companyId <= 0) {
+        console.log("🔄 No hay companyId, no cargando sucursales");
+        setCompanyBranches([]);
+        return;
+      }
+
       const params: GetCompanyBranchesParams = {
         page: 1,
         itemsPerPage: 1000,
+        companyId: filters.companyId,
       };
 
-      if (filters.companyId > 0) {
-        params.companyId = filters.companyId;
-      }
-
-      if (filters.search) params.search = filters.search;
-      if (filters.name) params.name = filters.name;
-      if (filters.code) params.code = filters.code;
-
+      console.log("🔄 Cargando sucursales para empresa:", filters.companyId);
       const branchesData = await companyBranchService.getCompanyBranches(
         params
       );
+
+      console.log("✅ Sucursales cargadas RAW:", branchesData);
+
+      // ✅ NUEVO: Verificar estructura de las sucursales
+      if (branchesData.length > 0) {
+        console.log("🔍 Primera sucursal detallada:", {
+          id: branchesData[0].id,
+          name: branchesData[0].name,
+          companyId: branchesData[0].companyId,
+          allKeys: Object.keys(branchesData[0]),
+        });
+      }
 
       setCompanyBranches(branchesData);
     } catch (err) {
@@ -49,44 +61,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       setError(errorMessage);
       setCompanyBranches([]);
       console.error("❌ Error cargando sucursales:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para cargar sucursales de múltiples empresas (si necesitas esta funcionalidad)
-  const loadAllCompanyBranches = async (companyIds: number[]) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const allBranches: CompanyBranch[] = [];
-
-      for (const companyId of companyIds) {
-        try {
-          const branchesData = await companyBranchService.getCompanyBranches({
-            companyId: companyId,
-            page: 1,
-            itemsPerPage: 1000,
-          });
-
-          if (Array.isArray(branchesData)) {
-            allBranches.push(...branchesData);
-          }
-        } catch (err) {
-          console.error(
-            `Error cargando sucursales de empresa ${companyId}:`,
-            err
-          );
-        }
-      }
-
-      setCompanyBranches(allBranches);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error al cargar sucursales";
-      setError(errorMessage);
-      setCompanyBranches([]);
     } finally {
       setLoading(false);
     }
@@ -198,6 +172,5 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     deleteCompanyBranch,
     getCompanyBranchById,
     refetch: loadCompanyBranches,
-    loadAllCompanyBranches, // Exportar la nueva función si la necesitas
   };
 };

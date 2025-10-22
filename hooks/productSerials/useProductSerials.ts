@@ -579,7 +579,7 @@ export const useSerialSearch = () => {
 
       const filters: GetProductSerialsParams = {
         search: searchTerm,
-        itemsPerPage: 50,
+        itemsPerPage: 10,
       };
 
       if (productId) {

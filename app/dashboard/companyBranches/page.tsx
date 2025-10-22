@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
-  Eye,
   Edit,
   Trash2,
   Search,
@@ -59,6 +58,7 @@ import {
 import { useCompanyBranches } from "@/hooks/companyBranches/useCompanyBranches";
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
+import { usePermissions } from "@/hooks/auth/usePermissions"; // NUEVO: Importar hook de permisos
 
 type Branch = CompanyBranch & {
   company?: {
@@ -80,6 +80,15 @@ const BranchesPage = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
     null
   );
+
+  // NUEVO: Hook de permisos
+  const {
+    canCreateBranch,
+    canEditBranch,
+    canDeleteBranch,
+    canToggleBranchStatus,
+    userRole,
+  } = usePermissions();
 
   // Usar el hook real de empresas
   const {
@@ -116,13 +125,11 @@ const BranchesPage = () => {
     refetch,
   } = useCompanyBranches(filters);
 
-  // Estados para los filtros
   const statusOptions = [
     { id: "1", name: "active", label: "Activo" },
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
 
-  // NUEVO: Opciones para el selector de empresas
   const companyOptions = useMemo(() => {
     return companies
       .filter((company) => company.id && company.name)
@@ -132,7 +139,6 @@ const BranchesPage = () => {
       }));
   }, [companies]);
 
-  // NUEVO: Efecto para establecer la primera empresa por defecto
   useEffect(() => {
     if (companies.length > 0 && !selectedCompanyId) {
       const firstCompanyId = companies[0].id;
@@ -171,6 +177,14 @@ const BranchesPage = () => {
     });
   }, [companyBranches, searchTerm, statusFilter]);
 
+  // NUEVO: Debug para ver permisos
+  useEffect(() => {
+    console.log("🔐 User role:", userRole);
+    console.log("🔐 Can create branch:", canCreateBranch());
+    console.log("🔐 Can edit branch:", canEditBranch());
+    console.log("🔐 Can delete branch:", canDeleteBranch());
+  }, [userRole, canCreateBranch, canEditBranch, canDeleteBranch]);
+
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -187,17 +201,12 @@ const BranchesPage = () => {
     }));
   }, [searchTerm]);
 
-  // Resto del código permanece igual...
-  const handleViewBranch = async (branch: Branch) => {
-    try {
-      setSelectedBranch(branch);
-      setIsViewDialogOpen(true);
-    } catch (err) {
-      toast.error("Error al cargar los detalles de la sucursal");
-    }
-  };
-
   const handleEditBranch = (branch: Branch) => {
+    if (!canEditBranch()) {
+      toast.error("No tienes permisos para editar sucursales");
+      return;
+    }
+
     setSelectedBranch(branch);
     setFormData({
       companyId: branch.companyId,
@@ -213,6 +222,11 @@ const BranchesPage = () => {
   };
 
   const handleCreateBranch = () => {
+    if (!canCreateBranch()) {
+      toast.error("No tienes permisos para crear sucursales");
+      return;
+    }
+
     setSelectedBranch(null);
 
     // CORRECCIÓN: Usar la empresa seleccionada actualmente o la primera disponible
@@ -233,6 +247,11 @@ const BranchesPage = () => {
   };
 
   const handleDeleteBranch = async (branch: Branch) => {
+    if (!canDeleteBranch()) {
+      toast.error("No tienes permisos para eliminar sucursales");
+      return;
+    }
+
     try {
       const success = await deleteCompanyBranch(branch.id.toString());
       if (success) {
@@ -252,6 +271,12 @@ const BranchesPage = () => {
 
     try {
       if (selectedBranch) {
+        // Verificar permisos para editar
+        if (!canEditBranch()) {
+          toast.error("No tienes permisos para editar sucursales");
+          return;
+        }
+
         const updateData: UpdateCompanyBranchData = {
           name: formData.name,
           code: formData.code,
@@ -272,6 +297,12 @@ const BranchesPage = () => {
           refetch();
         }
       } else {
+        // Verificar permisos para crear
+        if (!canCreateBranch()) {
+          toast.error("No tienes permisos para crear sucursales");
+          return;
+        }
+
         const createData: CreateCompanyBranchData = {
           companyId: formData.companyId,
           name: formData.name,
@@ -300,6 +331,11 @@ const BranchesPage = () => {
   };
 
   const handleToggleStatus = async (branch: Branch) => {
+    if (!canToggleBranchStatus()) {
+      toast.error("No tienes permisos para cambiar el estado de sucursales");
+      return;
+    }
+
     try {
       const updateData: UpdateCompanyBranchData = {
         is_active: !branch.is_active,
@@ -427,44 +463,61 @@ const BranchesPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleViewBranch(branch)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>Ver Detalles</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleEditBranch(branch)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Editar</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleToggleStatus(branch)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  {branch.is_active ? (
-                    <>
-                      <XCircle className="h-4 w-4" />
-                      <span>Desactivar</span>
-                    </>
-                  ) : (
-                    <>
-                      <BadgeCheck className="h-4 w-4" />
-                      <span>Activar</span>
-                    </>
+                {/* Editar - solo si tiene permisos */}
+                {canEditBranch() && (
+                  <DropdownMenuItem
+                    onClick={() => handleEditBranch(branch)}
+                    className="cursor-pointer flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Editar</span>
+                  </DropdownMenuItem>
+                )}
+
+                {/* Cambiar estado - solo si tiene permisos */}
+                {canToggleBranchStatus() && (
+                  <DropdownMenuItem
+                    onClick={() => handleToggleStatus(branch)}
+                    className="cursor-pointer flex items-center gap-2"
+                  >
+                    {branch.is_active ? (
+                      <>
+                        <XCircle className="h-4 w-4" />
+                        <span>Desactivar</span>
+                      </>
+                    ) : (
+                      <>
+                        <BadgeCheck className="h-4 w-4" />
+                        <span>Activar</span>
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                )}
+
+                {/* Eliminar - solo si tiene permisos */}
+                {canDeleteBranch() && (
+                  <>
+                    {(canEditBranch() || canToggleBranchStatus()) && (
+                      <DropdownMenuSeparator />
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteBranch(branch)}
+                      className="cursor-pointer flex items-center gap-2 text-red_b"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Eliminar</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Mensaje si no tiene ningún permiso */}
+                {!canEditBranch() &&
+                  !canToggleBranchStatus() &&
+                  !canDeleteBranch() && (
+                    <DropdownMenuItem className="text-gray-400 cursor-not-allowed">
+                      No tienes permisos para realizar acciones
+                    </DropdownMenuItem>
                   )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleDeleteBranch(branch)}
-                  className="cursor-pointer flex items-center gap-2 text-red_b"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Eliminar</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -489,8 +542,14 @@ const BranchesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Gestión de Sucursales
+              Sucursales
             </h1>
+            {/* NUEVO: Mostrar rol actual del usuario */}
+            {userRole && (
+              <div className="text-sm text-gray-500">
+                Rol: <span className="font-medium">{userRole}</span>
+              </div>
+            )}
           </div>
 
           {/* NUEVO: Sección de filtros con selector de empresas */}
@@ -564,16 +623,33 @@ const BranchesPage = () => {
                 </div>
               </div>
 
+              {/* NUEVO: Botón crear con verificación de permisos */}
               <Button
                 onClick={handleCreateBranch}
                 className="flex items-center gap-2 whitespace-nowrap"
-                disabled={isLoading}
+                disabled={isLoading || !canCreateBranch()}
               >
                 <Plus className="h-4 w-4" />
                 <span>Crear Sucursal</span>
+                {!canCreateBranch() && (
+                  <span className="sr-only">
+                    (No tienes permisos para crear sucursales)
+                  </span>
+                )}
               </Button>
             </div>
           </div>
+
+          {/* NUEVO: Mensaje informativo sobre permisos */}
+          {!canCreateBranch() && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                <strong>Información:</strong> Tu rol actual ({userRole}) no
+                tiene permisos para crear sucursales. Contacta al administrador
+                del sistema si necesitas este acceso.
+              </p>
+            </div>
+          )}
 
           {/* Mostrar tabla solo si hay una empresa seleccionada */}
           {selectedCompanyId ? (
