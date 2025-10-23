@@ -62,9 +62,7 @@ import {
   documentService,
 } from "@/services/documents/documents.service";
 
-// Importar el hook de clientes
 import useGetClients from "@/hooks/clients/useGetClients";
-// Importar el componente SelectSearchable
 import { SelectSearchable } from "@/components/ui/select-searchable";
 
 const esLocale = {
@@ -76,7 +74,6 @@ const esLocale = {
 };
 registerLocale("es", esLocale);
 
-// Tipo Budget basado en Document
 export type Budget = Document & {
   clientName?: string;
   sellerName?: string;
@@ -129,17 +126,15 @@ const BudgetsPage = () => {
 
   const { budgets, error, refetch, updateDocument, deleteDocument } =
     useBudgets({
-      companyId: companyId || 0, // Usar el companyId del usuario o 0 si no existe
+      companyId: companyId || 0,
     });
 
-  // Usar el hook de clientes
   const { clientsResponse: clients } = useGetClients({
     companyId: companyId || undefined,
     itemsPerPage: 100,
   });
   const { companies } = useGetAllCompanies();
 
-  // Cargar presupuestos al montar el componente
   useEffect(() => {
     refetch();
   }, []);
@@ -160,9 +155,7 @@ const BudgetsPage = () => {
       .filter((company) => company.id != null)
       .map((company) => ({
         value: company.id!.toString(),
-        label: `${company.name || "Empresa sin nombre"}${
-          company.legal_tax_id ? ` - ${company.legal_tax_id}` : ""
-        }`,
+        label: `${company.name || "Empresa sin nombre"}`,
       }));
 
     return options;
@@ -173,9 +166,7 @@ const BudgetsPage = () => {
       .filter((client) => client.id != null)
       .map((client) => ({
         value: client.id!.toString(),
-        label: `${client.legal_name || "Cliente sin nombre"}${
-          client.tax_id ? ` - ${client.tax_id}` : ""
-        }${client.email ? ` - ${client.email}` : ""}`,
+        label: `${client.legal_name || "Cliente sin nombre"}`,
       }));
     return options;
   }, [clients]);
@@ -1076,7 +1067,7 @@ const BudgetsPage = () => {
 
       {/* Modal para crear presupuesto - ACTUALIZADO CON SELECTSEARCHABLE */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-gray_xxl sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Crear Nuevo Presupuesto
@@ -1142,30 +1133,34 @@ const BudgetsPage = () => {
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="company-select">Empresa *</Label>
-              <SelectSearchable
-                value={selectedCompanyId?.toString() || ""}
-                onValueChange={handleCompanyChange}
-                placeholder="Seleccionar empresa..."
-                options={companyOptions}
-                emptyMessage="No se encontraron empresas."
-                searchPlaceholder="Buscar empresa..."
-                className="w-full"
-              />
-            </div>
-            {/* SELECTOR DE CLIENTES CON SELECTSEARCHABLE */}
-            <div className="space-y-2">
-              <Label htmlFor="client-select">Cliente *</Label>
-              <SelectSearchable
-                value={formData.clientId}
-                onValueChange={handleClientChange}
-                placeholder="Seleccionar cliente..."
-                options={clientOptions}
-                emptyMessage="No se encontraron clientes."
-                searchPlaceholder="Buscar..."
-                className="w-full"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className=" space-y-2">
+                <Label htmlFor="company-select">Empresa *</Label>
+                <SelectSearchable
+                  value={selectedCompanyId?.toString() || ""}
+                  onValueChange={handleCompanyChange}
+                  placeholder="Seleccionar empresa..."
+                  options={companyOptions}
+                  emptyMessage="No se encontraron empresas."
+                  searchPlaceholder="Buscar empresa..."
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2 w-full">
+                {" "}
+                {/* Añade w-full aquí también */}
+                <Label htmlFor="client-select">Cliente *</Label>
+                <SelectSearchable
+                  value={formData.clientId}
+                  onValueChange={handleClientChange}
+                  placeholder="Seleccionar cliente..."
+                  options={clientOptions}
+                  emptyMessage="No se encontraron clientes."
+                  searchPlaceholder="Buscar..."
+                  className="w-full"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1316,6 +1311,7 @@ const BudgetsPage = () => {
                 }
                 placeholder="Notas adicionales..."
                 rows={3}
+                className="bg-white"
               />
             </div>
           </div>
@@ -1394,7 +1390,8 @@ const BudgetsPage = () => {
                 />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className=" space-y-2 w-full">
+              {" "}
               <Label htmlFor="company-select">Empresa *</Label>
               <SelectSearchable
                 value={selectedCompanyId?.toString() || ""}

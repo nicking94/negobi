@@ -10,7 +10,6 @@ import {
   Filter,
   RotateCcw,
   FileText,
-  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,7 +82,6 @@ const DevolutionsPage = () => {
   const [isClientDevolutionsDialogOpen, setIsClientDevolutionsDialogOpen] =
     useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sellerFilter, setSellerFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -94,9 +92,7 @@ const DevolutionsPage = () => {
     null
   );
 
-  // Obtener las empresas
-  const { companies: companiesResponse, loading: companiesLoading } =
-    useGetAllCompanies();
+  const { companies: companiesResponse } = useGetAllCompanies();
 
   const companyOptions = useMemo(() => {
     return companiesResponse.map((company) => ({
@@ -111,16 +107,32 @@ const DevolutionsPage = () => {
     }
   }, [companiesResponse, selectedCompanyId]);
 
-  // Usar el hook de devoluciones
-  const {
-    returns,
-    loading: returnsLoading,
-    error: returnsError,
-  } = useReturns(
+  const { returns, error: returnsError } = useReturns(
     selectedCompanyId ? { companyId: selectedCompanyId } : { companyId: -1 }
   );
 
-  // Mapear los documentos de devolución al tipo Devolution
+  const getOperationType = (documentType: string): string => {
+    const typeMap: { [key: string]: string } = {
+      sales_return: "Devolución de Venta",
+      return_delivery_note: "Nota de Entrega Devolución",
+      invoice: "Factura",
+      order: "Pedido",
+    };
+    return typeMap[documentType] || documentType;
+  };
+
+  const mapReturnStatus = (status: string): Devolution["status"] => {
+    const statusMap: { [key: string]: Devolution["status"] } = {
+      draft: "draft",
+      pending: "pending",
+      approved: "approved",
+      completed: "completed",
+      cancelled: "cancelled",
+      rejected: "rejected",
+    };
+    return statusMap[status] || "pending";
+  };
+
   const devolutions: Devolution[] = useMemo(() => {
     if (!returns || !Array.isArray(returns)) {
       return [];
@@ -134,7 +146,6 @@ const DevolutionsPage = () => {
             obs.campo.toLowerCase().includes("reason")
         )?.valor || "No especificado";
 
-      // Obtener referencia de la factura original
       const billReference =
         returnDoc.affected_document_number ||
         returnDoc.sourceDocumentId?.toString() ||
@@ -164,42 +175,6 @@ const DevolutionsPage = () => {
       };
     });
   }, [returns]);
-
-  // Función para mapear el tipo de operación
-  const getOperationType = (documentType: string): string => {
-    const typeMap: { [key: string]: string } = {
-      sales_return: "Devolución de Venta",
-      return_delivery_note: "Nota de Entrega Devolución",
-      invoice: "Factura",
-      order: "Pedido",
-    };
-    return typeMap[documentType] || documentType;
-  };
-
-  // Función para mapear el estado de la devolución
-  const mapReturnStatus = (status: string): Devolution["status"] => {
-    const statusMap: { [key: string]: Devolution["status"] } = {
-      draft: "draft",
-      pending: "pending",
-      approved: "approved",
-      completed: "completed",
-      cancelled: "cancelled",
-      rejected: "rejected",
-    };
-    return statusMap[status] || "pending";
-  };
-
-  const sellers = useMemo(() => {
-    const uniqueSellers = Array.from(
-      new Set(
-        devolutions.map((devolution) => devolution.seller || "").filter(Boolean)
-      )
-    );
-    return uniqueSellers.map((seller, index) => ({
-      id: (index + 1).toString(),
-      name: seller,
-    }));
-  }, [devolutions]);
 
   const clients = useMemo(() => {
     const uniqueClients = Array.from(
@@ -232,9 +207,6 @@ const DevolutionsPage = () => {
           .includes(searchTerm.toLowerCase()) ||
         devolution.reason.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesSeller =
-        sellerFilter === "all" || devolution.seller === sellerFilter;
-
       const matchesClient =
         clientFilter === "all" || devolution.client === clientFilter;
 
@@ -248,21 +220,10 @@ const DevolutionsPage = () => {
           devolution.issued_date <= dateRange.to);
 
       return (
-        matchesSearch &&
-        matchesSeller &&
-        matchesClient &&
-        matchesStatus &&
-        matchesDateRange
+        matchesSearch && matchesClient && matchesStatus && matchesDateRange
       );
     });
-  }, [
-    devolutions,
-    searchTerm,
-    sellerFilter,
-    clientFilter,
-    statusFilter,
-    dateRange,
-  ]);
+  }, [devolutions, searchTerm, clientFilter, statusFilter, dateRange]);
 
   const handleViewDevolution = (devolution: Devolution) => {
     setSelectedDevolution(devolution);

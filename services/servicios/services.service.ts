@@ -38,9 +38,18 @@ export interface Service {
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
-
-  // Campos adicionales del response de lista
   externalId?: number;
+  category?: {
+    id: number;
+    category_name: string;
+    category_code: string;
+    description?: string;
+    is_active: boolean;
+  };
+  company?: {
+    id: number;
+    name: string;
+  };
 }
 
 // Datos para crear un servicio
@@ -110,13 +119,25 @@ export interface ServicePriceAnalysis {
 }
 
 export const serviceService = {
-  // Crear un nuevo servicio
   createService: async (serviceData: CreateServiceData): Promise<Service> => {
     const response = await api.post(PostService, serviceData);
-    return response.data.data;
+    const service = response.data.data;
+
+    // Normalizar la respuesta
+    return {
+      ...service,
+      category_id:
+        service.category_id !== undefined
+          ? service.category_id
+          : service.category?.id,
+      company_id:
+        service.company_id !== undefined
+          ? service.company_id
+          : service.company?.id,
+    };
   },
 
-  // Obtener todos los servicios
+  // En services.service.ts - método getServices
   getServices: async (params: GetServicesParams): Promise<Service[]> => {
     const queryParams = new URLSearchParams();
 
@@ -140,16 +161,43 @@ export const serviceService = {
     }
 
     const response = await api.get(`${GetServices}?${queryParams}`);
-    return response.data.data.data;
+
+    const servicesData = response.data.data.data;
+
+    return servicesData.map((service: any) => ({
+      ...service,
+
+      category_id:
+        service.category_id !== undefined
+          ? service.category_id
+          : service.category?.id,
+
+      company_id:
+        service.company_id !== undefined
+          ? service.company_id
+          : service.company?.id,
+    }));
   },
 
-  // Actualizar un servicio
   updateService: async (
     id: string,
     updates: UpdateServiceData
   ): Promise<Service> => {
     const response = await api.patch(`${PatchService}/${id}`, updates);
-    return response.data.data;
+    const service = response.data.data;
+
+    // Normalizar la respuesta
+    return {
+      ...service,
+      category_id:
+        service.category_id !== undefined
+          ? service.category_id
+          : service.category?.id,
+      company_id:
+        service.company_id !== undefined
+          ? service.company_id
+          : service.company?.id,
+    };
   },
 
   // Eliminar un servicio

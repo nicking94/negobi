@@ -51,10 +51,7 @@ export type DocumentStatus =
   | "cancelled"
   | "closed";
 
-// services/documents/documents.service.ts
-
 export interface Document {
-  // Campos principales
   id: number;
   document_type: DocumentType;
   document_number: string;

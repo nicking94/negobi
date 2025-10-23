@@ -8,9 +8,12 @@ import {
   Send,
   Search,
   Filter,
-  FileText,
   Truck,
   Building,
+  Package,
+  Calendar,
+  Hash,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +49,7 @@ import { DateRange } from "react-day-picker";
 import useGetClients from "@/hooks/clients/useGetClients";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { Card, CardContent } from "@/components/ui/card";
 
 export type DeliveryNote = {
   id: string;
@@ -68,10 +72,7 @@ const DeliveryNotesPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [selectedDeliveryNote, setSelectedDeliveryNote] =
     useState<DeliveryNote | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isClientDeliveryNotesDialogOpen, setIsClientDeliveryNotesDialogOpen] =
-    useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -80,22 +81,51 @@ const DeliveryNotesPage = () => {
   });
   const [clientFilter, setClientFilter] = useState<string>("all");
 
-  // Obtener clientes reales desde la API
-  const {
-    clientsResponse,
-    loading: clientsLoading,
-    setModified,
-  } = useGetClients({
+  const { clientsResponse, loading: clientsLoading } = useGetClients({
     search: searchTerm,
   });
 
-  // Datos de ejemplo para notas de entrega - ahora conectados con clientes reales
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
 
-  // Actualizar las notas de entrega cuando cambian los clientes
+  // Componentes auxiliares (deberían estar en un archivo separado o en el mismo)
+  const InfoRow = ({
+    label,
+    value,
+    valueClass = "",
+  }: {
+    label: string;
+    value: string | number;
+    valueClass?: string;
+  }) => (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center gap-2 text-sm text-gray-600">
+        <span>{label}</span>
+      </div>
+      <span className={`text-sm font-medium ${valueClass}`}>{value}</span>
+    </div>
+  );
+
+  const InfoCard = ({
+    title,
+    children,
+    className = "",
+  }: {
+    title: string;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <Card className={`border border-gray-200 ${className}`}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+
   useEffect(() => {
     if (clientsResponse && clientsResponse.length > 0) {
-      // Crear notas de entrega mock basadas en los clientes reales
       const mockNotes: DeliveryNote[] = clientsResponse.flatMap(
         (client, index) => {
           const notesForClient = [];
@@ -197,11 +227,6 @@ const DeliveryNotesPage = () => {
     return filteredNotes;
   }, [deliveryNotes, clientFilter, statusFilter, dateRange, clients]);
 
-  // Obtener notas de entrega de un cliente específico
-  const getClientDeliveryNotes = (clientName: string) => {
-    return deliveryNotes.filter((note) => note.client === clientName);
-  };
-
   const handleViewDeliveryNote = (note: DeliveryNote) => {
     setSelectedDeliveryNote(note);
     setIsViewDialogOpen(true);
@@ -213,11 +238,6 @@ const DeliveryNotesPage = () => {
 
   const handleProcessDeliveryNote = (note: DeliveryNote) => {
     toast.success(`Nota de entrega ${note.correlative} procesada exitosamente`);
-  };
-
-  const handleViewClientDeliveryNotes = (client: string) => {
-    setSelectedClient(client);
-    setIsClientDeliveryNotesDialogOpen(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -257,13 +277,6 @@ const DeliveryNotesPage = () => {
     );
   };
 
-  // Obtener el nombre del cliente seleccionado
-  const selectedClientName = useMemo(() => {
-    if (clientFilter === "all") return null;
-    return clients.find((c) => c.id === clientFilter)?.name || null;
-  }, [clientFilter, clients]);
-
-  // Configuración de columnas para la tabla
   const columns: ColumnDef<DeliveryNote>[] = [
     {
       accessorKey: "client",
@@ -520,134 +533,201 @@ const DeliveryNotesPage = () => {
         </main>
       </div>
 
-      {/* Modal para ver detalle de nota de entrega */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Detalle de Nota de Entrega {selectedDeliveryNote?.correlative}
-            </DialogTitle>
-            <DialogDescription>
-              Información completa de la nota de entrega seleccionada
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedDeliveryNote && (
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center justify-between border-b gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Información del Cliente
-                  </h3>
-                  <p className="text-sm">{selectedDeliveryNote.client}</p>
+        <DialogContent className="w-full bg-gray_xxl border border-gray-200 sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-2">
+          <DialogHeader className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Truck className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Información de Venta</h3>
-                  <p className="text-sm">
-                    <span className="font-medium">Vendedor:</span>{" "}
-                    {selectedDeliveryNote.seller}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Ubicación:</span>{" "}
-                    {selectedDeliveryNote.location}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Correlativo</h3>
-                  <p className="text-sm">{selectedDeliveryNote.correlative}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Factura de Referencia</h3>
-                  <p className="text-sm">
-                    {selectedDeliveryNote.bill_reference || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Tipo de Operación</h3>
-                  <p className="text-sm">
-                    {selectedDeliveryNote.operation_type}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Fecha de Emisión</h3>
-                  <p className="text-sm">
-                    {formatDate(selectedDeliveryNote.issued_date)}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Estado</h3>
-                  <p className="text-sm">
-                    {getStatusBadge(selectedDeliveryNote.status)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Dirección de Entrega</h3>
-                  <p className="text-sm">
-                    {selectedDeliveryNote.delivery_address}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Persona de Contacto</h3>
-                  <p className="text-sm">
-                    {selectedDeliveryNote.contact_person} -{" "}
-                    {selectedDeliveryNote.contact_phone}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Notas</h3>
-                <div className="border rounded-md p-4">
-                  <p className="text-sm">
-                    {selectedDeliveryNote.notes || "Sin notas"}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Productos a Entregar</h3>
-                <div className="border rounded-md p-4">
-                  <p className="text-sm text-center text-gray_m">
-                    Aquí iría el detalle de los productos a entregar
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Subtotal:</span>
-                    <span>
-                      {formatCurrency(selectedDeliveryNote.total * 0.85)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">IVA (15%):</span>
-                    <span>
-                      {formatCurrency(selectedDeliveryNote.total * 0.15)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-2 border-t">
-                    <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      {formatCurrency(selectedDeliveryNote.total)}
-                    </span>
-                  </div>
+                  <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                    Detalle de Nota de Entrega
+                    {selectedDeliveryNote && (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedDeliveryNote.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : selectedDeliveryNote.status === "delivered"
+                            ? "bg-green_xxl text-green_b"
+                            : selectedDeliveryNote.status === "cancelled"
+                            ? "bg-red_xxl text-red_b"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {selectedDeliveryNote.status === "pending"
+                          ? "Pendiente"
+                          : selectedDeliveryNote.status === "delivered"
+                          ? "Entregado"
+                          : selectedDeliveryNote.status === "cancelled"
+                          ? "Cancelado"
+                          : "En tránsito"}
+                      </span>
+                    )}
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600 mt-1">
+                    Información completa de la nota de entrega
+                  </DialogDescription>
                 </div>
               </div>
             </div>
+          </DialogHeader>
+
+          {selectedDeliveryNote && (
+            <div className="p-6 space-y-6">
+              {/* Información Básica */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <Hash className="h-5 w-5 text-green_m" />
+                    <div>
+                      <p className="text-sm text-gray-600">Correlativo</p>
+                      <p className="font-bold text-green_b">
+                        {selectedDeliveryNote.correlative}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-green_m" />
+                    <div>
+                      <p className="text-sm text-gray-600">Fecha de Emisión</p>
+                      <p className="font-medium text-green_b">
+                        {formatDate(selectedDeliveryNote.issued_date)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <Receipt className="h-5 w-5 text-green_m" />
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Factura Referencia
+                      </p>
+                      <p className="font-medium text-green_b">
+                        {selectedDeliveryNote.bill_reference || "N/A"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Cliente y Vendedor */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <InfoCard title="Información del Cliente">
+                  <div className="space-y-2">
+                    <InfoRow
+                      label="Nombre"
+                      value={selectedDeliveryNote.client}
+                    />
+                    <InfoRow
+                      label="Dirección"
+                      value={selectedDeliveryNote.delivery_address}
+                    />
+                  </div>
+                </InfoCard>
+
+                <InfoCard title="Información de Venta">
+                  <div className="space-y-2">
+                    <InfoRow
+                      label="Vendedor"
+                      value={selectedDeliveryNote.seller || "No especificado"}
+                    />
+                    <InfoRow
+                      label="Ubicación"
+                      value={selectedDeliveryNote.location}
+                    />
+                    <InfoRow
+                      label="Tipo de Operación"
+                      value={selectedDeliveryNote.operation_type}
+                    />
+                  </div>
+                </InfoCard>
+              </div>
+
+              {/* Información de Contacto */}
+              <InfoCard title="Información de Contacto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <InfoRow
+                      label="Persona de Contacto"
+                      value={selectedDeliveryNote.contact_person}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <InfoRow
+                      label="Teléfono"
+                      value={selectedDeliveryNote.contact_phone}
+                      valueClass="text-blue-600"
+                    />
+                  </div>
+                </div>
+              </InfoCard>
+
+              {/* Notas */}
+              {selectedDeliveryNote.notes && (
+                <InfoCard title="Notas">
+                  <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                    {selectedDeliveryNote.notes}
+                  </p>
+                </InfoCard>
+              )}
+
+              {/* Productos */}
+              <InfoCard title="Productos a Entregar">
+                <div className="bg-gray-50 rounded-md p-6 text-center border border-gray-200">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">
+                    Detalle de productos por implementar
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Aquí se mostrará la lista de productos asociados a esta
+                    entrega
+                  </p>
+                </div>
+              </InfoCard>
+
+              {/* Resumen Financiero */}
+              <InfoCard title="Resumen Financiero">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <InfoRow
+                        label="Subtotal"
+                        value={formatCurrency(
+                          selectedDeliveryNote.total * 0.85
+                        )}
+                      />
+                      <InfoRow
+                        label="IVA (15%)"
+                        value={formatCurrency(
+                          selectedDeliveryNote.total * 0.15
+                        )}
+                        valueClass="text-blue-600"
+                      />
+                    </div>
+
+                    <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200">
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="font-bold text-gray-900">Total</span>
+                        <span className="font-bold text-lg text-green-600">
+                          {formatCurrency(selectedDeliveryNote.total)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </InfoCard>
+            </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          {/* Footer Actions */}
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
@@ -668,97 +748,6 @@ const DeliveryNotesPage = () => {
                 Marcar como Enviado
               </Button>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para ver todas las notas de entrega del cliente */}
-      <Dialog
-        open={isClientDeliveryNotesDialogOpen}
-        onOpenChange={setIsClientDeliveryNotesDialogOpen}
-      >
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Notas de Entrega de {selectedClient}
-            </DialogTitle>
-            <DialogDescription>
-              Lista completa de notas de entrega del cliente seleccionado
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedClient && (
-            <div className="grid gap-4 py-4">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-green_m">
-                  <thead>
-                    <tr className="bg-green_m text-white">
-                      <th className="px-4 py-2 text-left">Correlativo</th>
-                      <th className="px-4 py-2 text-left">
-                        Factura Referencia
-                      </th>
-                      <th className="px-4 py-2 text-left">Fecha</th>
-                      <th className="px-4 py-2 text-left">Total</th>
-                      <th className="px-4 py-2 text-left">Estado</th>
-                      <th className="px-4 py-2 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getClientDeliveryNotes(selectedClient).map((note) => (
-                      <tr key={note.id}>
-                        <td className="border border-gray_l px-4 py-2">
-                          {note.correlative}
-                        </td>
-                        <td className="border border-gray_l px-4 py-2">
-                          {note.bill_reference || "N/A"}
-                        </td>
-                        <td className="border border-gray_l px-4 py-2">
-                          {formatDate(note.issued_date)}
-                        </td>
-                        <td className="border border-gray_l px-4 py-2">
-                          {formatCurrency(note.total)}
-                        </td>
-                        <td className="border border-gray_l px-4 py-2">
-                          {getStatusBadge(note.status)}
-                        </td>
-                        <td className="border border-gray_l px-4 py-2">
-                          <div className="flex justify-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDeliveryNote(note)}
-                              className="flex items-center gap-1"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span>Ver Nota</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleResendDeliveryNote(note)}
-                              className="flex items-center gap-1"
-                            >
-                              <Send className="h-4 w-4" />
-                              <span>Reenviar</span>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsClientDeliveryNotesDialogOpen(false)}
-            >
-              Cerrar
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

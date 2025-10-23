@@ -125,8 +125,8 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full bg-white border border-gray-200 sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-2">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 bg-gray-50">
+      <DialogContent className="w-full bg-gray_xxl border border-gray-200 sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-2">
+        <DialogHeader className="p-6 border-b border-gray-200 ">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -147,20 +147,10 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                   )}
                 </DialogTitle>
                 <DialogDescription className="text-gray-600 mt-1">
-                  Información resumida del documento
+                  Información resumida de la factura
                 </DialogDescription>
               </div>
             </div>
-            {document && (
-              <div className="text-right">
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(
-                    parseFloat(document.total_amount?.toString() || "0")
-                  )}
-                </p>
-                <p className="text-sm text-gray-600">Total</p>
-              </div>
-            )}
           </div>
         </DialogHeader>
 
@@ -191,7 +181,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
         {/* Document Content */}
         {document && !loading && (
-          <div className="p-6 space-y-6">
+          <div className=" p-6 space-y-6">
             {/* Información Básica */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-white border border-gray-200">
@@ -280,8 +270,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               </InfoCard>
             )}
 
-            {/* Resumen Financiero - Simplificado */}
-            <InfoCard title="Resumen Financiero" className="bg-gray-50">
+            <InfoCard title="Resumen Financiero">
               <div className="space-y-3">
                 {/* Subtotal y Descuentos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -333,7 +322,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                 </div>
 
                 {/* Información adicional relevante */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-gray-200">
+                <div className="grid grid-cols-1  gap-4 pt-3 border-t border-gray-200">
                   <InfoRow
                     label="Moneda"
                     value={document.currency?.currency_name || "Bolivar"}
@@ -361,7 +350,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
             {(parseFloat(document.credit_amount?.toString() || "0") > 0 ||
               parseFloat(document.cash_amount?.toString() || "0") > 0) && (
               <InfoCard title="Métodos de Pago">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className=" grid grid-cols-1 md:grid-cols-2 gap-3">
                   {parseFloat(document.credit_amount?.toString() || "0") >
                     0 && (
                     <div className="flex justify-between items-center p-2 bg-blue-50 rounded border border-blue-200">
@@ -394,13 +383,8 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
         )}
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          >
+        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 ">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cerrar
           </Button>
           {document && (
@@ -409,7 +393,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               onClick={() => {
                 console.log("Reenviar documento:", document.id);
               }}
-              className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Send className="h-4 w-4 mr-2" />
               Reenviar Factura

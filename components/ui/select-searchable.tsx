@@ -54,6 +54,7 @@ export function SelectSearchable({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          size={"full"}
           role="combobox"
           aria-expanded={open}
           disabled={disabled}

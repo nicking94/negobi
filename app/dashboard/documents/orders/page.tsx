@@ -93,10 +93,7 @@ export type Order = {
 const OrdersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isClientOrdersDialogOpen, setIsClientOrdersDialogOpen] =
-    useState(false);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null
@@ -112,52 +109,6 @@ const OrdersPage = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
     null
   );
-
-  // Obtener las empresas
-  const { companies: companiesResponse } = useGetAllCompanies();
-
-  // Usar el hook useDocuments correctamente
-  const {
-    documents: documentsData,
-    loading: documentsLoading, // Cambiado de ordersLoading a documentsLoading
-    error: documentsError, // Cambiado de ordersError a documentsError
-    updateDocumentStatus,
-  } = useDocuments({
-    companyId: selectedCompanyId || 0,
-    document_type: "order",
-  });
-
-  // Mapear documentos a órdenes
-  const orders: Order[] = useMemo(() => {
-    if (!documentsData || !Array.isArray(documentsData)) {
-      return [];
-    }
-
-    return documentsData.map((doc) => ({
-      id: doc.id.toString(),
-      order_number: doc.document_number,
-      client: doc.client?.legal_name || `Cliente ${doc.clientId}`,
-      client_id: doc.clientId,
-      order_date: new Date(doc.document_date),
-      delivery_date: doc.due_date ? new Date(doc.due_date) : null,
-      operation_type: doc.operationTypeId
-        ? `Operación ${doc.operationTypeId}`
-        : "Venta",
-      operation_type_id: doc.operationTypeId,
-      items: [],
-      total: doc.total_amount,
-      total_amount: doc.total_amount,
-      status: mapApiStatusToLocalStatus(doc.status),
-      seller: doc.salesperson_external_code || "No especificado",
-      salesperson_id: doc.salespersonId,
-      location: doc.sourceWarehouseId
-        ? `Almacén ${doc.sourceWarehouseId}`
-        : "Ubicación no especificada",
-      warehouse_id: doc.sourceWarehouseId,
-      notes: doc.notes || "Sin notas",
-      company_id: doc.companyId,
-    }));
-  }, [documentsData]);
 
   // Actualizar el mapeo de estados
   const mapApiStatusToLocalStatus = (apiStatus: string): Order["status"] => {
@@ -225,6 +176,50 @@ const OrdersPage = () => {
     }
   };
 
+  const { companies: companiesResponse } = useGetAllCompanies();
+
+  const {
+    documents: documentsData,
+    loading: documentsLoading,
+    error: documentsError,
+    updateDocumentStatus,
+  } = useDocuments({
+    companyId: selectedCompanyId || 0,
+    document_type: "order",
+  });
+
+  // Mapear documentos a órdenes
+  const orders: Order[] = useMemo(() => {
+    if (!documentsData || !Array.isArray(documentsData)) {
+      return [];
+    }
+
+    return documentsData.map((doc) => ({
+      id: doc.id.toString(),
+      order_number: doc.document_number,
+      client: doc.client?.legal_name || `Cliente ${doc.clientId}`,
+      client_id: doc.clientId,
+      order_date: new Date(doc.document_date),
+      delivery_date: doc.due_date ? new Date(doc.due_date) : null,
+      operation_type: doc.operationTypeId
+        ? `Operación ${doc.operationTypeId}`
+        : "Venta",
+      operation_type_id: doc.operationTypeId,
+      items: [],
+      total: doc.total_amount,
+      total_amount: doc.total_amount,
+      status: mapApiStatusToLocalStatus(doc.status),
+      seller: doc.salesperson_external_code || "No especificado",
+      salesperson_id: doc.salespersonId,
+      location: doc.sourceWarehouseId
+        ? `Almacén ${doc.sourceWarehouseId}`
+        : "Ubicación no especificada",
+      warehouse_id: doc.sourceWarehouseId,
+      notes: doc.notes || "Sin notas",
+      company_id: doc.companyId,
+    }));
+  }, [documentsData]);
+
   const companyOptions = useMemo(() => {
     return companiesResponse.map((company) => ({
       value: company.id.toString(),
@@ -268,11 +263,6 @@ const OrdersPage = () => {
     { value: "completed", label: "Completado" },
     { value: "cancelled", label: "Cancelado" },
   ];
-
-  // Obtener pedidos de un cliente específico
-  const getClientOrders = (clientName: string) => {
-    return orders.filter((order) => order.client === clientName);
-  };
 
   // Filtrar pedidos según los criterios
   const filteredOrders = useMemo(() => {
@@ -348,11 +338,6 @@ const OrdersPage = () => {
       console.error("Error updating order status:", error);
       toast.error("Error al actualizar el estado del pedido");
     }
-  };
-
-  const handleViewClientOrders = (client: string) => {
-    setSelectedClient(client);
-    setIsClientOrdersDialogOpen(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -478,22 +463,16 @@ const OrdersPage = () => {
                   className="cursor-pointer flex items-center gap-2"
                 >
                   <Eye className="h-4 w-4" />
-                  <span>Ver Detalles</span>
+                  <span>Detalles del pedido</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleViewDocument(order)}
                   className="cursor-pointer flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  <span>Ver Documento</span>
+                  <span>Detalles de factura</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleViewClientOrders(order.client)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Ver Pedidos del Cliente</span>
-                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
                   <Label>Cambiar Estado</Label>
@@ -726,7 +705,6 @@ const OrdersPage = () => {
         </main>
       </div>
 
-      {/* Modal para ver detalle de pedido */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -873,102 +851,7 @@ const OrdersPage = () => {
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <FileText className="h-4 w-4 mr-2" />
-              Ver Documento
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para ver pedidos del cliente */}
-      <Dialog
-        open={isClientOrdersDialogOpen}
-        onOpenChange={setIsClientOrdersDialogOpen}
-      >
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Pedidos de {selectedClient}
-            </DialogTitle>
-            <DialogDescription>
-              Lista de pedidos del cliente seleccionado
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedClient && (
-            <div className="grid gap-4 py-4">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-2 text-left">Número</th>
-                      <th className="px-4 py-2 text-left">Tipo Operación</th>
-                      <th className="px-4 py-2 text-left">Fecha</th>
-                      <th className="px-4 py-2 text-left">Total</th>
-                      <th className="px-4 py-2 text-left">Estado</th>
-                      <th className="px-4 py-2 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getClientOrders(selectedClient).map((order) => (
-                      <tr key={order.id}>
-                        <td className="border border-gray-200 px-4 py-2">
-                          {order.order_number}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-2">
-                          {order.operation_type}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-2">
-                          {formatDate(order.order_date)}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-2">
-                          {formatCurrency(order.total)}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-2">
-                          <Badge
-                            variant={getStatusVariant(order.status)}
-                            className={getStatusClassName(order.status)}
-                          >
-                            {getStatusIcon(order.status)}
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </td>
-                        <td className="border border-gray-200 px-4 py-2">
-                          <div className="flex justify-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewOrder(order)}
-                              className="flex items-center gap-1"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span>Ver</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDocument(order)}
-                              className="flex items-center gap-1"
-                            >
-                              <FileText className="h-4 w-4" />
-                              <span>Documento</span>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsClientOrdersDialogOpen(false)}
-            >
-              Cerrar
+              Detalles de factura
             </Button>
           </div>
         </DialogContent>

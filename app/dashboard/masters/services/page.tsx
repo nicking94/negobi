@@ -274,16 +274,20 @@ const ServicesPage = () => {
   };
 
   const getCategoryName = (service: Service) => {
-    console.log("🔍 Buscando categoría para servicio:", service);
-    console.log("🔍 category_id del servicio:", service.category_id);
-    console.log("🔍 Todas las categorías disponibles:", categories);
+    const categoryId = service.category_id || service.category?.id;
 
-    if (!service.category_id) return "Sin categoría";
+    if (!categoryId) return "Sin categoría";
+    const category = categories.find((c) => c.id === categoryId);
 
-    const category = categories.find((c) => c.id === service.category_id);
-    console.log("🔍 Categoría encontrada:", category);
+    if (category) {
+      return category.category_name;
+    }
 
-    return category?.category_name || "Sin categoría";
+    if (service.category?.category_name) {
+      return service.category.category_name;
+    }
+
+    return "Sin categoría";
   };
 
   const getSyncStatus = (service: Service) => {
@@ -464,7 +468,7 @@ const ServicesPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Servicios {services.length > 0 && `(${services.length})`}
+              Servicios
             </h1>
           </div>
 
