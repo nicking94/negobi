@@ -12,6 +12,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  Badge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,11 +87,23 @@ const BudgetsPage = () => {
     selectedCompanyId,
     setSelectedCompanyId,
     isLoading: companyLoading,
+    userProfile,
   } = useUserCompany();
 
   const { createBudget, loading: creating } = useCreateBudget();
   const { getDocumentDetails } = useDocumentDetails();
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { clientsResponse: clients } = useGetClients({
+    companyId: companyId || undefined,
+    itemsPerPage: 1000,
+  });
+  const { budgets, error, refetch, updateDocument, deleteDocument } =
+    useBudgets({
+      companyId: companyId || 0,
+    });
+
+  const { companies } = useGetAllCompanies();
+
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -124,17 +137,6 @@ const BudgetsPage = () => {
     due_date: "",
   });
 
-  const { budgets, error, refetch, updateDocument, deleteDocument } =
-    useBudgets({
-      companyId: companyId || 0,
-    });
-
-  const { clientsResponse: clients } = useGetClients({
-    companyId: companyId || undefined,
-    itemsPerPage: 100,
-  });
-  const { companies } = useGetAllCompanies();
-
   useEffect(() => {
     refetch();
   }, []);
@@ -162,15 +164,26 @@ const BudgetsPage = () => {
   }, [companies]);
 
   const clientOptions = useMemo(() => {
-    const options = clients
+    if (!clients || clients.length === 0) {
+      return [];
+    }
+
+    const filteredClients = clients.filter((client) => {
+      const belongsToCompany =
+        !client.companyId || client.companyId === companyId;
+
+      return belongsToCompany;
+    });
+
+    const options = filteredClients
       .filter((client) => client.id != null)
       .map((client) => ({
         value: client.id!.toString(),
         label: `${client.legal_name || "Cliente sin nombre"}`,
       }));
-    return options;
-  }, [clients]);
 
+    return options;
+  }, [clients, companyId]);
   // Mapear documentos a formato Budget
   const mappedBudgets: Budget[] = useMemo(() => {
     return budgets.map((doc) => ({
@@ -366,9 +379,11 @@ const BudgetsPage = () => {
   };
 
   const handleCreateSubmit = async () => {
-    // Verificar que tenemos companyId seleccionado
-    if (!selectedCompanyId) {
-      toast.error("No se puede crear el presupuesto: Empresa no seleccionada");
+    // ✅ Usar la empresa del usuario logeado automáticamente
+    const targetCompanyId = selectedCompanyId || companyId;
+
+    if (!targetCompanyId) {
+      toast.error("No se puede crear el presupuesto: Empresa no configurada");
       return;
     }
 
@@ -383,7 +398,7 @@ const BudgetsPage = () => {
         document_date: new Date(
           formData.document_date + "T00:00:00"
         ).toISOString(),
-        companyId: selectedCompanyId,
+        companyId: targetCompanyId,
         clientId: parseInt(formData.clientId),
         notes: formData.notes,
         status: formData.status,
@@ -409,6 +424,7 @@ const BudgetsPage = () => {
         toast.error(`Errores de validación: ${validation.errors.join(", ")}`);
         return;
       }
+
       const result = await createBudget(budgetData);
 
       if (result) {
@@ -1065,7 +1081,6 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para crear presupuesto - ACTUALIZADO CON SELECTSEARCHABLE */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="w-full bg-gray_xxl sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -1073,83 +1088,23 @@ const BudgetsPage = () => {
               Crear Nuevo Presupuesto
             </DialogTitle>
             <DialogDescription>
+              {companyId && (
+                <div className="bg-blue-50 p-2 rounded-md text-sm">
+                  <strong>Empresa:</strong>{" "}
+                  {userProfile?.company?.name || `ID: ${companyId}`}
+                  <br />
+                  <strong>Usuario:</strong> {userProfile?.first_name}{" "}
+                  {userProfile?.last_name}
+                </div>
+              )}
               Complete la información para crear un nuevo presupuesto
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="document_number">Número de Documento</Label>
-                <Input
-                  id="document_number"
-                  value={formData.document_number}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      document_number: e.target.value,
-                    })
-                  }
-                  placeholder="Ej: BGT-001"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="document_date">Fecha de Emisión</Label>
-                <div className="w-full">
-                  <DatePicker
-                    selected={
-                      formData.document_date
-                        ? new Date(formData.document_date + "T00:00:00")
-                        : new Date()
-                    }
-                    onChange={(date: Date | null) => {
-                      if (date) {
-                        const utcDate = new Date(
-                          Date.UTC(
-                            date.getFullYear(),
-                            date.getMonth(),
-                            date.getDate()
-                          )
-                        );
-                        setFormData({
-                          ...formData,
-                          document_date: utcDate.toISOString().split("T")[0],
-                        });
-                      } else {
-                        setFormData({
-                          ...formData,
-                          document_date: "",
-                        });
-                      }
-                    }}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholderText="Seleccionar fecha"
-                    showPopperArrow={false}
-                    wrapperClassName="w-full"
-                    dateFormat="dd/MM/yyyy"
-                    locale="es"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className=" space-y-2">
-                <Label htmlFor="company-select">Empresa *</Label>
-                <SelectSearchable
-                  value={selectedCompanyId?.toString() || ""}
-                  onValueChange={handleCompanyChange}
-                  placeholder="Seleccionar empresa..."
-                  options={companyOptions}
-                  emptyMessage="No se encontraron empresas."
-                  searchPlaceholder="Buscar empresa..."
-                  className="w-full"
-                />
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2 w-full">
                 {" "}
-                {/* Añade w-full aquí también */}
                 <Label htmlFor="client-select">Cliente *</Label>
                 <SelectSearchable
                   value={formData.clientId}

@@ -9,7 +9,6 @@ import {
   Briefcase,
   MapPin,
   Users,
-  Shield,
   Target,
   Calendar,
   User,
@@ -33,7 +32,8 @@ import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/translation/useTranslation";
-import { useCurrency } from "@/context/CurrencyContext"; // Importar el hook
+import { useCurrency } from "@/context/CurrencyContext";
+import { usePermissions } from "@/hooks/auth/usePermissions";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -48,7 +48,8 @@ const DashboardHeader = ({
   const { loading } = useLogout();
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const { translateRole } = useTranslation();
-  const { currency, setCurrency } = useCurrency(); // Usar el contexto de moneda
+  const { currency, setCurrency } = useCurrency();
+  const { canAccessOrganizations, canAccessCompanies } = usePermissions();
 
   useEffect(() => {
     const refreshProfile = async () => {
@@ -137,10 +138,10 @@ const DashboardHeader = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
-          {/* Selector de Moneda Funcional */}
+          {/* Selector de Moneda */}
           <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1">
             <button
-              onClick={() => handleCurrencyChange("VES")}
+              onClick={() => setCurrency("VES")}
               className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
                 currency === "VES"
                   ? "bg-gradient-to-r from-green_m to-green_b text-white"
@@ -150,7 +151,7 @@ const DashboardHeader = ({
               VES
             </button>
             <button
-              onClick={() => handleCurrencyChange("USD")}
+              onClick={() => setCurrency("USD")}
               className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
                 currency === "USD"
                   ? "bg-gradient-to-r from-green_m to-green_b text-white"
@@ -161,7 +162,7 @@ const DashboardHeader = ({
             </button>
           </div>
 
-          {/* Dropdown del Usuario (sin cambios) */}
+          {/* Dropdown del Usuario */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -199,7 +200,6 @@ const DashboardHeader = ({
               align="end"
               className="w-[18rem] md:w-64 shadow-xl border-0 bg-white/95 backdrop-blur-sm"
             >
-              {/* Resto del código del dropdown sin cambios */}
               <div className="px-2 py-3 border-b border-gray_xxl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-green_xl to-green_b rounded-md flex items-center justify-center text-white font-semibold text-sm">
@@ -233,24 +233,33 @@ const DashboardHeader = ({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent className="shadow-xl border-0 bg-white/95 backdrop-blur-sm w-48">
-                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
-                      <Link
-                        href="/dashboard/organizations"
-                        className="flex items-center w-full"
-                      >
-                        <Building className="w-4 h-4 mr-2" />
-                        Organizaciones
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
-                      <Link
-                        href="/dashboard/settings/companies"
-                        className="flex items-center w-full"
-                      >
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        Empresas
-                      </Link>
-                    </DropdownMenuItem>
+                    {/* Solo mostrar Organizaciones para superadmin */}
+                    {canAccessOrganizations() && (
+                      <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                        <Link
+                          href="/dashboard/organizations"
+                          className="flex items-center w-full"
+                        >
+                          <Building className="w-4 h-4 mr-2" />
+                          Organizaciones
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* Solo mostrar Empresas para superadmin */}
+                    {canAccessCompanies() && (
+                      <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                        <Link
+                          href="/dashboard/settings/companies"
+                          className="flex items-center w-full"
+                        >
+                          <Briefcase className="w-4 h-4 mr-2" />
+                          Empresas
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* Estos enlaces son visibles para todos los usuarios con permisos */}
                     <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                       <Link
                         href="/dashboard/companyBranches"

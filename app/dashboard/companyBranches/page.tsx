@@ -1,3 +1,4 @@
+// components/dashboard/BranchesPage.tsx - CORREGIDO
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -56,9 +57,8 @@ import {
   UpdateCompanyBranchData,
 } from "@/services/companyBranches/companyBranches.service";
 import { useCompanyBranches } from "@/hooks/companyBranches/useCompanyBranches";
-import { SelectSearchable } from "@/components/ui/select-searchable";
-import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
-import { usePermissions } from "@/hooks/auth/usePermissions"; // NUEVO: Importar hook de permisos
+import { usePermissions } from "@/hooks/auth/usePermissions";
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
 
 type Branch = CompanyBranch & {
   company?: {
@@ -76,12 +76,15 @@ const BranchesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // NUEVO: Estado para la empresa seleccionada
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
-    null
-  );
+  // Obtener empresa del usuario logeado
+  const {
+    userCompany,
+    companyId,
+    isLoading: userCompanyLoading,
+    hasCompany,
+  } = useUserCompany();
 
-  // NUEVO: Hook de permisos
+  // Hook de permisos
   const {
     canCreateBranch,
     canEditBranch,
@@ -90,16 +93,8 @@ const BranchesPage = () => {
     userRole,
   } = usePermissions();
 
-  // Usar el hook real de empresas
-  const {
-    companies,
-    loading: companiesLoading,
-    error: companiesError,
-  } = useGetAllCompanies();
-
   // Estado para el formulario de creación/edición
   const [formData, setFormData] = useState({
-    companyId: 0,
     name: "",
     code: "",
     contact_email: "",
@@ -109,9 +104,8 @@ const BranchesPage = () => {
     is_central: false,
   });
 
-  // NUEVO: Configurar filtros con companyId
+  // Configurar filtros SIN companyId (se obtiene automáticamente del usuario)
   const [filters, setFilters] = useState({
-    companyId: 0, // Inicialmente 0 para no filtrar
     search: "",
   });
 
@@ -130,69 +124,11 @@ const BranchesPage = () => {
     { id: "2", name: "inactive", label: "Inactivo" },
   ];
 
-  const companyOptions = useMemo(() => {
-    return companies
-      .filter((company) => company.id && company.name)
-      .map((company) => ({
-        value: company.id.toString(),
-        label: `${company.name}`,
-      }));
-  }, [companies]);
-
-  useEffect(() => {
-    if (companies.length > 0 && !selectedCompanyId) {
-      const firstCompanyId = companies[0].id;
-      setSelectedCompanyId(firstCompanyId);
-      setFilters((prev) => ({ ...prev, companyId: firstCompanyId }));
-    }
-  }, [companies, selectedCompanyId]);
-
-  // NUEVO: Manejar cambio de empresa
-  const handleCompanyChange = (companyId: number) => {
-    setSelectedCompanyId(companyId);
-    setFilters((prev) => ({ ...prev, companyId }));
-  };
-
-  const filteredBranches = useMemo(() => {
-    return companyBranches.filter((branch) => {
-      // Filtro por búsqueda
-      const matchesSearch =
-        !searchTerm ||
-        (branch.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (branch.code?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (branch.contact_email?.toLowerCase() || "").includes(
-          searchTerm.toLowerCase()
-        ) ||
-        (branch.physical_address?.toLowerCase() || "").includes(
-          searchTerm.toLowerCase()
-        );
-
-      // Filtro por status
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && branch.is_active) ||
-        (statusFilter === "inactive" && !branch.is_active);
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [companyBranches, searchTerm, statusFilter]);
-
-  // NUEVO: Debug para ver permisos
-  useEffect(() => {
-    console.log("🔐 User role:", userRole);
-    console.log("🔐 Can create branch:", canCreateBranch());
-    console.log("🔐 Can edit branch:", canEditBranch());
-    console.log("🔐 Can delete branch:", canDeleteBranch());
-  }, [userRole, canCreateBranch, canEditBranch, canDeleteBranch]);
-
   useEffect(() => {
     if (error) {
       toast.error(error);
     }
-    if (companiesError) {
-      toast.error(companiesError);
-    }
-  }, [error, companiesError]);
+  }, [error]);
 
   useEffect(() => {
     setFilters((prev) => ({
@@ -200,6 +136,9 @@ const BranchesPage = () => {
       search: searchTerm,
     }));
   }, [searchTerm]);
+
+  // CORRECCIÓN: Información de la empresa del usuario - usar hasCompany para consistencia
+  const companyName = userCompany?.name || "Empresa no asignada";
 
   const handleEditBranch = (branch: Branch) => {
     if (!canEditBranch()) {
@@ -209,7 +148,6 @@ const BranchesPage = () => {
 
     setSelectedBranch(branch);
     setFormData({
-      companyId: branch.companyId,
       name: branch.name,
       code: branch.code,
       contact_email: branch.contact_email,
@@ -227,14 +165,14 @@ const BranchesPage = () => {
       return;
     }
 
+    // Verificar que el usuario tenga empresa asignada
+    if (!hasCompany) {
+      toast.error("No tienes una empresa asignada para crear sucursales");
+      return;
+    }
+
     setSelectedBranch(null);
-
-    // CORRECCIÓN: Usar la empresa seleccionada actualmente o la primera disponible
-    const defaultCompanyId =
-      selectedCompanyId || (companies.length > 0 ? companies[0].id : 0);
-
     setFormData({
-      companyId: defaultCompanyId,
       name: "",
       code: "",
       contact_email: "",
@@ -264,8 +202,9 @@ const BranchesPage = () => {
   };
 
   const handleSaveBranch = async () => {
-    if (formData.companyId === 0) {
-      toast.error("Por favor selecciona una empresa válida");
+    // Verificar que el usuario tenga empresa asignada
+    if (!hasCompany) {
+      toast.error("No tienes una empresa asignada para gestionar sucursales");
       return;
     }
 
@@ -304,7 +243,7 @@ const BranchesPage = () => {
         }
 
         const createData: CreateCompanyBranchData = {
-          companyId: formData.companyId,
+          companyId: companyId!, // Usar la empresa del usuario (ya verificada con hasCompany)
           name: formData.name,
           code: formData.code,
           contact_email: formData.contact_email,
@@ -367,14 +306,6 @@ const BranchesPage = () => {
     }
   };
 
-  const getCompanyName = (companyId: number | null | undefined) => {
-    if (!companyId) return "Empresa no especificada";
-    const company = companies.find((c) => c.id === companyId);
-    return company
-      ? `${company.name} (${company.code})`
-      : "Empresa no encontrada";
-  };
-
   const columns: ColumnDef<Branch>[] = [
     {
       accessorKey: "name",
@@ -391,7 +322,6 @@ const BranchesPage = () => {
         </div>
       ),
     },
-
     {
       accessorKey: "contact_email",
       header: "Email",
@@ -526,7 +456,31 @@ const BranchesPage = () => {
     },
   ];
 
-  const isLoading = loading || companiesLoading;
+  const filteredBranches = useMemo(() => {
+    return companyBranches.filter((branch) => {
+      // Filtro por búsqueda
+      const matchesSearch =
+        !searchTerm ||
+        (branch.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (branch.code?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (branch.contact_email?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        ) ||
+        (branch.physical_address?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        );
+
+      // Filtro por status
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && branch.is_active) ||
+        (statusFilter === "inactive" && !branch.is_active);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [companyBranches, searchTerm, statusFilter]);
+
+  const isLoading = loading || userCompanyLoading;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -541,18 +495,14 @@ const BranchesPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Sucursales
-            </h1>
-            {/* NUEVO: Mostrar rol actual del usuario */}
-            {userRole && (
-              <div className="text-sm text-gray-500">
-                Rol: <span className="font-medium">{userRole}</span>
-              </div>
-            )}
+            <div>
+              <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
+                Sucursales
+              </h1>
+            </div>
           </div>
 
-          {/* NUEVO: Sección de filtros con selector de empresas */}
+          {/* Sección de filtros SIN selector de empresas */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -599,48 +549,23 @@ const BranchesPage = () => {
               </div>
             </div>
 
-            {/* NUEVO: Selector de empresas */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label
-                  htmlFor="company-selector"
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Seleccionar Empresa:
-                </Label>
-                <div className="flex items-center gap-2">
-                  <SelectSearchable
-                    value={selectedCompanyId?.toString() || ""}
-                    onValueChange={(value) =>
-                      handleCompanyChange(Number(value))
-                    }
-                    placeholder="Buscar empresa..."
-                    options={companyOptions}
-                    emptyMessage="No se encontraron empresas."
-                    searchPlaceholder="Buscar empresa por nombre..."
-                    className="w-full md:w-64"
-                  />
-                </div>
-              </div>
-
-              {/* NUEVO: Botón crear con verificación de permisos */}
-              <Button
-                onClick={handleCreateBranch}
-                className="flex items-center gap-2 whitespace-nowrap"
-                disabled={isLoading || !canCreateBranch()}
-              >
-                <Plus className="h-4 w-4" />
-                <span>Crear Sucursal</span>
-                {!canCreateBranch() && (
-                  <span className="sr-only">
-                    (No tienes permisos para crear sucursales)
-                  </span>
-                )}
-              </Button>
-            </div>
+            {/* Botón crear con verificación de permisos */}
+            <Button
+              onClick={handleCreateBranch}
+              className="flex items-center gap-2 whitespace-nowrap"
+              disabled={isLoading || !canCreateBranch() || !hasCompany}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Crear Sucursal</span>
+              {!canCreateBranch() && (
+                <span className="sr-only">
+                  (No tienes permisos para crear sucursales)
+                </span>
+              )}
+            </Button>
           </div>
 
-          {/* NUEVO: Mensaje informativo sobre permisos */}
+          {/* Mensaje informativo sobre permisos */}
           {!canCreateBranch() && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">
@@ -651,8 +576,18 @@ const BranchesPage = () => {
             </div>
           )}
 
-          {/* Mostrar tabla solo si hay una empresa seleccionada */}
-          {selectedCompanyId ? (
+          {/* CORRECCIÓN: Mensaje si el usuario no tiene empresa asignada */}
+          {!hasCompany && !userCompanyLoading && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">
+                <strong>Advertencia:</strong> No tienes una empresa asignada. No
+                puedes ver ni gestionar sucursales. Contacta al administrador.
+              </p>
+            </div>
+          )}
+
+          {/* CORRECCIÓN: Mostrar tabla solo si hay una empresa asignada */}
+          {hasCompany ? (
             <DataTable<Branch, Branch>
               columns={columns}
               data={Array.isArray(filteredBranches) ? filteredBranches : []}
@@ -666,11 +601,11 @@ const BranchesPage = () => {
               itemsPerPage={10}
               setItemsPerPage={() => {}}
             />
-          ) : (
+          ) : !userCompanyLoading ? (
             <div className="text-center py-8 text-gray-500">
-              Selecciona una empresa para ver sus sucursales
+              No tienes una empresa asignada para ver sucursales
             </div>
-          )}
+          ) : null}
         </main>
       </div>
 
@@ -707,14 +642,15 @@ const BranchesPage = () => {
                 </div>
               </div>
 
-              <div className="w-full">
-                <Label htmlFor="view-company" className="text-sm font-medium">
-                  Empresa
-                </Label>
-                <p className="mt-1">
-                  {getCompanyName(selectedBranch.companyId)}
-                </p>
-              </div>
+              {/* CORRECCIÓN: Mostrar empresa del usuario solo si tiene empresa */}
+              {hasCompany && (
+                <div className="w-full">
+                  <Label htmlFor="view-company" className="text-sm font-medium">
+                    Empresa
+                  </Label>
+                  <p className="mt-1">{companyName}</p>
+                </div>
+              )}
 
               <div className="flex flex-col md:flex-row gap-4 w-full">
                 <div className="flex-1">
@@ -808,7 +744,7 @@ const BranchesPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de edición/creación con Grid */}
+      {/* Modal de edición/creación */}
       <Dialog
         open={isEditDialogOpen || isCreateDialogOpen}
         onOpenChange={(open) => {
@@ -818,7 +754,7 @@ const BranchesPage = () => {
           }
         }}
       >
-        <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-gray_xxl sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               {selectedBranch ? "Editar Sucursal" : "Crear Nueva Sucursal"}
@@ -966,7 +902,7 @@ const BranchesPage = () => {
             <Button
               type="button"
               onClick={handleSaveBranch}
-              disabled={isLoading}
+              disabled={isLoading || !hasCompany}
             >
               {isLoading
                 ? "Guardando..."

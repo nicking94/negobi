@@ -16,8 +16,6 @@ const usePutSupplier = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Actualizando proveedor:", { id, supplierData }); // Debug
-
       const response = await supplierService.updateSupplier(id, supplierData);
 
       if (response.success && response.data) {

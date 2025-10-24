@@ -25,11 +25,10 @@ export const useBudgets = (
   };
 };
 
-// Hook para crear presupuestos
 export const useCreateBudget = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { companyId } = useUserCompany();
+  const { companyId, selectedCompanyId } = useUserCompany();
 
   const createBudget = async (
     budgetData: Omit<CreateDocumentData, "document_type">
@@ -38,9 +37,12 @@ export const useCreateBudget = () => {
       setLoading(true);
       setError(null);
 
-      if (!companyId) {
+      // ✅ Usar la empresa seleccionada o la del usuario por defecto
+      const targetCompanyId = selectedCompanyId || companyId;
+
+      if (!targetCompanyId) {
         const errorMsg =
-          "No se puede crear el presupuesto: Empresa no configurada";
+          "No se puede crear el presupuesto: Empresa no configurada. Por favor, seleccione una empresa.";
         console.error("❌", errorMsg);
         throw new Error(errorMsg);
       }
@@ -49,7 +51,7 @@ export const useCreateBudget = () => {
         ...budgetData,
         document_type: "quote",
         status: "draft",
-        companyId,
+        companyId: targetCompanyId, // ✅ Siempre usar la empresa correcta
       };
 
       const validation = documentService.validateDocumentData(documentData);

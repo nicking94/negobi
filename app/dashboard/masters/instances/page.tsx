@@ -82,6 +82,7 @@ const InstancesPage = () => {
   } = useProductCategories({
     page: 1,
     itemsPerPage: 10,
+    companyId: companyId,
   });
 
   const {
@@ -158,7 +159,6 @@ const InstancesPage = () => {
           description: processedData.description,
           prefix: processedData.prefix,
           correlative_length: processedData.correlative_length,
-          // Mantener el estado actual al editar
           is_active: editingCategory.is_active ?? true,
           show_in_ecommerce: processedData.show_in_ecommerce,
           show_in_sales_app: processedData.show_in_sales_app,
@@ -178,25 +178,31 @@ const InstancesPage = () => {
           return;
         }
       } else {
+        // ✅ Asegurar que companyId esté disponible
+        if (!companyId) {
+          toast.error("No se pudo determinar la empresa del usuario");
+          return;
+        }
+
         const createData: CreateProductCategoryData = {
-          companyId: companyId || 4,
+          companyId: companyId, // ✅ Usar el companyId real del usuario
           category_name: processedData.category_name,
           category_code: processedData.category_code,
           description: processedData.description,
           prefix: processedData.prefix,
           correlative_length: processedData.correlative_length,
-          // Las nuevas instancias se crean activas por defecto
           is_active: true,
           show_in_ecommerce: processedData.show_in_ecommerce,
           show_in_sales_app: processedData.show_in_sales_app,
         };
+
         const result = await createProductCategory(createData);
 
         if (result) {
           toast.success("Instancia creada exitosamente");
           setModified((prev) => !prev);
         } else {
-          toast.error("Error al crear la intancia");
+          toast.error("Error al crear la instancia");
           return;
         }
       }
@@ -224,12 +230,10 @@ const InstancesPage = () => {
         description: category.description,
         prefix: category.prefix,
         correlative_length: category.correlative_length,
-        is_active: !category.is_active, // Cambiar el estado
+        is_active: !category.is_active,
         show_in_ecommerce: category.show_in_ecommerce,
         show_in_sales_app: category.show_in_sales_app,
       };
-
-      console.log("📤 Cambiando estado de categoría:", updateData);
 
       const result = await updateProductCategory(
         category.id.toString(),

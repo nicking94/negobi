@@ -134,21 +134,9 @@ const WarehousesPage = () => {
   useEffect(() => {
     if (companies.length > 0 && !selectedCompanyId) {
       const firstCompanyId = companies[0].id;
-      console.log("Estableciendo primera empresa:", firstCompanyId);
       setSelectedCompanyId(firstCompanyId);
     }
   }, [companies, selectedCompanyId]);
-
-  // CORRECCIÓN: Recargar almacenes cuando cambia la empresa seleccionada
-  useEffect(() => {
-    if (selectedCompanyId) {
-      console.log(
-        "🔄 Empresa cambiada, recargando almacenes para:",
-        selectedCompanyId
-      );
-      // El hook useWarehouses se recargará automáticamente porque companyId cambió
-    }
-  }, [selectedCompanyId]);
 
   useEffect(() => {
     const companyBranches = getBranchesForSelectedCompany();
@@ -301,29 +289,21 @@ const WarehousesPage = () => {
   };
 
   const getBranchName = (branchId: number) => {
-    console.log("🔍 Buscando sucursal ID:", branchId);
-    console.log("📍 Sucursales disponibles:", branches);
-
-    // Si branchId es 0, significa que no hay sucursal asignada
     if (!branchId || branchId === 0) {
       return "Sin sucursal asignada";
     }
 
-    // Buscar directamente en las sucursales disponibles
     const branch = branches.find((b) => b.id === branchId);
 
     if (!branch) {
-      console.warn(`❌ Sucursal no encontrada para ID: ${branchId}`);
-      return `Sucursal ${branchId}`; // Mostrar el ID si no se encuentra
+      console.warn("No se encontró la sucursal con id:", branchId);
+      return "Sucursal no encontrada";
     }
 
     return branch.name;
   };
 
   const getBranchesForSelectedCompany = () => {
-    console.log("Filtrando sucursales para empresa:", selectedCompanyId);
-    console.log("Todas las sucursales:", branches);
-
     if (!selectedCompanyId) {
       return [];
     }
@@ -332,7 +312,6 @@ const WarehousesPage = () => {
       return branch.companyId && branch.companyId === selectedCompanyId;
     });
 
-    console.log("✅ Sucursales filtradas:", filteredBranches);
     return filteredBranches;
   };
 
@@ -526,41 +505,6 @@ const WarehousesPage = () => {
     }
   }, [error, branchesError, companiesError]);
 
-  // En page.tsx - useEffect de debug
-  useEffect(() => {
-    console.log("=== DEBUG WAREHOUSES ===");
-    console.log("📦 Warehouses cargados:", warehouses);
-    console.log("📍 Sucursales disponibles:", branches);
-
-    // Verificar la estructura de los warehouses
-    warehouses.forEach((warehouse, index) => {
-      console.log(`🔍 Warehouse ${index + 1}:`, {
-        id: warehouse.id,
-        name: warehouse.name,
-        companyBranchId: warehouse.companyBranchId,
-      });
-
-      // Verificar coincidencia con sucursales
-      const branchExists = branches.some(
-        (b) => b.id === warehouse.companyBranchId
-      );
-
-      if (!branchExists && warehouse.companyBranchId) {
-        console.warn(
-          `⚠️ Warehouse "${warehouse.name}" tiene companyBranchId ${warehouse.companyBranchId} que NO existe en branches`
-        );
-      } else if (branchExists) {
-        console.log(
-          `✅ Warehouse "${warehouse.name}" tiene sucursal válida: ${warehouse.companyBranchId}`
-        );
-      }
-    });
-
-    console.log("=== FIN DEBUG ===");
-  }, [warehouses, branches]);
-
-  const isLoading = loading || branchesLoading || companiesLoading;
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -662,7 +606,6 @@ const WarehousesPage = () => {
                   <Select
                     value={selectedCompanyId?.toString() || ""}
                     onValueChange={(value) => {
-                      console.log("Cambiando empresa a:", value);
                       setSelectedCompanyId(Number(value));
 
                       setBranchFilter("all");

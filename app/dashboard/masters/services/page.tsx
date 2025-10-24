@@ -127,18 +127,14 @@ const ServicesPage = () => {
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
-      category_id: null, // ← CAMBIAR A null
+      category_id: null,
       company_id: parseInt(activeCompanyId),
     },
   });
 
   const onSubmit = async (data: ServiceFormInputs) => {
     try {
-      console.log("📝 Datos del formulario:", data);
-      console.log("🔍 category_id value:", data.category_id);
-      console.log("🔍 category_id type:", typeof data.category_id);
       if (editingService && editingService.id) {
-        // Actualizar servicio existente
         const updateData: UpdateServiceData = {
           name: data.name,
           code: data.code,

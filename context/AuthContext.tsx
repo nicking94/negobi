@@ -1,4 +1,4 @@
-// context/AuthContext.tsx - MEJORADO
+// context/AuthContext.tsx
 "use client";
 import React, {
   createContext,

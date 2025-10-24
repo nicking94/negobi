@@ -12,8 +12,6 @@ const useDeleteSupplier = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Eliminando proveedor:", id); // Debug
-
       const response = await supplierService.deleteSupplier(id);
 
       if (response.success && response.data) {

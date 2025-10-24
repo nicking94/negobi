@@ -1,3 +1,4 @@
+// hooks/companyBranches/useCompanyBranches.ts - MODIFICADO
 import { useState, useEffect } from "react";
 import {
   companyBranchService,
@@ -6,9 +7,9 @@ import {
   UpdateCompanyBranchData,
   GetCompanyBranchesParams,
 } from "../../services/companyBranches/companyBranches.service";
+import { useUserCompany } from "../auth/useUserCompany";
 
 export interface UseCompanyBranchesFilters {
-  companyId: number | null;
   search?: string;
   name?: string;
   code?: string;
@@ -19,40 +20,35 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // En useCompanyBranches.ts - función loadCompanyBranches
+  // Obtener la empresa del usuario logeado
+  const { companyId, isLoading: userCompanyLoading } = useUserCompany();
+
   const loadCompanyBranches = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      if (!filters.companyId || filters.companyId <= 0) {
-        console.log("🔄 No hay companyId, no cargando sucursales");
+      // Si no hay companyId, no cargar sucursales
+      if (!companyId || companyId <= 0) {
+        console.log("ℹ️ Usuario sin empresa asignada, no se cargan sucursales");
         setCompanyBranches([]);
         return;
       }
 
+      console.log(`🏢 Cargando sucursales para empresa ID: ${companyId}`);
+
       const params: GetCompanyBranchesParams = {
         page: 1,
         itemsPerPage: 1000,
-        companyId: filters.companyId,
+        companyId: companyId, // Siempre usar la empresa del usuario
       };
 
-      console.log("🔄 Cargando sucursales para empresa:", filters.companyId);
       const branchesData = await companyBranchService.getCompanyBranches(
         params
       );
-
-      console.log("✅ Sucursales cargadas RAW:", branchesData);
-
-      // ✅ NUEVO: Verificar estructura de las sucursales
-      if (branchesData.length > 0) {
-        console.log("🔍 Primera sucursal detallada:", {
-          id: branchesData[0].id,
-          name: branchesData[0].name,
-          companyId: branchesData[0].companyId,
-          allKeys: Object.keys(branchesData[0]),
-        });
-      }
+      console.log(
+        `✅ Sucursales cargadas: ${branchesData.length} para empresa ${companyId}`
+      );
 
       setCompanyBranches(branchesData);
     } catch (err) {
@@ -66,15 +62,25 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Crear sucursal
+  // Crear sucursal - SOLO para la empresa del usuario
   const createCompanyBranch = async (
     branchData: CreateCompanyBranchData
   ): Promise<CompanyBranch | null> => {
     try {
       setLoading(true);
       setError(null);
+
+      if (!hasCompany || !companyId) {
+        throw new Error("No tienes una empresa asignada para crear sucursales");
+      }
+
+      const branchDataWithUserCompany = {
+        ...branchData,
+        companyId: companyId,
+      };
+
       const newBranch = await companyBranchService.createCompanyBranch(
-        branchData
+        branchDataWithUserCompany
       );
       setCompanyBranches((prev) => [...prev, newBranch]);
       return newBranch;
@@ -114,16 +120,15 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Eliminar sucursal - CORREGIDO
+  // Eliminar sucursal
   const deleteCompanyBranch = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await companyBranchService.deleteCompanyBranch(id);
 
-      // Corrección: eliminar la sucursal que coincide con el ID
-      setCompanyBranches(
-        (prev) => prev.filter((branch) => branch.id.toString() !== id) // Cambiado !== en lugar de ===
+      setCompanyBranches((prev) =>
+        prev.filter((branch) => branch.id.toString() !== id)
       );
 
       return true;
@@ -158,19 +163,26 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   };
 
   useEffect(() => {
-    if (filters.companyId) {
+    if (companyId && !userCompanyLoading) {
       loadCompanyBranches();
     }
-  }, [filters.companyId, filters.search, filters.name, filters.code]);
+  }, [
+    companyId,
+    userCompanyLoading,
+    filters.search,
+    filters.name,
+    filters.code,
+  ]);
 
   return {
     companyBranches,
-    loading,
+    loading: loading || userCompanyLoading,
     error,
     createCompanyBranch,
     updateCompanyBranch,
     deleteCompanyBranch,
     getCompanyBranchById,
     refetch: loadCompanyBranches,
+    userCompanyId: companyId,
   };
 };

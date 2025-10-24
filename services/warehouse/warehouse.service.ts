@@ -127,33 +127,11 @@ export const warehouseService = {
     }
 
     const url = `${GetWarehouses}?${queryParams}`;
-    console.log("🔄 Llamando a la API con URL:", url);
 
     try {
       const response = await api.get(url);
-      console.log("✅ Respuesta completa de la API:", response);
-
       const responseData = response.data.data;
-      console.log("📦 Estructura completa recibida:", responseData);
-
       const warehousesData = responseData.data;
-      console.log("📦 Array de almacenes RAW:", warehousesData);
-
-      // ✅ NUEVO: Inspeccionar la estructura del primer warehouse
-      if (warehousesData.length > 0) {
-        console.log("🔍 Primer warehouse detallado:", {
-          id: warehousesData[0].id,
-          name: warehousesData[0].name,
-          // Verificar todas las propiedades posibles
-          companyBranchId: warehousesData[0].companyBranchId,
-          company_branch: warehousesData[0].company_branch,
-          // Verificar si hay otros campos relacionados
-          company_branch_id: warehousesData[0].company_branch_id,
-          branchId: warehousesData[0].branchId,
-          // Verificar todas las keys
-          allKeys: Object.keys(warehousesData[0]),
-        });
-      }
 
       if (!Array.isArray(warehousesData)) {
         console.warn("⚠️ warehousesData no es un array:", warehousesData);
@@ -161,10 +139,6 @@ export const warehouseService = {
       }
 
       const mappedWarehouses = warehousesData.map((warehouse) => {
-        console.log(`🔍 Procesando warehouse ${warehouse.id}:`, warehouse);
-
-        // La API SIEMPRE debe devolver companyBranchId directamente
-        // según la documentación
         const companyBranchId = warehouse.companyBranchId;
 
         if (!companyBranchId) {
@@ -177,18 +151,17 @@ export const warehouseService = {
 
         return {
           ...warehouse,
-          companyBranchId: companyBranchId || 0, // Mantener 0 como fallback
+          companyBranchId: companyBranchId || 0,
         };
       });
 
-      console.log("📦 Almacenes mapeados FINAL:", mappedWarehouses);
       return mappedWarehouses;
     } catch (error) {
       console.error("❌ Error en la llamada a getWarehouses:", error);
       throw error;
     }
   },
-  // Obtener un almacén por ID
+
   getWarehouseById: async (id: string): Promise<Warehouse> => {
     const response = await api.get(`${GetWarehouseById}/${id}`);
     return response.data.data;
@@ -208,12 +181,10 @@ export const warehouseService = {
     };
   },
 
-  // Eliminar un almacén
   deleteWarehouse: async (id: string): Promise<void> => {
     await api.delete(`${DeleteWarehouse}/${id}`);
   },
 
-  // Sincronizar almacenes desde ERP
   syncWarehouses: async (
     syncData: SyncWarehouseData
   ): Promise<SyncResponse> => {
@@ -221,15 +192,13 @@ export const warehouseService = {
     return response.data;
   },
 
-  // Métodos adicionales útiles
   getActiveWarehouses: async (companyId?: number): Promise<Warehouse[]> => {
     return warehouseService.getWarehouses({
       companyId,
-      itemsPerPage: 10, // Más almacenes ya que pueden ser muchos
+      itemsPerPage: 10,
     });
   },
 
-  // Buscar almacenes por nombre
   searchWarehousesByName: async (
     searchTerm: string,
     companyId?: number
@@ -241,7 +210,6 @@ export const warehouseService = {
     });
   },
 
-  // Buscar almacenes por código
   searchWarehousesByCode: async (
     code: string,
     companyId?: number
@@ -255,7 +223,6 @@ export const warehouseService = {
     );
   },
 
-  // Obtener almacenes por sucursal
   getWarehousesByBranch: async (branchId: number): Promise<Warehouse[]> => {
     const warehouses = await warehouseService.getActiveWarehouses();
     return warehouses.filter(
@@ -263,7 +230,6 @@ export const warehouseService = {
     );
   },
 
-  // Activar/desactivar almacén
   toggleWarehouseStatus: async (
     id: string,
     isActive: boolean
@@ -271,7 +237,6 @@ export const warehouseService = {
     return warehouseService.updateWarehouse(id, { is_active: isActive });
   },
 
-  // Verificar si existe un almacén con el mismo código
   checkWarehouseCodeExists: async (
     code: string,
     companyId?: number
@@ -288,7 +253,6 @@ export const warehouseService = {
     }
   },
 
-  // Verificar si existe un almacén con el mismo nombre
   checkWarehouseNameExists: async (
     name: string,
     companyId?: number
@@ -324,7 +288,6 @@ export const warehouseService = {
     }
   },
 
-  // Obtener almacenes agrupados por sucursal
   getWarehousesGroupedByBranch: async (
     companyId?: number
   ): Promise<Record<number, Warehouse[]>> => {
@@ -344,13 +307,11 @@ export const warehouseService = {
     }
   },
 
-  // Validar formato de teléfono (básico)
   validatePhone: (phone: string): boolean => {
     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
     return phoneRegex.test(phone.replace(/\s/g, ""));
   },
 
-  // Formatear teléfono
   formatPhone: (phone: string): string => {
     return phone.replace(/\D/g, "").substring(0, 15);
   },

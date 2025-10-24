@@ -19,6 +19,7 @@ export interface UseProductCategoriesFilters {
   show_in_sales_app?: boolean;
   page?: number;
   itemsPerPage?: number;
+  companyId?: number; // ✅ Agregar companyId a los filtros
 }
 
 export const useProductCategories = (
@@ -45,6 +46,8 @@ export const useProductCategories = (
       const combinedFilters: GetProductCategoriesParams = {
         page,
         itemsPerPage,
+        // ✅ Incluir companyId en los filtros si está disponible
+        ...(filters.companyId && { companyId: filters.companyId }),
         ...(filters.is_active !== undefined && {
           is_active: filters.is_active,
         }),
@@ -166,6 +169,7 @@ export const useProductCategories = (
   useEffect(() => {
     loadProductCategories();
   }, [
+    filters.companyId,
     filters.parentCategoryId,
     filters.search,
     filters.category_name,

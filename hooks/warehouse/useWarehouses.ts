@@ -30,7 +30,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
       const companyId = filters.companyId || customFilters?.companyId;
 
       if (!companyId) {
-        console.log("🔄 No hay companyId, no cargando almacenes");
         setWarehouses([]);
         return;
       }
@@ -43,24 +42,13 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
         itemsPerPage: 10,
       };
 
-      console.log("🔄 Cargando almacenes con filtros:", combinedFilters);
-
       const warehousesData = await warehouseService.getWarehouses(
         combinedFilters
       );
 
-      console.log("✅ Datos recibidos del servicio:", warehousesData);
-
       const safeWarehousesData = Array.isArray(warehousesData)
         ? warehousesData
         : [];
-
-      console.log(
-        "✅ Almacenes cargados:",
-        safeWarehousesData.length,
-        "elementos"
-      );
-      console.log("📦 Detalles de almacenes:", safeWarehousesData);
 
       setWarehouses(safeWarehousesData);
     } catch (err) {

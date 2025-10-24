@@ -19,20 +19,12 @@ const useUpdateClient = ({
   const [error, setError] = useState<ApiError | null>(null);
   const [data, setData] = useState<Client | null>(null);
 
-  // hooks/clients/useUpdateClient.ts - MEJORADO
   const updateClient = async (id: string, clientData: Partial<Client>) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log("📤 Enviando actualización:", { id, clientData });
-
       const response = await ClientsService.updateClient(id, clientData);
-
-      console.log("📥 Respuesta del backend:", {
-        data: response.data,
-        salespersonUserIdActualizado: response.data.data?.salespersonUserId,
-      });
 
       if (response.status === 200) {
         const updatedClient = response.data.data;
@@ -50,11 +42,8 @@ const useUpdateClient = ({
           salespersonUserId: updatedClient.salespersonUserId,
         };
 
-        console.log("✅ Cliente actualizado exitosamente:", mappedClient);
-
         setData(mappedClient);
 
-        // ✅ ACTUALIZAR INMEDIATAMENTE el estado local
         if (onUpdateLocalState) {
           onUpdateLocalState(mappedClient);
         }

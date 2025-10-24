@@ -62,6 +62,7 @@ import usePutSupplier from "@/hooks/suppliers/usePutSupplier";
 import useDeleteSupplier from "@/hooks/suppliers/useDeleteSupplier";
 import useGetOneSupplier from "@/hooks/suppliers/useGetOneSupplier";
 import { useAuth } from "@/context/AuthContext";
+import useUserCompany from "@/hooks/auth/useUserCompany"; // ✅ IMPORTAR EL HOOK
 import { SupplierCreatePayload, SupplierType, ApiError } from "@/types";
 
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
@@ -199,6 +200,14 @@ const cleanFormData = (data: SupplierFormData): CleanedSupplierFormData => {
 const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const { user } = useAuth();
+
+  // ✅ USAR EL HOOK useUserCompany
+  const {
+    companyId: userCompanyId,
+    isLoading: companyLoading,
+    isSuperAdmin,
+  } = useUserCompany();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(
     null
@@ -224,12 +233,18 @@ const SuppliersPage = () => {
   const { deleteSupplier } = useDeleteSupplier();
   const { supplier: currentSupplier, loading: loadingOne } =
     useGetOneSupplier(editingSupplierId);
-
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
   const { paymentTerms: realPaymentTerms, loading: paymentTermsLoading } =
     useGetPaymentTermsForSelect();
   const { companyOptions } = useGetCompaniesForSelect();
+
+  // ✅ EFECTO PARA ESTABLECER LA COMPAÑÍA DEL USUARIO POR DEFECTO
+  useEffect(() => {
+    if (userCompanyId && !companyId) {
+      console.log(`🏢 Estableciendo compañía del usuario: ${userCompanyId}`);
+      setCompanyId(userCompanyId);
+    }
+  }, [userCompanyId, companyId, setCompanyId]);
 
   const filteredSuppliers = useMemo(() => {
     if (!suppliersResponse) return [];
@@ -282,9 +297,6 @@ const SuppliersPage = () => {
             response.data.data.length > 0;
 
           if (exists) {
-            console.log(
-              `⚠️  Campo duplicado encontrado: ${check.field} = ${check.value}`
-            );
             return check.field;
           }
         }
@@ -302,9 +314,6 @@ const SuppliersPage = () => {
     supplierCode: string
   ): Promise<boolean> => {
     try {
-      console.log("🔍 Verificando código:", { companyId, supplierCode });
-
-      // Primero verifica localmente
       if (suppliersResponse && suppliersResponse.length > 0) {
         const exists = suppliersResponse.some(
           (supplier: SupplierType) =>
@@ -312,7 +321,6 @@ const SuppliersPage = () => {
             supplier.supplier_code === supplierCode
         );
 
-        console.log("✅ Existe localmente:", exists);
         if (exists) return true;
       }
 
@@ -326,32 +334,28 @@ const SuppliersPage = () => {
 
       const response = await supplierService.getSuppliers(params);
 
-      console.log("📡 Respuesta completa:", response);
-
-      // Verificar diferentes estructuras de respuesta
       if (
         response.data &&
         response.data.data &&
         Array.isArray(response.data.data)
       ) {
         const exists = response.data.data.length > 0;
-        console.log("✅ Existe en API (data.data):", exists);
+
         return exists;
       }
 
       if (response.data && Array.isArray(response.data)) {
         const exists = response.data.length > 0;
-        console.log("✅ Existe en API (data):", exists);
+
         return exists;
       }
 
       if (Array.isArray(response)) {
         const exists = response.length > 0;
-        console.log("✅ Existe en API (array directo):", exists);
+
         return exists;
       }
 
-      console.log("❌ No se encontró en ninguna estructura");
       return false;
     } catch (error) {
       console.error("❌ Error checking supplier code:", error);
@@ -398,11 +402,6 @@ const SuppliersPage = () => {
 
   useEffect(() => {
     if (currentSupplier && editingSupplierId) {
-      console.log("🔄 Setting form data for editing:", {
-        currentSupplier,
-        editingSupplierId,
-      });
-
       const formData: SupplierFormData = {
         supplier_code: currentSupplier.supplier_code || "",
         legal_name: currentSupplier.legal_name || "",
@@ -434,8 +433,6 @@ const SuppliersPage = () => {
         updated_by: user?.username || "admin",
         external_code: currentSupplier.external_code || "",
       };
-
-      console.log("🎯 Final form data to set:", formData);
 
       setTimeout(() => {
         form.reset(formData);
@@ -485,11 +482,12 @@ const SuppliersPage = () => {
     }
 
     try {
-      const userCompanyId = user?.company_id || 4;
+      // ✅ USAR userCompanyId DEL HOOK
+      const effectiveCompanyId = userCompanyId || user?.company_id || 4;
 
       // Preparar datos limpios para la actualización - SOLO enviar campos necesarios
       const updateData: StatusUpdateData = {
-        companyId: userCompanyId,
+        companyId: effectiveCompanyId,
         supplier_code: supplier.supplier_code,
         legal_name: supplier.legal_name,
         tax_document_type: supplier.tax_document_type,
@@ -547,13 +545,7 @@ const SuppliersPage = () => {
       if (supplier.last_payment_number)
         updateData.last_payment_number = supplier.last_payment_number;
 
-      console.log("📤 Enviando datos para cambiar estado:", updateData);
-
-      const response = await updateSupplier(supplier.id, updateData);
-
-      console.log("📥 Respuesta de updateSupplier:", response);
-
-      setModified((prev) => !prev);
+      setModified((prev: boolean) => !prev);
     } catch (error) {
       console.error("🔴 Error cambiando estado de proveedor:", error);
 
@@ -567,26 +559,20 @@ const SuppliersPage = () => {
   };
 
   const onSubmit = async (data: SupplierFormData) => {
-    console.log("🎯 onSubmit triggered", { editingSupplierId, data });
-
     try {
-      const userCompanyId = user?.company_id || 4;
+      // ✅ USAR userCompanyId DEL HOOK
+      const effectiveCompanyId = userCompanyId || user?.company_id;
 
-      if (!userCompanyId) {
+      if (!effectiveCompanyId) {
         toast.error("No se pudo determinar la compañía del usuario");
         return;
       }
 
-      console.log("🏢 Usando companyId del usuario:", userCompanyId);
-
-      // Limpiar y validar datos del formulario
       const cleanedData = cleanFormData(data);
 
-      // Si es un nuevo proveedor, verificar duplicados
       if (!editingSupplierId) {
-        // Verificar código de proveedor
         const codeExists = await checkSupplierCodeExists(
-          userCompanyId,
+          effectiveCompanyId,
           cleanedData.supplier_code
         );
         if (codeExists) {
@@ -598,7 +584,7 @@ const SuppliersPage = () => {
 
         // Preparar datos para verificar otros campos únicos
         const supplierDataForCheck: SupplierCreatePayload = {
-          companyId: userCompanyId,
+          companyId: effectiveCompanyId,
           supplier_code: cleanedData.supplier_code,
           legal_name: cleanedData.legal_name,
           tax_document_type: cleanedData.tax_document_type,
@@ -629,7 +615,7 @@ const SuppliersPage = () => {
       }
 
       const supplierData: SupplierCreatePayload = {
-        companyId: userCompanyId,
+        companyId: effectiveCompanyId,
         supplier_code: cleanedData.supplier_code,
         legal_name: cleanedData.legal_name,
         tax_document_type: cleanedData.tax_document_type,
@@ -663,14 +649,10 @@ const SuppliersPage = () => {
         last_payment_date: cleanedData.last_payment_date,
         last_purchase_number: cleanedData.last_purchase_number,
         last_payment_number: cleanedData.last_payment_number,
-
-        // Información del sistema - Para creación siempre activo
-        is_active: true, // Los nuevos proveedores se crean activos por defecto
+        is_active: true,
         created_by: user?.username || "admin",
         updated_by: user?.username || "admin",
       };
-
-      console.log("📤 Payload final para API:", supplierData);
 
       if (editingSupplierId) {
         // En edición, mantener el estado actual del proveedor
@@ -686,7 +668,7 @@ const SuppliersPage = () => {
 
       resetForm();
       setIsModalOpen(false);
-      setModified((prev) => !prev);
+      setModified((prev: boolean) => !prev);
     } catch (error: unknown) {
       console.error("❌ Error completo:", error);
       const apiError = error as ApiError;
@@ -694,8 +676,6 @@ const SuppliersPage = () => {
         apiError?.response?.data?.message ||
         apiError?.message ||
         "Error al guardar el proveedor";
-
-      console.log("🔍 Mensaje de error:", errorMessage);
 
       if (
         errorMessage.includes("duplicate key") ||
@@ -738,7 +718,7 @@ const SuppliersPage = () => {
           try {
             await deleteSupplier(supplierId);
             toast.success("Proveedor eliminado exitosamente");
-            setModified((prev) => !prev);
+            setModified((prev: boolean) => !prev);
           } catch (error: unknown) {
             const errorMessage =
               error instanceof Error
@@ -1098,27 +1078,32 @@ const SuppliersPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <DropdownMenuSeparator />
 
-                    <div className="w-full px-2 py-1.5">
-                      <Label htmlFor="company-filter">Compañía</Label>
-                      <SelectSearchable
-                        value={companyId?.toString() || "all"}
-                        onValueChange={(value) =>
-                          setCompanyId(
-                            value === "all" ? undefined : parseInt(value)
-                          )
-                        }
-                        placeholder="Todas las compañías"
-                        options={[
-                          { value: "all", label: "Todas las compañías" },
-                          ...companyOptions,
-                        ]}
-                        emptyMessage="No se encontraron compañías"
-                        searchPlaceholder="Buscar compañía..."
-                        className="w-full mt-1"
-                      />
-                    </div>
+                    {/* ✅ MOSTRAR FILTRO DE COMPAÑÍA SOLO PARA SUPERADMINS */}
+                    {isSuperAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <div className="w-full px-2 py-1.5">
+                          <Label htmlFor="company-filter">Compañía</Label>
+                          <SelectSearchable
+                            value={companyId?.toString() || "all"}
+                            onValueChange={(value) =>
+                              setCompanyId(
+                                value === "all" ? undefined : parseInt(value)
+                              )
+                            }
+                            placeholder="Todas las compañías"
+                            options={[
+                              { value: "all", label: "Todas las compañías" },
+                              ...companyOptions,
+                            ]}
+                            emptyMessage="No se encontraron compañías"
+                            searchPlaceholder="Buscar compañía..."
+                            className="w-full mt-1"
+                          />
+                        </div>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1175,7 +1160,7 @@ const SuppliersPage = () => {
                             onBlur={async (e) => {
                               if (!editingSupplierId && field.value) {
                                 const exists = await checkSupplierCodeExists(
-                                  user?.company_id || 1,
+                                  userCompanyId || user?.company_id || 1,
                                   field.value
                                 );
                                 if (exists) {

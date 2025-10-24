@@ -37,6 +37,12 @@ export interface UserType {
   deleted_at?: string | null;
   externalId?: number;
   dni?: string;
+  company?: {
+    id: number;
+    name: string;
+    legal_tax_id: string;
+    contact_email: string;
+  };
 }
 
 export interface ClientType {

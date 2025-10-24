@@ -64,6 +64,7 @@ import { useClientTypes } from "@/hooks/clients/useClientTypes";
 import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
 import { SelectSearchable } from "@/components/ui/select-searchable";
+import { useUserCompany } from "@/hooks/auth/useUserCompany"; // ✅ IMPORTAR EL HOOK
 
 export type Client = {
   id?: string;
@@ -121,6 +122,11 @@ export type Client = {
   is_active?: boolean;
   paymentTermId?: number;
   tax_id?: string;
+  companyId?: number;
+  company?: {
+    id: number;
+    name: string;
+  };
 };
 
 const clientSchema = z.object({
@@ -206,6 +212,14 @@ const ClientsPage = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
+
+  const {
+    companyId,
+    isLoading: companyLoading,
+    isSuperAdmin,
+    userCompany,
+  } = useUserCompany();
+
   const { users: sellers, loading: sellersLoading } = useGetSellers();
   const {
     clientTypes,
@@ -224,13 +238,6 @@ const ClientsPage = () => {
       name: `${user.first_name} ${user.last_name}`,
     }));
 
-  console.log("👥 Vendedores cargados:", {
-    totalSellers: sellers.length,
-    activeSellers: sellerOptions.length,
-    sellerIds: sellerOptions.map((s) => s.id),
-    editingClientSalespersonId: editingClient?.salespersonUserId,
-  });
-
   const sellerSelectOptions = sellerOptions.map((seller) => ({
     value: seller.id.toString(),
     label: seller.name,
@@ -248,6 +255,7 @@ const ClientsPage = () => {
     error: paymentTermsError,
   } = useGetPaymentTerms();
 
+  // ✅ EL HOOK useGetClients AHORA FILTRA AUTOMÁTICAMENTE POR companyId
   const {
     clientsResponse,
     page,
@@ -258,6 +266,8 @@ const ClientsPage = () => {
     setItemsPerPage,
     setModified,
     updateClientInState,
+    loading: clientsLoading,
+    companyId: currentCompanyId,
   } = useGetClients({
     search: searchTerm,
     salespersonUserId: selectedSeller !== "all" ? selectedSeller : undefined,
@@ -276,13 +286,11 @@ const ClientsPage = () => {
       toast.error(errorMessage);
     },
   });
+
   const { updateClient, isLoading: isUpdating } = useUpdateClient({
     onSuccess: (updatedClient) => {
-      console.log("🎉 Cliente actualizado exitosamente:", updatedClient);
       toast.success("Cliente actualizado exitosamente");
-
       updateClientInState(updatedClient);
-
       setIsModalOpen(false);
       resetForm();
     },
@@ -310,6 +318,7 @@ const ClientsPage = () => {
   });
 
   const activePaymentTerms = paymentTerms.filter((term) => term.is_active);
+
   useEffect(() => {
     const formattedTypes = TAX_DOCUMENT_TYPES.map((type) => ({
       value: type,
@@ -325,12 +334,31 @@ const ClientsPage = () => {
       toast.error("Error al cargar los términos de pago");
     }
   }, [paymentTermsError]);
+
   useEffect(() => {
     if (clientTypesError) {
       console.error("Error loading client types:", clientTypesError);
       toast.error("Error al cargar los tipos de cliente");
     }
   }, [clientTypesError]);
+
+  useEffect(() => {
+    if (companyLoading) {
+      console.log("🔄 Cargando información de la empresa...");
+    } else if (companyId) {
+      console.log(`✅ Empresa cargada: ${companyId}`, userCompany);
+      if (userCompany) {
+        console.log("🏢 Datos de empresa:", {
+          id: userCompany.id,
+          name: userCompany.name,
+          legal_tax_id: userCompany.legal_tax_id,
+          external_code: userCompany.external_code,
+        });
+      }
+    } else {
+      console.log("❌ No se pudo obtener la empresa del usuario");
+    }
+  }, [companyLoading, companyId, userCompany, isSuperAdmin]);
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -386,26 +414,11 @@ const ClientsPage = () => {
 
   useEffect(() => {
     if (isModalOpen && editingClient) {
-      console.log("🎯 Modal abierto para editar - Datos completos:", {
-        editingClientId: editingClient.id,
-        editingClientSalespersonUserId: editingClient.salespersonUserId,
-        editingClientSalesperson: editingClient.salesperson,
-
-        currentClientInState: clientsResponse.find(
-          (c) => c.id === editingClient.id
-        ),
-      });
-
       const currentClient = clientsResponse.find(
         (c) => c.id === editingClient.id
       );
 
       if (currentClient) {
-        console.log("🔄 Usando datos frescos del estado global:", {
-          salespersonUserId: currentClient.salespersonUserId,
-          salesperson: currentClient.salesperson,
-        });
-
         setTimeout(() => {
           form.setValue(
             "salespersonUserId",
@@ -526,16 +539,6 @@ const ClientsPage = () => {
         }
       });
 
-      // ❌ ELIMINAR COMPLETAMENTE cualquier manipulación de salesperson
-      // NO agregues cleanData.salesperson en ningún lado
-
-      console.log("🔄 Datos a enviar para actualizar:", {
-        id: editingClient?.id,
-        data: cleanData,
-        camposEnviados: Object.keys(cleanData),
-        salespersonUserIdEnviado: cleanData.salespersonUserId, // ← Solo este campo
-      });
-
       if (editingClient && editingClient.id) {
         await updateClient(editingClient.id, cleanData);
       } else {
@@ -574,18 +577,6 @@ const ClientsPage = () => {
   };
 
   const handleEdit = (client: Client) => {
-    console.log("📥 Cargando cliente para editar - DATOS COMPLETOS:", {
-      id: client.id,
-      salespersonUserId: client.salespersonUserId,
-      salesperson: client.salesperson,
-      // Verificar la estructura real del backend
-      tieneSalespersonObject: !!client.salesperson,
-      salespersonId: client.salesperson?.id,
-      // Buscar en el estado global por si hay datos más actualizados
-      clientInGlobalState: clientsResponse.find((c) => c.id === client.id),
-    });
-
-    // ✅ USAR SIEMPRE los datos del estado global que son más confiables
     const currentClient =
       clientsResponse.find((c) => c.id === client.id) || client;
 
@@ -603,42 +594,25 @@ const ClientsPage = () => {
       return value;
     };
 
-    // ✅ CORRECCIÓN: Obtener el ID del objeto salesperson (como en el ejemplo que muestras)
     let salespersonUserIdValue = undefined;
 
     if (currentClient.salesperson && currentClient.salesperson.id) {
-      // ✅ PRIMERA OPCIÓN: Usar el ID del objeto salesperson (estructura correcta)
       salespersonUserIdValue = currentClient.salesperson.id;
-      console.log(
-        "✅ Usando ID de salesperson object:",
-        salespersonUserIdValue
-      );
     } else if (
       currentClient.salespersonUserId !== undefined &&
       currentClient.salespersonUserId !== null &&
       currentClient.salespersonUserId !== 0
     ) {
-      // ✅ SEGUNDA OPCIÓN: Usar salespersonUserId como fallback
       salespersonUserIdValue = currentClient.salespersonUserId;
-      console.log(
-        "🔄 Usando salespersonUserId como fallback:",
-        salespersonUserIdValue
-      );
     } else {
       console.log("❌ No se encontró vendedor asignado");
     }
 
-    console.log(
-      "🎯 Valor FINAL de salespersonUserId para el formulario:",
-      salespersonUserIdValue
-    );
-
-    // Resetear el formulario con todos los valores
     form.reset({
       businessTypeId: cleanValueForForm(currentClient.businessTypeId) as
         | number
         | undefined,
-      salespersonUserId: salespersonUserIdValue, // ← Este valor viene del objeto salesperson
+      salespersonUserId: salespersonUserIdValue,
       zoneId: cleanValueForForm(currentClient.zoneId) as number | undefined,
       client_code: currentClient.client_code || "",
       legal_name: currentClient.legal_name || "",
@@ -808,7 +782,18 @@ const ClientsPage = () => {
         <div className="font-medium">{row.getValue("tax_document_number")}</div>
       ),
     },
-
+    {
+      accessorKey: "companyId",
+      header: "Empresa",
+      cell: ({ row }) => {
+        const client = row.original;
+        return (
+          <div className="font-medium text-sm text-gray-600">
+            {client.company?.name || `Empresa ID: ${client.companyId}`}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "salespersonUserId",
       header: "Vendedor",
@@ -916,6 +901,9 @@ const ClientsPage = () => {
 
   const isSubmitting = isCreating || isUpdating;
 
+  // ✅ LOADING STATE COMBINADO
+  const isLoading = clientsLoading || companyLoading;
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -930,9 +918,11 @@ const ClientsPage = () => {
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Clientes
-            </h1>
+            <div>
+              <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
+                Clientes
+              </h1>
+            </div>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
@@ -945,12 +935,17 @@ const ClientsPage = () => {
                   className="pl-8 "
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className=" gap-2">
+                  <Button
+                    variant="outline"
+                    className=" gap-2"
+                    disabled={isLoading}
+                  >
                     <Filter className="h-4 w-4" />
                     <span>Filtrar</span>
                   </Button>
@@ -961,6 +956,7 @@ const ClientsPage = () => {
                     <Select
                       value={selectedSeller}
                       onValueChange={setSelectedSeller}
+                      disabled={isLoading}
                     >
                       <SelectTrigger id="seller-filter" className="mt-1">
                         <SelectValue placeholder="Todos los vendedores" />
@@ -990,7 +986,7 @@ const ClientsPage = () => {
                   setIsModalOpen(true);
                 }}
                 className="gap-2 w-full sm:w-auto"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoading}
               >
                 <Plus className="h-4 w-4" />
                 <span>Nuevo cliente</span>
@@ -998,17 +994,27 @@ const ClientsPage = () => {
             </div>
           </div>
 
-          <DataTable<Client, Client>
-            columns={columns}
-            data={clientsResponse || []}
-            noResultsText="No se encontraron clientes"
-            page={page}
-            setPage={setPage}
-            totalPage={totalPage}
-            total={total}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-          />
+          {/* ✅ MOSTRAR LOADING STATE */}
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Cargando clientes...</p>
+              </div>
+            </div>
+          ) : (
+            <DataTable<Client, Client>
+              columns={columns}
+              data={clientsResponse || []}
+              noResultsText="No se encontraron clientes"
+              page={page}
+              setPage={setPage}
+              totalPage={totalPage}
+              total={total}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+            />
+          )}
         </main>
       </div>
 
@@ -1113,14 +1119,6 @@ const ClientsPage = () => {
                       control={form.control}
                       name="salespersonUserId"
                       render={({ field }) => {
-                        console.log(
-                          "🔘 Campo salespersonUserId en formulario:",
-                          {
-                            value: field.value,
-                            tipo: typeof field.value,
-                          }
-                        );
-
                         return (
                           <FormItem>
                             <FormLabel>Vendedor</FormLabel>
@@ -1134,10 +1132,6 @@ const ClientsPage = () => {
                                     : field.value.toString()
                                 }
                                 onValueChange={(value) => {
-                                  console.log(
-                                    "🔘 Vendedor seleccionado:",
-                                    value
-                                  );
                                   if (value === "0") {
                                     field.onChange(undefined);
                                   } else {

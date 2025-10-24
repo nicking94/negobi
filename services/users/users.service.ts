@@ -109,6 +109,7 @@ export class UsersService {
     params: OrganizationQueryType
   ): Promise<UsersListResponse> {
     const response = await api.get(UserRoutes.getUsers, { params });
+
     return response.data;
   }
 
@@ -135,8 +136,13 @@ export class UsersService {
 
   // Obtener perfil del usuario logueado
   static async getProfile(): Promise<UserResponse> {
-    const response = await api.get(UserRoutes.getProfile);
-    return response.data;
+    try {
+      const response = await api.get(UserRoutes.getProfile);
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Actualizar perfil (alias de updateUser pero para el perfil actual)

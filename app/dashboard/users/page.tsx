@@ -239,19 +239,6 @@ const UsersPage = () => {
       });
     }
   }, [selectedUser, isEditDialogOpen, form, availableRoles]);
-  // Agrega esto temporalmente para debuggear
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      console.log("Click en:", e.target);
-      console.log(
-        "Dropdown abiertos:",
-        document.querySelectorAll('[data-state="open"]').length
-      );
-    };
-
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, []);
 
   const handleEditUser = (user: UserType) => {
     setSelectedUser(user);

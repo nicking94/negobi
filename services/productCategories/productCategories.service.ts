@@ -162,6 +162,9 @@ export const productCategoryService = {
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
+    if (params?.companyId) {
+      queryParams.append("companyId", params.companyId.toString());
+    }
 
     // Parámetros opcionales
     if (params?.search) queryParams.append("search", params.search);

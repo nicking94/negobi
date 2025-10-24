@@ -5,9 +5,11 @@ import {
 } from "@/services/users/users.service";
 import { useEffect, useState, useCallback } from "react";
 import { OrganizationQueryType, UserType, ApiError } from "@/types";
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
 
 interface UseGetUsersProps {
   roleFilter?: string;
+  companyId?: number;
 }
 
 interface UseGetUsersReturn {
@@ -20,17 +22,20 @@ interface UseGetUsersReturn {
   total: number;
   itemsPerPage: number;
   search: string;
-  companyId: number;
+  companyId: number | undefined;
   error: string | null;
   setPage: (page: number) => void;
   setItemsPerPage: (itemsPerPage: number) => void;
   setSearch: (search: string) => void;
-  setCompanyId: (companyId: number) => void;
+  setCompanyId: (companyId: number | undefined) => void; // Cambiar tipo
   refetch: () => void;
 }
 
 const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
-  const { roleFilter } = props || {};
+  const { roleFilter, companyId: propCompanyId } = props || {};
+
+  const { companyId: userCompanyId, isSuperAdmin } = useUserCompany();
+
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserType[]>([]);
   const [modified, setModified] = useState(false);
@@ -39,7 +44,12 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
   const [total, setTotal] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
-  const [companyId, setCompanyId] = useState(4);
+
+  // CORRECCIÓN: Estado interno para companyId
+  const [companyId, setCompanyId] = useState<number | undefined>(
+    propCompanyId || userCompanyId
+  );
+
   const [error, setError] = useState<string | null>(null);
 
   const getUsers = useCallback(async () => {
@@ -51,12 +61,20 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
         search: search.trim(),
         page,
         itemsPerPage,
-        companyId,
       };
+
+      // Lógica de filtrado por empresa
+      if (!isSuperAdmin) {
+        params.companyId = userCompanyId;
+      } else if (companyId) {
+        params.companyId = companyId;
+      }
 
       if (roleFilter) {
         params.role = roleFilter;
       }
+
+      console.log("🔍 [useGetUsers] Params:", params);
 
       const response: UsersListResponse = await UsersService.getUsers(params);
 
@@ -86,7 +104,15 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
     } finally {
       setLoading(false);
     }
-  }, [search, page, itemsPerPage, companyId, roleFilter]);
+  }, [
+    search,
+    page,
+    itemsPerPage,
+    companyId,
+    roleFilter,
+    isSuperAdmin,
+    userCompanyId,
+  ]);
 
   useEffect(() => {
     getUsers();
@@ -106,12 +132,12 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
     page,
     itemsPerPage,
     search,
-    companyId,
+    companyId, // Exportar companyId
     error,
     setPage,
     setItemsPerPage,
     setSearch,
-    setCompanyId,
+    setCompanyId, // Exportar setCompanyId
     refetch,
   };
 };
