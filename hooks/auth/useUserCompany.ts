@@ -1,6 +1,6 @@
-// hooks/auth/useUserCompany.ts - CORREGIDO
+// hooks/auth/useUserCompany.ts - ACTUALIZADO
 import { useAuth } from "@/context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { UsersService } from "@/services/users/users.service";
 
 export interface UserProfile {
@@ -31,10 +31,20 @@ export const useUserCompany = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userCompany, setUserCompany] = useState<any>(null);
+  // ✅ NUEVO: Estado para la empresa seleccionada
+  const [selectedCompanyId, setSelectedCompanyId] = useState<
+    number | undefined
+  >(undefined);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Si ya tenemos el perfil, no hacer fetch nuevamente
+      if (userProfile && userProfile.id === parseInt(user.id)) {
         setIsLoading(false);
         return;
       }
@@ -63,13 +73,12 @@ export const useUserCompany = () => {
 
           setUserProfile(profileData);
 
-          // CORRECCIÓN: Si viene el objeto company, usamos su ID como companyId
           if (response.data.company) {
             setUserCompany(response.data.company);
-            console.log(
-              "🏢 Datos de empresa obtenidos:",
-              response.data.company
-            );
+            // ✅ Inicializar selectedCompanyId con la empresa del usuario
+            if (!selectedCompanyId && response.data.company.id) {
+              setSelectedCompanyId(response.data.company.id);
+            }
           }
         }
       } catch (error) {
@@ -94,11 +103,24 @@ export const useUserCompany = () => {
     };
 
     fetchUserProfile();
-  }, [user]);
+  }, [user]); // Solo dependencia de user
 
-  // CORRECCIÓN PRINCIPAL: Si company_id es undefined pero tenemos userCompany, usar el ID de userCompany
-  const companyId =
-    userProfile?.company_id || userCompany?.id || user?.company_id || undefined;
+  // CORRECCIÓN: Usar useMemo para evitar recálculos innecesarios
+  const companyId = useMemo(() => {
+    // ✅ Prioridad: selectedCompanyId > userCompany > userProfile
+    return (
+      selectedCompanyId ||
+      userProfile?.company_id ||
+      userCompany?.id ||
+      user?.company_id ||
+      undefined
+    );
+  }, [
+    selectedCompanyId,
+    userProfile?.company_id,
+    userCompany?.id,
+    user?.company_id,
+  ]);
 
   const isSuperAdmin = user?.role === "superAdmin";
   const isAdmin = user?.role === "directive";
@@ -109,17 +131,10 @@ export const useUserCompany = () => {
   const canAccessBranches = isSuperAdmin || isAdmin;
   const canAccessUsers = isSuperAdmin || isAdmin;
 
-  console.log("🔍 useUserCompany debug:", {
-    userCompany,
-    companyId,
-    hasCompany: !!companyId,
-    userProfileCompanyId: userProfile?.company_id,
-    userCompanyId: user?.company_id,
-    userCompanyObjectId: userCompany?.id, // Agregar este para debug
-  });
-
   return {
     companyId,
+    selectedCompanyId, // ✅ NUEVO: Exportar selectedCompanyId
+    setSelectedCompanyId, // ✅ NUEVO: Exportar setSelectedCompanyId
     isLoading: isLoading || authLoading,
     hasCompany: !!companyId,
     user: userProfile,

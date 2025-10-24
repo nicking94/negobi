@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -60,6 +60,7 @@ import {
 import { UserType } from "@/types";
 import { useUserRoles } from "@/hooks/users/useUserRoles";
 import { useTranslation } from "@/hooks/translation/useTranslation";
+import useUserCompany from "@/hooks/auth/useUserCompany";
 
 const createUserSchema = (availableRoles: string[] = []) => {
   return z.object({
@@ -88,6 +89,16 @@ type UserFormValues = z.infer<ReturnType<typeof createUserSchema>>;
 
 const UsersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { user, companyId } = useUserCompany();
+  const { translateRole } = useTranslation();
+
+  const {
+    data: rolesData,
+    loading: rolesLoading,
+
+    getFilteredRoles,
+  } = useUserRoles();
+
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -95,42 +106,30 @@ const UsersPage = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
-  // ✅ Usar el hook de traducción
-  const { translateRole } = useTranslation();
-
-  // Obtener roles desde la API
-  const {
-    data: rolesData,
-    loading: rolesLoading,
-    error: rolesError,
-  } = useUserRoles();
-
-  const getAvailableRoles = () => {
+  const getAvailableRoles = useMemo(() => {
     if (!rolesData) return [];
 
     try {
+      let allRoles: string[] = [];
+
       if (rolesData.data?.message) {
         const parsed = JSON.parse(rolesData.data.message);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-
-      if (Array.isArray(rolesData.data)) {
-        return rolesData.data;
-      }
-
-      if (rolesData.data && typeof rolesData.data === "object") {
+        allRoles = Array.isArray(parsed) ? parsed : [];
+      } else if (Array.isArray(rolesData.data)) {
+        allRoles = rolesData.data;
+      } else if (rolesData.data && typeof rolesData.data === "object") {
         const rolesArray = Object.values(rolesData.data).flat();
-        return Array.isArray(rolesArray) ? rolesArray : [];
+        allRoles = Array.isArray(rolesArray) ? rolesArray : [];
       }
 
-      return [];
+      return getFilteredRoles(allRoles);
     } catch (error) {
       console.error("Error parsing roles:", error);
       return [];
     }
-  };
+  }, [rolesData, getFilteredRoles]);
 
-  const availableRoles = getAvailableRoles();
+  const availableRoles = getAvailableRoles;
 
   const userSchema = createUserSchema(availableRoles);
 
@@ -145,7 +144,7 @@ const UsersPage = () => {
     setPage,
     setItemsPerPage,
     setSearch,
-    error: usersError,
+
     refetch: refetchUsers,
   } = useGetUsers();
 
@@ -276,8 +275,8 @@ const UsersPage = () => {
         phone: data.phone || "",
         role: data.role,
         seller_code: data.seller_code || "",
-        branch_id: 4,
-        company_id: 4,
+        branch_id: user?.branch_id || 1,
+        company_id: companyId || 1,
       };
 
       await createUserHook(createData);
@@ -440,19 +439,6 @@ const UsersPage = () => {
             </h1>
           </div>
 
-          {/* Mostrar errores de carga */}
-          {usersError && (
-            <div className="bg-red_xxl border border-red_b text-red_b px-4 py-3 rounded mb-4">
-              {usersError}
-            </div>
-          )}
-
-          {rolesError && (
-            <div className="bg-red_xxl border border-red_b text-red_b px-4 py-3 rounded mb-4">
-              Error al cargar los roles: {rolesError.message}
-            </div>
-          )}
-
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -480,10 +466,8 @@ const UsersPage = () => {
                   <DropdownMenuContent
                     align="end"
                     className="w-[18rem]"
-                    // ✅ Prevenir que el Select interfiera con el cierre
-                    onCloseAutoFocus={(e) => e.preventDefault()}
                     onInteractOutside={(e) => {
-                      // ✅ Permitir que el clic fuera cierre el dropdown
+                      // Permitir que el clic fuera cierre el dropdown
                       const target = e.target as HTMLElement;
                       if (!target.closest("[data-radix-select-content]")) {
                         setIsFilterDropdownOpen(false);
@@ -496,22 +480,14 @@ const UsersPage = () => {
                         value={roleFilter}
                         onValueChange={(value) => {
                           setRoleFilter(value);
-                        }}
-                        onOpenChange={(open) => {
-                          if (!open) {
-                            setTimeout(() => {
-                              document.body.style.pointerEvents = "";
-                              document.documentElement.style.pointerEvents = "";
-                            }, 100);
-                          }
+                          // Cerrar el dropdown después de seleccionar
+                          setTimeout(() => setIsFilterDropdownOpen(false), 100);
                         }}
                       >
                         <SelectTrigger id="role-filter" className="mt-1">
                           <SelectValue placeholder="Todos los roles" />
                         </SelectTrigger>
-                        <SelectContent
-                          onCloseAutoFocus={(e) => e.stopPropagation()}
-                        >
+                        <SelectContent>
                           <SelectItem value="all">Todos los roles</SelectItem>
                           {availableRoles.map((role: string, index: number) => (
                             <SelectItem key={index} value={role}>

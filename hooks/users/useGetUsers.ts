@@ -1,4 +1,4 @@
-// hooks/users/useGetUsers.ts
+// hooks/users/useGetUsers.ts - VERSIÓN CORREGIDA
 import {
   UsersService,
   UsersListResponse,
@@ -27,13 +27,12 @@ interface UseGetUsersReturn {
   setPage: (page: number) => void;
   setItemsPerPage: (itemsPerPage: number) => void;
   setSearch: (search: string) => void;
-  setCompanyId: (companyId: number | undefined) => void; // Cambiar tipo
+  setCompanyId: (companyId: number | undefined) => void;
   refetch: () => void;
 }
 
 const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
   const { roleFilter, companyId: propCompanyId } = props || {};
-
   const { companyId: userCompanyId, isSuperAdmin } = useUserCompany();
 
   const [loading, setLoading] = useState(false);
@@ -44,12 +43,9 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
   const [total, setTotal] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
-
-  // CORRECCIÓN: Estado interno para companyId
   const [companyId, setCompanyId] = useState<number | undefined>(
     propCompanyId || userCompanyId
   );
-
   const [error, setError] = useState<string | null>(null);
 
   const getUsers = useCallback(async () => {
@@ -63,18 +59,31 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
         itemsPerPage,
       };
 
-      // Lógica de filtrado por empresa
-      if (!isSuperAdmin) {
-        params.companyId = userCompanyId;
-      } else if (companyId) {
-        params.companyId = companyId;
+      // ✅ CORRECCIÓN: Asegurar que companyId siempre sea válido
+      let effectiveCompanyId: number;
+
+      if (isSuperAdmin) {
+        // Para superAdmin, usar el companyId del estado o del prop
+        effectiveCompanyId = companyId || propCompanyId || userCompanyId || 1;
+      } else {
+        // Para no superAdmin, forzar el userCompanyId
+        effectiveCompanyId = userCompanyId || 1;
       }
 
-      if (roleFilter) {
+      // ✅ Asegurar que companyId sea un número válido
+      if (effectiveCompanyId && effectiveCompanyId > 0) {
+        params.companyId = effectiveCompanyId;
+      } else {
+        // Si no hay companyId válido, usar un valor por defecto
+        console.warn(
+          "⚠️ No se encontró companyId válido, usando valor por defecto 1"
+        );
+        params.companyId = 1;
+      }
+
+      if (roleFilter && roleFilter !== "all") {
         params.role = roleFilter;
       }
-
-      console.log("🔍 [useGetUsers] Params:", params);
 
       const response: UsersListResponse = await UsersService.getUsers(params);
 
@@ -109,9 +118,10 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
     page,
     itemsPerPage,
     companyId,
-    roleFilter,
-    isSuperAdmin,
+    propCompanyId,
     userCompanyId,
+    isSuperAdmin,
+    roleFilter,
   ]);
 
   useEffect(() => {
@@ -132,12 +142,12 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
     page,
     itemsPerPage,
     search,
-    companyId, // Exportar companyId
+    companyId,
     error,
     setPage,
     setItemsPerPage,
     setSearch,
-    setCompanyId, // Exportar setCompanyId
+    setCompanyId,
     refetch,
   };
 };

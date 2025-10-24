@@ -1,4 +1,4 @@
-// hooks/clients/useGetClients.ts - MEJORADO
+// hooks/clients/useGetClients.ts - CORREGIDO
 import { useEffect, useState, useCallback } from "react";
 import { ClientsService } from "@/services/clients/clients.service";
 import { Client } from "@/app/dashboard/masters/clients/page";
@@ -9,11 +9,12 @@ interface UseGetClientsParams {
   page?: number;
   itemsPerPage?: number;
   salespersonUserId?: string;
+  companyId?: number; // ✅ AGREGAR ESTA PROPIEDAD
 }
 
 const useGetClients = (params: UseGetClientsParams = {}) => {
   const {
-    companyId,
+    companyId: userCompanyId,
     isLoading: companyLoading,
     isSuperAdmin,
   } = useUserCompany();
@@ -27,14 +28,14 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
     params?.itemsPerPage || 1000
   );
 
+  // ✅ Usar companyId del parámetro o del usuario
+  const effectiveCompanyId = params.companyId || userCompanyId;
+
   const getClients = useCallback(async () => {
-    // ✅ PERMITIR A SUPERADMIN HACER LA PETICIÓN SIN companyId SI ES NECESARIO
     if (companyLoading) {
       return;
     }
-
-    // ✅ PARA SUPERADMIN, companyId podría ser null pero igual permitir la petición
-    if (!companyId && !isSuperAdmin) {
+    if (!effectiveCompanyId && !isSuperAdmin) {
       console.log("❌ No companyId available for non-superadmin user");
       return;
     }
@@ -48,14 +49,10 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
         itemsPerPage,
         legal_name: params?.search || "",
       };
-      if (companyId) {
-        queryParams.companyId = companyId;
-      }
 
       // ✅ SOLO INCLUIR companyId SI ESTÁ DISPONIBLE
-      if (companyId) {
-        queryParams.companyId = companyId;
-        console.log(`🔍 Buscando clientes para empresa: ${companyId}`);
+      if (effectiveCompanyId) {
+        queryParams.companyId = effectiveCompanyId;
       } else if (isSuperAdmin) {
         console.log(`🔍 Superadmin: buscando clientes sin filtro de empresa`);
       }
@@ -105,7 +102,7 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
       setLoading(false);
     }
   }, [
-    companyId,
+    effectiveCompanyId,
     companyLoading,
     isSuperAdmin,
     params?.search,
@@ -144,7 +141,7 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
     itemsPerPage,
     refetch: getClients,
     updateClientInState,
-    companyId,
+    companyId: effectiveCompanyId,
     isSuperAdmin,
   };
 };

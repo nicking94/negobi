@@ -12,7 +12,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Badge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,12 +93,12 @@ const BudgetsPage = () => {
   const { getDocumentDetails } = useDocumentDetails();
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const { clientsResponse: clients } = useGetClients({
-    companyId: companyId || undefined,
+    companyId: selectedCompanyId || companyId,
     itemsPerPage: 1000,
   });
   const { budgets, error, refetch, updateDocument, deleteDocument } =
     useBudgets({
-      companyId: companyId || 0,
+      companyId: selectedCompanyId || companyId || 0,
     });
 
   const { companies } = useGetAllCompanies();

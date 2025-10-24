@@ -65,7 +65,7 @@ export interface UsersListResponse {
 
 export interface UserResponse {
   success: boolean;
-  data: UserType;
+  data: UserProfile;
 }
 
 export interface UserDeleteResponse {
@@ -138,14 +138,12 @@ export class UsersService {
   static async getProfile(): Promise<UserResponse> {
     try {
       const response = await api.get(UserRoutes.getProfile);
-
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  // Actualizar perfil (alias de updateUser pero para el perfil actual)
   static async updateProfile(
     id: number,
     data: UpdateUserPayload

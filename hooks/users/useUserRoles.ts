@@ -1,5 +1,5 @@
-// hooks/users/useUserRoles.ts - ACTUALIZADO
-import { useState, useEffect } from "react";
+// hooks/users/useUserRoles.ts - CORREGIDO
+import { useState, useEffect, useMemo } from "react";
 import {
   UsersService,
   UserRolesResponse,
@@ -19,7 +19,6 @@ export const useUserRoles = () => {
         setError(null);
 
         const response = await UsersService.getUserRoles();
-
         setData(response);
       } catch (err) {
         console.error("❌ Error fetching roles:", err);
@@ -32,24 +31,23 @@ export const useUserRoles = () => {
     };
 
     fetchRoles();
-  }, []);
+  }, []); // Array de dependencias vacío para que solo se ejecute una vez
 
-  // Función para filtrar roles según permisos del usuario actual
-  const getFilteredRoles = (allRoles: string[]): string[] => {
-    if (isSuperAdmin) {
-      // SuperAdmin puede ver todos los roles
-      return allRoles;
-    } else if (isAdmin) {
-      // Admin (directive) puede ver todos los roles EXCEPTO superAdmin y directive
-      return allRoles.filter(
-        (role) => role !== "superAdmin" && role !== "directive"
-      );
-    } else {
-      // Otros roles solo pueden ver roles básicos (excluir superAdmin, directive, management)
-      const restrictedRoles = ["superAdmin", "directive", "management"];
-      return allRoles.filter((role) => !restrictedRoles.includes(role));
-    }
-  };
+  // CORRECCIÓN: Usar useMemo para filtrar roles
+  const getFilteredRoles = useMemo(() => {
+    return (allRoles: string[]): string[] => {
+      if (isSuperAdmin) {
+        return allRoles;
+      } else if (isAdmin) {
+        return allRoles.filter(
+          (role) => role !== "superAdmin" && role !== "directive"
+        );
+      } else {
+        const restrictedRoles = ["superAdmin", "directive", "management"];
+        return allRoles.filter((role) => !restrictedRoles.includes(role));
+      }
+    };
+  }, [isSuperAdmin, isAdmin]); // Dependencias específicas
 
   return {
     data,

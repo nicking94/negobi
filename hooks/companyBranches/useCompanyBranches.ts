@@ -13,6 +13,7 @@ export interface UseCompanyBranchesFilters {
   search?: string;
   name?: string;
   code?: string;
+  companyId?: number | null;
 }
 
 export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
@@ -28,14 +29,10 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Si no hay companyId, no cargar sucursales
       if (!companyId || companyId <= 0) {
-        console.log("ℹ️ Usuario sin empresa asignada, no se cargan sucursales");
         setCompanyBranches([]);
         return;
       }
-
-      console.log(`🏢 Cargando sucursales para empresa ID: ${companyId}`);
 
       const params: GetCompanyBranchesParams = {
         page: 1,
@@ -45,9 +42,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
 
       const branchesData = await companyBranchService.getCompanyBranches(
         params
-      );
-      console.log(
-        `✅ Sucursales cargadas: ${branchesData.length} para empresa ${companyId}`
       );
 
       setCompanyBranches(branchesData);
@@ -69,10 +63,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     try {
       setLoading(true);
       setError(null);
-
-      if (!hasCompany || !companyId) {
-        throw new Error("No tienes una empresa asignada para crear sucursales");
-      }
 
       const branchDataWithUserCompany = {
         ...branchData,

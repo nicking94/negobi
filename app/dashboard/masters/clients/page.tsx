@@ -342,24 +342,6 @@ const ClientsPage = () => {
     }
   }, [clientTypesError]);
 
-  useEffect(() => {
-    if (companyLoading) {
-      console.log("🔄 Cargando información de la empresa...");
-    } else if (companyId) {
-      console.log(`✅ Empresa cargada: ${companyId}`, userCompany);
-      if (userCompany) {
-        console.log("🏢 Datos de empresa:", {
-          id: userCompany.id,
-          name: userCompany.name,
-          legal_tax_id: userCompany.legal_tax_id,
-          external_code: userCompany.external_code,
-        });
-      }
-    } else {
-      console.log("❌ No se pudo obtener la empresa del usuario");
-    }
-  }, [companyLoading, companyId, userCompany, isSuperAdmin]);
-
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {

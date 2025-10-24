@@ -238,10 +238,8 @@ const SuppliersPage = () => {
     useGetPaymentTermsForSelect();
   const { companyOptions } = useGetCompaniesForSelect();
 
-  // ✅ EFECTO PARA ESTABLECER LA COMPAÑÍA DEL USUARIO POR DEFECTO
   useEffect(() => {
     if (userCompanyId && !companyId) {
-      console.log(`🏢 Estableciendo compañía del usuario: ${userCompanyId}`);
       setCompanyId(userCompanyId);
     }
   }, [userCompanyId, companyId, setCompanyId]);
