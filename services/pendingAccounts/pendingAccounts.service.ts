@@ -65,14 +65,15 @@ export interface CreatePendingAccountData {
   amount_due: number;
   balance_due: number;
   due_date: string;
+  status: AccountStatus;
 
   // Campos opcionales para creación
   clientId?: number;
   supplierId?: number;
   documentId?: number;
   currencyId?: number;
-  status?: AccountStatus;
   notes?: string;
+  external_code?: string;
 }
 
 export interface UpdatePendingAccountData {
@@ -88,6 +89,7 @@ export interface UpdatePendingAccountData {
   due_date?: string;
   status?: AccountStatus;
   notes?: string;
+  external_code?: string;
 }
 
 // Response interfaces
@@ -110,19 +112,28 @@ export interface PaginatedPendingAccountsResponse {
   };
 }
 
-export const pendingAccountService = {
+// Función para formatear números decimales
+const formatDecimalForAPI = (value: number | undefined): number => {
+  if (value === undefined || value === null) return 0;
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+};
+
+class PendingAccountsService {
   // Crear una nueva cuenta pendiente
-  createPendingAccount: async (
-    pendingAccountData: CreatePendingAccountData
-  ): Promise<PendingAccount> => {
-    const response = await api.post(PostPendingAccount, pendingAccountData);
+  async create(data: CreatePendingAccountData): Promise<PendingAccount> {
+    // Formatear los campos decimales antes de enviar
+    const formattedData = {
+      ...data,
+      amount_due: formatDecimalForAPI(data.amount_due),
+      balance_due: formatDecimalForAPI(data.balance_due),
+    };
+
+    const response = await api.post(PostPendingAccount, formattedData);
     return response.data.data;
-  },
+  }
 
   // Obtener todas las cuentas pendientes
-  getPendingAccounts: async (
-    params?: GetPendingAccountsParams
-  ): Promise<PendingAccount[]> => {
+  async getAll(params?: GetPendingAccountsParams): Promise<PendingAccount[]> {
     const queryParams = new URLSearchParams();
 
     // Parámetros requeridos
@@ -172,57 +183,68 @@ export const pendingAccountService = {
 
     const response = await api.get(`${GetPendingAccounts}?${queryParams}`);
     return response.data.data;
-  },
+  }
 
   // Actualizar una cuenta pendiente
-  updatePendingAccount: async (
+  async update(
     id: string,
-    updates: UpdatePendingAccountData
-  ): Promise<PendingAccount> => {
-    const response = await api.patch(`${PatchPendingAccount}/${id}`, updates);
+    data: UpdatePendingAccountData
+  ): Promise<PendingAccount> {
+    // Formatear los campos decimales antes de enviar
+    const formattedData: any = { ...data };
+
+    if (data.amount_due !== undefined) {
+      formattedData.amount_due = formatDecimalForAPI(data.amount_due);
+    }
+    if (data.balance_due !== undefined) {
+      formattedData.balance_due = formatDecimalForAPI(data.balance_due);
+    }
+
+    const response = await api.patch(
+      `${PatchPendingAccount}/${id}`,
+      formattedData
+    );
     return response.data.data;
-  },
+  }
 
   // Eliminar una cuenta pendiente
-  deletePendingAccount: async (id: string): Promise<void> => {
+  async delete(id: string): Promise<void> {
     await api.delete(`${DeletePendingAccount}/${id}`);
-  },
+  }
 
   // Obtener una cuenta pendiente por ID
-  getPendingAccountById: async (id: string): Promise<PendingAccount> => {
+  async getById(id: string): Promise<PendingAccount> {
     const response = await api.get(`${GetPendingAccounts}/${id}`);
     return response.data.data;
-  },
+  }
 
   // Métodos adicionales útiles
-  getReceivableAccounts: async (
-    companyId?: number
-  ): Promise<PendingAccount[]> => {
+  async getReceivableAccounts(companyId?: number): Promise<PendingAccount[]> {
     const params: GetPendingAccountsParams = {
       account_type: "receivable",
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     };
     if (companyId) {
       params.companyId = companyId;
     }
-    return pendingAccountService.getPendingAccounts(params);
-  },
+    return this.getAll(params);
+  }
 
-  getPayableAccounts: async (companyId?: number): Promise<PendingAccount[]> => {
+  async getPayableAccounts(companyId?: number): Promise<PendingAccount[]> {
     const params: GetPendingAccountsParams = {
       account_type: "payable",
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     };
     if (companyId) {
       params.companyId = companyId;
     }
-    return pendingAccountService.getPendingAccounts(params);
-  },
+    return this.getAll(params);
+  }
 
-  getOverdueAccounts: async (companyId?: number): Promise<PendingAccount[]> => {
-    const allAccounts = await pendingAccountService.getPendingAccounts({
+  async getOverdueAccounts(companyId?: number): Promise<PendingAccount[]> {
+    const allAccounts = await this.getAll({
       companyId,
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     });
 
     const today = new Date();
@@ -230,30 +252,28 @@ export const pendingAccountService = {
       const dueDate = new Date(account.due_date);
       return dueDate < today && account.balance_due > 0;
     });
-  },
+  }
 
-  getAccountsByClient: async (clientId: number): Promise<PendingAccount[]> => {
-    return pendingAccountService.getPendingAccounts({
+  async getAccountsByClient(clientId: number): Promise<PendingAccount[]> {
+    return this.getAll({
       clientId,
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     });
-  },
+  }
 
-  getAccountsBySupplier: async (
-    supplierId: number
-  ): Promise<PendingAccount[]> => {
-    return pendingAccountService.getPendingAccounts({
+  async getAccountsBySupplier(supplierId: number): Promise<PendingAccount[]> {
+    return this.getAll({
       supplierId,
-      itemsPerPage: 10,
+      itemsPerPage: 100,
     });
-  },
+  }
 
-  getAccountsByDueDateRange: async (
+  async getAccountsByDueDateRange(
     startDate: string,
     endDate: string,
     companyId?: number
-  ): Promise<PendingAccount[]> => {
-    const allAccounts = await pendingAccountService.getPendingAccounts({
+  ): Promise<PendingAccount[]> {
+    const allAccounts = await this.getAll({
       companyId,
       itemsPerPage: 100,
     });
@@ -264,20 +284,18 @@ export const pendingAccountService = {
       const end = new Date(endDate);
       return dueDate >= start && dueDate <= end;
     });
-  },
+  }
 
   // Calcular totales
-  calculateTotals: async (
-    companyId?: number
-  ): Promise<{
+  async calculateTotals(companyId?: number): Promise<{
     totalReceivable: number;
     totalPayable: number;
     totalOverdue: number;
     totalOutstanding: number;
-  }> => {
-    const allAccounts = await pendingAccountService.getPendingAccounts({
+  }> {
+    const allAccounts = await this.getAll({
       companyId,
-      itemsPerPage: 100,
+      itemsPerPage: 1000, // Alto para obtener todas las cuentas
     });
 
     const today = new Date();
@@ -307,16 +325,14 @@ export const pendingAccountService = {
       totalOverdue,
       totalOutstanding,
     };
-  },
+  }
 
   // Aplicar pago a cuenta pendiente
-  applyPayment: async (
+  async applyPayment(
     accountId: string,
     paymentAmount: number
-  ): Promise<PendingAccount> => {
-    const account = await pendingAccountService.getPendingAccountById(
-      accountId
-    );
+  ): Promise<PendingAccount> {
+    const account = await this.getById(accountId);
 
     const newBalance = Math.max(0, account.balance_due - paymentAmount);
     const newStatus =
@@ -326,9 +342,47 @@ export const pendingAccountService = {
         ? "Partially Paid"
         : account.status;
 
-    return pendingAccountService.updatePendingAccount(accountId, {
+    return this.update(accountId, {
       balance_due: newBalance,
       status: newStatus,
     });
-  },
+  }
+}
+
+export const pendingAccountsService = new PendingAccountsService();
+
+// Exportar también los métodos legacy para compatibilidad
+export const pendingAccountService = {
+  createPendingAccount: (data: CreatePendingAccountData) =>
+    pendingAccountsService.create(data),
+  getPendingAccounts: (params?: GetPendingAccountsParams) =>
+    pendingAccountsService.getAll(params),
+  updatePendingAccount: (id: string, data: UpdatePendingAccountData) =>
+    pendingAccountsService.update(id, data),
+  deletePendingAccount: (id: string) => pendingAccountsService.delete(id),
+  getPendingAccountById: (id: string) => pendingAccountsService.getById(id),
+  getReceivableAccounts: (companyId?: number) =>
+    pendingAccountsService.getReceivableAccounts(companyId),
+  getPayableAccounts: (companyId?: number) =>
+    pendingAccountsService.getPayableAccounts(companyId),
+  getOverdueAccounts: (companyId?: number) =>
+    pendingAccountsService.getOverdueAccounts(companyId),
+  getAccountsByClient: (clientId: number) =>
+    pendingAccountsService.getAccountsByClient(clientId),
+  getAccountsBySupplier: (supplierId: number) =>
+    pendingAccountsService.getAccountsBySupplier(supplierId),
+  getAccountsByDueDateRange: (
+    startDate: string,
+    endDate: string,
+    companyId?: number
+  ) =>
+    pendingAccountsService.getAccountsByDueDateRange(
+      startDate,
+      endDate,
+      companyId
+    ),
+  calculateTotals: (companyId?: number) =>
+    pendingAccountsService.calculateTotals(companyId),
+  applyPayment: (accountId: string, paymentAmount: number) =>
+    pendingAccountsService.applyPayment(accountId, paymentAmount),
 };

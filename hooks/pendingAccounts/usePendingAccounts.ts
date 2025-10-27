@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import {
-  pendingAccountService,
+  pendingAccountsService,
   PendingAccount,
   CreatePendingAccountData,
   UpdatePendingAccountData,
   AccountType,
-  AccountStatus,
   GetPendingAccountsParams,
 } from "../../services/pendingAccounts/pendingAccounts.service";
 
@@ -41,11 +40,12 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         ...filters,
         ...customFilters,
         page: 1,
-        itemsPerPage: 10,
+        itemsPerPage: 100,
       };
 
-      const pendingAccountsData =
-        await pendingAccountService.getPendingAccounts(combinedFilters);
+      const pendingAccountsData = await pendingAccountsService.getAll(
+        combinedFilters
+      );
 
       if (Array.isArray(pendingAccountsData)) {
         setPendingAccounts(pendingAccountsData);
@@ -53,12 +53,13 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         console.warn("⚠️ Estructura inesperada:", pendingAccountsData);
         setPendingAccounts([]);
       }
-    } catch (err) {
-      setError(
-        err instanceof Error
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
           ? err.message
-          : "Error al cargar cuentas pendientes"
-      );
+          : "Error al cargar cuentas pendientes");
+      setError(errorMessage);
       setPendingAccounts([]);
     } finally {
       setLoading(false);
@@ -72,14 +73,18 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const newPendingAccount =
-        await pendingAccountService.createPendingAccount(pendingAccountData);
+      const newPendingAccount = await pendingAccountsService.create(
+        pendingAccountData
+      );
       setPendingAccounts((prev) => [...prev, newPendingAccount]);
       return newPendingAccount;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al crear cuenta pendiente"
-      );
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
+          ? err.message
+          : "Error al crear cuenta pendiente");
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -94,20 +99,23 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const updatedPendingAccount =
-        await pendingAccountService.updatePendingAccount(id, updates);
+      const updatedPendingAccount = await pendingAccountsService.update(
+        id,
+        updates
+      );
       setPendingAccounts((prev) =>
         prev.map((account) =>
           account.id.toString() === id ? updatedPendingAccount : account
         )
       );
       return updatedPendingAccount;
-    } catch (err) {
-      setError(
-        err instanceof Error
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
           ? err.message
-          : "Error al actualizar cuenta pendiente"
-      );
+          : "Error al actualizar cuenta pendiente");
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -119,17 +127,18 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      await pendingAccountService.deletePendingAccount(id);
+      await pendingAccountsService.delete(id);
       setPendingAccounts((prev) =>
         prev.filter((account) => account.id.toString() !== id)
       );
       return true;
-    } catch (err) {
-      setError(
-        err instanceof Error
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
           ? err.message
-          : "Error al eliminar cuenta pendiente"
-      );
+          : "Error al eliminar cuenta pendiente");
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
@@ -143,14 +152,15 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const pendingAccount = await pendingAccountService.getPendingAccountById(
-        id
-      );
+      const pendingAccount = await pendingAccountsService.getById(id);
       return pendingAccount;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al obtener cuenta pendiente"
-      );
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
+          ? err.message
+          : "Error al obtener cuenta pendiente");
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -165,7 +175,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const updatedAccount = await pendingAccountService.applyPayment(
+      const updatedAccount = await pendingAccountsService.applyPayment(
         accountId,
         paymentAmount
       );
@@ -175,8 +185,11 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         )
       );
       return updatedAccount;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al aplicar pago");
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error ? err.message : "Error al aplicar pago");
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -213,7 +226,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
   };
 };
 
-// Hook especializado para cuentas por cobrar
+// Los hooks especializados restantes permanecen igual...
 export const useReceivableAccounts = (companyId?: number) => {
   const [receivableAccounts, setReceivableAccounts] = useState<
     PendingAccount[]
@@ -227,16 +240,17 @@ export const useReceivableAccounts = (companyId?: number) => {
     try {
       setLoading(true);
       setError(null);
-      const accounts = await pendingAccountService.getReceivableAccounts(
+      const accounts = await pendingAccountsService.getReceivableAccounts(
         targetCompanyId
       );
       setReceivableAccounts(accounts);
-    } catch (err) {
-      setError(
-        err instanceof Error
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
           ? err.message
-          : "Error al cargar cuentas por cobrar"
-      );
+          : "Error al cargar cuentas por cobrar");
+      setError(errorMessage);
       setReceivableAccounts([]);
     } finally {
       setLoading(false);
