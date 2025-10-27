@@ -6,7 +6,9 @@ import {
   UpdatePendingAccountData,
   AccountType,
   GetPendingAccountsParams,
+  pendingAccountService,
 } from "../../services/pendingAccounts/pendingAccounts.service";
+import useUserCompany from "../auth/useUserCompany";
 
 // Definir el tipo para los filtros del hook
 export interface UsePendingAccountsFilters {
@@ -24,11 +26,11 @@ export interface UsePendingAccountsFilters {
 }
 
 export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
+  const { companyId, selectedCompanyId } = useUserCompany(); // ✅ Obtener selectedCompanyId también
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las cuentas pendientes con filtros
   const loadPendingAccounts = async (
     customFilters?: Partial<UsePendingAccountsFilters>
   ) => {
@@ -36,12 +38,32 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
       setLoading(true);
       setError(null);
 
+      // ✅ VERIFICACIÓN MÁS ROBUSTA
+      const targetCompanyId = companyId;
+
+      console.log("🔍 Verificando companyId:", {
+        companyId,
+        targetCompanyId,
+        tipo: typeof targetCompanyId,
+        esNumero: !isNaN(Number(targetCompanyId)),
+      });
+
+      // Validar que companyId es un número válido
+      if (!targetCompanyId || isNaN(Number(targetCompanyId))) {
+        console.warn("⚠️ companyId no válido, no se hará la petición");
+        setPendingAccounts([]);
+        return;
+      }
+
       const combinedFilters: GetPendingAccountsParams = {
         ...filters,
         ...customFilters,
+        companyId: Number(targetCompanyId),
         page: 1,
         itemsPerPage: 100,
       };
+
+      console.log("📥 Cargando cuentas con filters:", combinedFilters);
 
       const pendingAccountsData = await pendingAccountsService.getAll(
         combinedFilters
@@ -49,6 +71,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
 
       if (Array.isArray(pendingAccountsData)) {
         setPendingAccounts(pendingAccountsData);
+        console.log("✅ Cuentas cargadas:", pendingAccountsData.length);
       } else {
         console.warn("⚠️ Estructura inesperada:", pendingAccountsData);
         setPendingAccounts([]);
@@ -196,12 +219,11 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     }
   };
 
-  // Cargar cuentas pendientes al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadPendingAccounts();
   }, [
+    companyId,
     filters.account_type,
-    filters.companyId,
     filters.clientId,
     filters.supplierId,
     filters.documentId,

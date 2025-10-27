@@ -112,24 +112,56 @@ export interface PaginatedPendingAccountsResponse {
   };
 }
 
-// Función para formatear números decimales
+// Función corregida para formatear números decimales
 const formatDecimalForAPI = (value: number | undefined): number => {
   if (value === undefined || value === null) return 0;
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+
+  const numValue = Number(value);
+  if (isNaN(numValue)) return 0;
+
+  const formatted = parseFloat(numValue.toFixed(2));
+
+  console.log("🔢 FormatDecimalForAPI CORREGIDA:", {
+    input: value,
+    output: formatted,
+    stringified: formatted.toString(),
+    hasDecimals: formatted.toString().includes("."),
+  });
+
+  return formatted;
 };
 
 class PendingAccountsService {
-  // Crear una nueva cuenta pendiente
   async create(data: CreatePendingAccountData): Promise<PendingAccount> {
-    // Formatear los campos decimales antes de enviar
+    // ALTERNATIVA: Enviar como strings formateados
     const formattedData = {
       ...data,
-      amount_due: formatDecimalForAPI(data.amount_due),
-      balance_due: formatDecimalForAPI(data.balance_due),
+      amount_due: data.amount_due.toFixed(2), // Enviar como string "15000.00"
+      balance_due: data.balance_due.toFixed(2), // Enviar como string "0.00"
     };
 
-    const response = await api.post(PostPendingAccount, formattedData);
-    return response.data.data;
+    console.log("🚀 ENVIANDO COMO STRING:", {
+      payload: formattedData,
+      amount_due_type: typeof formattedData.amount_due,
+      balance_due_type: typeof formattedData.balance_due,
+    });
+
+    try {
+      const response = await api.post(PostPendingAccount, formattedData);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("❌ ERROR EN API:", error.response?.data);
+      throw error;
+    }
+  }
+
+  private ensureTwoDecimals(value: number): number {
+    if (value === undefined || value === null) return 0;
+    const numValue = Number(value);
+    if (isNaN(numValue)) return 0;
+
+    // Forzar siempre 2 decimales
+    return parseFloat(numValue.toFixed(2));
   }
 
   // Obtener todas las cuentas pendientes
@@ -143,7 +175,6 @@ class PendingAccountsService {
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -153,8 +184,11 @@ class PendingAccountsService {
     if (params?.account_type) {
       queryParams.append("account_type", params.account_type);
     }
-    if (params?.companyId) {
+    if (params?.companyId && !isNaN(params.companyId)) {
       queryParams.append("companyId", params.companyId.toString());
+    } else {
+      console.error("❌ companyId inválido:", params?.companyId);
+      throw new Error("companyId es requerido y debe ser un número válido");
     }
     if (params?.clientId) {
       queryParams.append("clientId", params.clientId.toString());
@@ -190,15 +224,16 @@ class PendingAccountsService {
     id: string,
     data: UpdatePendingAccountData
   ): Promise<PendingAccount> {
-    // Formatear los campos decimales antes de enviar
     const formattedData: any = { ...data };
 
     if (data.amount_due !== undefined) {
-      formattedData.amount_due = formatDecimalForAPI(data.amount_due);
+      formattedData.amount_due = this.ensureTwoDecimals(data.amount_due);
     }
     if (data.balance_due !== undefined) {
-      formattedData.balance_due = formatDecimalForAPI(data.balance_due);
+      formattedData.balance_due = this.ensureTwoDecimals(data.balance_due);
     }
+
+    console.log("🔄 ACTUALIZANDO (CORREGIDO):", formattedData);
 
     const response = await api.patch(
       `${PatchPendingAccount}/${id}`,

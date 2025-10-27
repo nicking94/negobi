@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -62,28 +62,19 @@ import {
 } from "@/services/pendingAccounts/pendingAccounts.service";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import useUserCompany from "@/hooks/auth/useUserCompany";
+import useGetClients from "@/hooks/clients/useGetClients";
+import { SelectSearchable } from "@/components/ui/select-searchable";
 
+// ✅ SCHEMA ACTUALIZADO - Incluye currencyId
 const pendingAccountFormSchema = z.object({
   account_type: z.enum(["receivable", "payable"]),
-  companyId: z.number().min(1, "La empresa es requerida"),
   clientId: z.number().optional(),
   supplierId: z.number().optional(),
   documentId: z.number().optional(),
-  amount_due: z
-    .string()
-    .min(1, "El monto es requerido")
-    .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-      "El monto debe ser mayor a 0"
-    ),
-  balance_due: z
-    .string()
-    .min(1, "El saldo es requerido")
-    .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0,
-      "El saldo no puede ser negativo"
-    ),
-  currencyId: z.number().optional(),
+  amount_due: z.string().min(1, "El monto es requerido"),
+  balance_due: z.string().min(1, "El saldo es requerido"),
+  currencyId: z.number().min(1, "La moneda es requerida"), // ✅ REQUERIDO
   due_date: z.string().min(1, "La fecha de vencimiento es requerida"),
   status: z.enum([
     "Outstanding",
@@ -98,13 +89,14 @@ const pendingAccountFormSchema = z.object({
 
 type PendingAccountFormInput = z.infer<typeof pendingAccountFormSchema>;
 
-// Tipo para la API (con números)
+// Tipo para la API (con números decimales)
 type PendingAccountFormAPI = Omit<
   PendingAccountFormInput,
   "amount_due" | "balance_due"
 > & {
   amount_due: number;
   balance_due: number;
+  companyId: number;
 };
 
 // Traducciones para los estados
@@ -137,8 +129,39 @@ const getStatusBadgeVariant = (status: AccountStatus) => {
   }
 };
 
+// ✅ Función para formatear números a decimales con coma
+const formatDecimal = (value: number | string): string => {
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0,00";
+
+  return num.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false, // No usar separadores de miles
+  });
+};
+// ✅ Función mejorada para convertir string con coma a número
+const parseDecimal = (value: string): number => {
+  if (!value || value.trim() === "") return 0;
+
+  // Reemplazar coma por punto y eliminar espacios
+  const normalizedValue = value.replace(",", ".").replace(/\s/g, "");
+  const parsed = parseFloat(normalizedValue);
+
+  // Verificar que es un número válido y no NaN
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 const PendingAccountsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { companyId, selectedCompanyId } = useUserCompany();
+  const { clientsResponse: clients } = useGetClients({
+    companyId: selectedCompanyId || companyId,
+    itemsPerPage: 1000,
+  });
+
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientPendingBalance, setClientPendingBalance] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<PendingAccount | null>(
     null
@@ -161,25 +184,72 @@ const PendingAccountsPage = () => {
     account_type:
       selectedType !== "all" ? (selectedType as AccountType) : undefined,
     status: selectedStatus !== "all" ? selectedStatus : undefined,
+    companyId: selectedCompanyId || companyId,
   });
 
   const form = useForm<PendingAccountFormInput>({
     resolver: zodResolver(pendingAccountFormSchema),
     defaultValues: {
       account_type: "receivable",
-      companyId: undefined,
       clientId: undefined,
       supplierId: undefined,
       documentId: undefined,
-      amount_due: "0",
-      balance_due: "0",
-      currencyId: undefined,
+      amount_due: "",
+      balance_due: "",
+      currencyId: 1, // ✅ VALOR POR DEFECTO (1 = USD o la moneda principal)
       due_date: "",
       status: "Outstanding",
       notes: "",
       external_code: "",
     },
+    mode: "onChange",
   });
+
+  const clientOptions = useMemo(() => {
+    if (!clients || clients.length === 0) {
+      return [];
+    }
+
+    const filteredClients = clients.filter((client) => {
+      const belongsToCompany =
+        !client.companyId || client.companyId === companyId;
+      return belongsToCompany;
+    });
+
+    const options = filteredClients
+      .filter((client) => client.id != null)
+      .map((client) => ({
+        value: client.id!.toString(),
+        label: `${client.legal_name || "Cliente sin nombre"}`,
+      }));
+
+    return options;
+  }, [clients, companyId]);
+
+  // Calcular saldo pendiente del cliente cuando se selecciona un cliente
+  useEffect(() => {
+    if (selectedClientId) {
+      const clientIdNum = parseInt(selectedClientId);
+      const clientAccounts = pendingAccounts.filter(
+        (account) =>
+          account.clientId === clientIdNum &&
+          account.account_type === "receivable"
+      );
+
+      const totalPendingBalance = clientAccounts.reduce(
+        (sum, account) => sum + account.balance_due,
+        0
+      );
+
+      setClientPendingBalance(totalPendingBalance);
+
+      // ✅ ACTUALIZAR AUTOMÁTICAMENTE EL VALOR EN EL FORMULARIO CON FORMATO DECIMAL
+      form.setValue("balance_due", formatDecimal(totalPendingBalance));
+    } else {
+      setClientPendingBalance(0);
+      form.setValue("balance_due", "");
+    }
+  }, [selectedClientId, pendingAccounts, form]);
 
   // Efecto para resetear el formulario cuando se cierra el modal
   useEffect(() => {
@@ -188,25 +258,109 @@ const PendingAccountsPage = () => {
     }
   }, [isModalOpen]);
 
+  useEffect(() => {
+    if (editingAccount && editingAccount.clientId) {
+      const clientIdString = editingAccount.clientId.toString();
+      if (selectedClientId !== clientIdString) {
+        console.log("🔄 Sincronizando cliente en edición:", clientIdString);
+        setSelectedClientId(clientIdString);
+      }
+    }
+  }, [editingAccount, selectedClientId]);
+
+  useEffect(() => {
+    // Recargar cuentas cuando se cree, actualice o elimine una
+    if (!isModalOpen && form.formState.isSubmitSuccessful) {
+      console.log("🔄 Recargando cuentas después de operación...");
+      refetch();
+    }
+  }, [isModalOpen, form.formState.isSubmitSuccessful, refetch]);
+
   const onSubmit = async (values: PendingAccountFormInput) => {
     try {
-      // Convertir a tipo API
+      const targetCompanyId = selectedCompanyId || companyId;
+
+      if (!targetCompanyId) {
+        toast.error("No se puede crear la cobranza: Empresa no configurada");
+        return;
+      }
+
+      if (!values.amount_due || parseDecimal(values.amount_due) <= 0) {
+        toast.error("El monto debe ser mayor a 0");
+        return;
+      }
+
+      if (!values.due_date) {
+        toast.error("La fecha de vencimiento es requerida");
+        return;
+      }
+
+      if (values.account_type === "receivable" && !values.clientId) {
+        toast.error("El cliente es requerido para cuentas por cobrar");
+        return;
+      }
+
+      if (!values.currencyId) {
+        toast.error("La moneda es requerida");
+        return;
+      }
+
+      const amountDue = parseDecimal(values.amount_due);
+      const balanceDue = parseDecimal(values.balance_due);
+
+      if (isNaN(amountDue) || isNaN(balanceDue)) {
+        toast.error("Los montos deben ser números válidos");
+        return;
+      }
+
       const apiData: PendingAccountFormAPI = {
         ...values,
-        amount_due: parseFloat(values.amount_due),
-        balance_due: parseFloat(values.balance_due),
+        companyId: targetCompanyId,
+        amount_due: amountDue,
+        balance_due: balanceDue,
       };
 
+      console.log("📤 Datos a enviar a la API:", apiData);
+      console.log("🔍 Tipos de datos:", {
+        amount_due_type: typeof apiData.amount_due,
+        amount_due_value: apiData.amount_due,
+        balance_due_type: typeof apiData.balance_due,
+        balance_due_value: apiData.balance_due,
+        currencyId_type: typeof apiData.currencyId,
+        currencyId_value: apiData.currencyId,
+      });
+
       if (editingAccount && editingAccount.id) {
-        await updatePendingAccount(editingAccount.id.toString(), apiData);
+        console.log("🔄 Actualizando cuenta existente...");
+        const result = await updatePendingAccount(
+          editingAccount.id.toString(),
+          apiData
+        );
+        console.log("✅ Resultado de actualización:", result);
         setIsModalOpen(false);
+        toast.success("Cuenta pendiente actualizada exitosamente");
       } else {
-        await createPendingAccount(apiData);
+        console.log("🆕 Creando nueva cuenta...");
+        const result = await createPendingAccount(apiData);
+        console.log("✅ Resultado de creación:", result);
         setIsModalOpen(false);
+        toast.success("Cuenta pendiente creada exitosamente");
       }
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("❌ Error en onSubmit:", error);
+      toast.error("Error al guardar la cuenta pendiente");
     }
+  };
+
+  const handleClientChange = (value: string) => {
+    console.log("👤 Cliente seleccionado:", value);
+    setSelectedClientId(value);
+
+    // ✅ Convertir a número solo si hay un valor, de lo contrario establecer como undefined
+    const clientIdNumber = value ? parseInt(value) : undefined;
+    form.setValue("clientId", clientIdNumber);
+
+    console.log("📝 Formulario actualizado con clientId:", clientIdNumber);
   };
 
   const handleDelete = (account: PendingAccount) => {
@@ -224,8 +378,9 @@ const PendingAccountsPage = () => {
           onClick: async () => {
             try {
               await deletePendingAccount(account.id.toString());
+              toast.success("Cuenta pendiente eliminada exitosamente");
             } catch {
-              // El error ya se maneja en el callback del hook
+              toast.error("Error al eliminar la cuenta pendiente");
             }
           },
         },
@@ -240,17 +395,23 @@ const PendingAccountsPage = () => {
   };
 
   const handleEdit = (account: PendingAccount) => {
+    console.log("✏️ Editando cuenta:", account);
+
+    // ✅ ESTABLECER EL CLIENTE PRIMERO - Esto es crucial
+    const clientIdString = account.clientId?.toString() || "";
+    setSelectedClientId(clientIdString);
+
     setEditingAccount(account);
 
+    // ✅ RESET DEL FORMULARIO CON LOS VALORES CORRECTOS
     form.reset({
       account_type: account.account_type,
-      companyId: account.companyId,
       clientId: account.clientId,
       supplierId: account.supplierId,
       documentId: account.documentId,
-      amount_due: account.amount_due.toString(),
-      balance_due: account.balance_due.toString(),
-      currencyId: account.currencyId,
+      amount_due: formatDecimal(account.amount_due),
+      balance_due: formatDecimal(account.balance_due),
+      currencyId: account.currencyId || 1,
       due_date: account.due_date.split("T")[0],
       status: account.status,
       notes: account.notes || "",
@@ -259,36 +420,45 @@ const PendingAccountsPage = () => {
 
     setIsModalOpen(true);
   };
-
   const resetForm = () => {
+    console.log("🔄 Reseteando formulario...");
     form.reset({
       account_type: "receivable",
-      companyId: undefined,
       clientId: undefined,
       supplierId: undefined,
       documentId: undefined,
-      amount_due: "0",
-      balance_due: "0",
-      currencyId: undefined,
+      amount_due: "",
+      balance_due: "",
+      currencyId: 1,
       due_date: "",
       status: "Outstanding",
       notes: "",
       external_code: "",
     });
+    setSelectedClientId("");
+    setClientPendingBalance(0);
     setEditingAccount(null);
   };
 
-  // Columnas para la tabla
+  // ✅ Función para formatear input en tiempo real
+  const handleAmountInput = (field: any, value: string) => {
+    // Permitir solo números y coma
+    const cleanedValue = value.replace(/[^\d,]/g, "");
+
+    // Validar que solo haya una coma
+    const commaCount = (cleanedValue.match(/,/g) || []).length;
+    if (commaCount > 1) return;
+
+    // Validar que después de la coma solo haya hasta 2 dígitos
+    if (cleanedValue.includes(",")) {
+      const parts = cleanedValue.split(",");
+      if (parts[1].length > 2) return;
+    }
+
+    field.onChange(cleanedValue);
+  };
+
   const columns: ColumnDef<PendingAccount>[] = [
-    {
-      accessorKey: "external_code",
-      header: "Código Externo",
-      cell: ({ row }) => (
-        <div className="font-medium">
-          {row.getValue("external_code") || `ID: ${row.original.id}`}
-        </div>
-      ),
-    },
     {
       accessorKey: "account_type",
       header: "Tipo",
@@ -310,12 +480,8 @@ const PendingAccountsPage = () => {
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("amount_due"));
         return (
-          <div className="font-medium text-right">
-            $
-            {amount.toLocaleString("es-ES", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+          <div className="font-medium">
+            ${formatDecimal(amount)} {/* ✅ FORMATO DECIMAL */}
           </div>
         );
       },
@@ -332,11 +498,7 @@ const PendingAccountsPage = () => {
               isOverdue ? "text-red-600 font-bold" : ""
             }`}
           >
-            $
-            {balance.toLocaleString("es-ES", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            ${formatDecimal(balance)} {/* ✅ FORMATO DECIMAL */}
           </div>
         );
       },
@@ -416,7 +578,7 @@ const PendingAccountsPage = () => {
     },
   ];
 
-  // Calcular estadísticas
+  // Calcular estadísticas (CON FORMATO DECIMAL EN LAS TARJETAS)
   const stats = {
     totalReceivable: pendingAccounts
       .filter((account) => account.account_type === "receivable")
@@ -432,6 +594,7 @@ const PendingAccountsPage = () => {
   };
 
   const isSubmitting = form.formState.isSubmitting;
+  const formIsValid = form.formState.isValid;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/20 overflow-hidden relative">
@@ -463,11 +626,8 @@ const PendingAccountsPage = () => {
                     Por Cobrar
                   </p>
                   <p className="text-2xl font-bold text-green-600">
-                    $
-                    {stats.totalReceivable.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    ${formatDecimal(stats.totalReceivable)}{" "}
+                    {/* ✅ FORMATO DECIMAL */}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
@@ -478,11 +638,8 @@ const PendingAccountsPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Por Pagar</p>
                   <p className="text-2xl font-bold text-orange-600">
-                    $
-                    {stats.totalPayable.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    ${formatDecimal(stats.totalPayable)}{" "}
+                    {/* ✅ FORMATO DECIMAL */}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-orange-500" />
@@ -592,7 +749,7 @@ const PendingAccountsPage = () => {
                 disabled={loading}
               >
                 <Plus className="h-4 w-4" />
-                <span>Nueva Cuenta</span>
+                <span>Nueva Cobranza</span>
               </Button>
             </div>
           </div>
@@ -625,7 +782,7 @@ const PendingAccountsPage = () => {
             <DataTable<PendingAccount, PendingAccount>
               columns={columns}
               data={pendingAccounts || []}
-              noResultsText="No se encontraron cuentas pendientes"
+              noResultsText="No se encontraron cobranzas"
               page={1}
               setPage={() => {}}
               totalPage={1}
@@ -637,19 +794,17 @@ const PendingAccountsPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar cuenta pendiente */}
+      {/* Modal para crear/editar cobranza */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
-              {editingAccount
-                ? "Editar Cuenta Pendiente"
-                : "Crear Nueva Cuenta Pendiente"}
+              {editingAccount ? "Editar Cobranza" : "Crear Nueva Cobranza"}
             </DialogTitle>
             <DialogDescription>
               {editingAccount
-                ? "Modifica la información de la cuenta pendiente"
-                : "Completa la información para crear una nueva cuenta pendiente"}
+                ? "Modifica la información de la cobranza"
+                : "Completa la información para crear una nueva cobranza"}
             </DialogDescription>
           </DialogHeader>
 
@@ -659,7 +814,25 @@ const PendingAccountsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Información básica */}
                   <div className="space-y-4">
-                    <h3 className="font-medium">Información Básica</h3>
+                    <FormField
+                      control={form.control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cliente *</FormLabel>
+                          <SelectSearchable
+                            value={selectedClientId}
+                            onValueChange={handleClientChange}
+                            placeholder="Seleccionar cliente..."
+                            options={clientOptions}
+                            emptyMessage="No se encontraron clientes."
+                            searchPlaceholder="Buscar cliente..."
+                            className="w-full"
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}
@@ -691,34 +864,6 @@ const PendingAccountsPage = () => {
 
                     <FormField
                       control={form.control}
-                      name="companyId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>ID Empresa *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              placeholder="1"
-                              value={field.value || ""}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? parseInt(e.target.value)
-                                    : undefined
-                                )
-                              }
-                              className="w-full"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="amount_due"
                       render={({ field }) => (
                         <FormItem>
@@ -726,48 +871,27 @@ const PendingAccountsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              value={field.value || ""}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? parseFloat(e.target.value)
-                                    : undefined
-                                )
-                              }
+                              type="text" // ✅ Cambiado a text para permitir coma
+                              placeholder="0,00"
                               className="w-full"
                               disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="balance_due"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Saldo Pendiente *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              value={field.value || ""}
                               onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? parseFloat(e.target.value)
-                                    : undefined
-                                )
+                                handleAmountInput(field, e.target.value)
                               }
-                              className="w-full"
-                              disabled={isSubmitting}
+                              onBlur={(e) => {
+                                // Formatear al perder el foco
+                                const value = e.target.value;
+                                if (value && !value.includes(",")) {
+                                  field.onChange(value + ",00");
+                                } else if (value.includes(",")) {
+                                  const parts = value.split(",");
+                                  if (parts[1].length === 1) {
+                                    field.onChange(
+                                      parts[0] + "," + parts[1] + "0"
+                                    );
+                                  }
+                                }
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -778,8 +902,6 @@ const PendingAccountsPage = () => {
 
                   {/* Información adicional */}
                   <div className="space-y-4">
-                    <h3 className="font-medium">Información Adicional</h3>
-
                     <FormField
                       control={form.control}
                       name="due_date"
@@ -792,6 +914,10 @@ const PendingAccountsPage = () => {
                               type="date"
                               className="w-full"
                               disabled={isSubmitting}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                setTimeout(() => form.trigger("due_date"), 100);
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -834,18 +960,21 @@ const PendingAccountsPage = () => {
                       )}
                     />
 
+                    {/* ✅ CAMPO DE SALDO PENDIENTE COMO SOLO LECTURA */}
                     <FormField
                       control={form.control}
-                      name="external_code"
+                      name="balance_due"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Código Externo</FormLabel>
+                          <FormLabel>Saldo Pendiente *</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Código externo de referencia"
-                              className="w-full"
-                              disabled={isSubmitting}
+                              type="text"
+                              placeholder="0,00"
+                              className="w-full bg-gray-100 cursor-not-allowed"
+                              readOnly
+                              disabled
                             />
                           </FormControl>
                           <FormMessage />
@@ -853,123 +982,6 @@ const PendingAccountsPage = () => {
                       )}
                     />
                   </div>
-                </div>
-
-                {/* Campos opcionales */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID Cliente</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            placeholder="ID del cliente"
-                            value={field.value || ""}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            className="w-full"
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="supplierId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID Proveedor</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            placeholder="ID del proveedor"
-                            value={field.value || ""}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            className="w-full"
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="documentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID Documento</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            placeholder="ID del documento relacionado"
-                            value={field.value || ""}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            className="w-full"
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="currencyId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID Moneda</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            placeholder="ID de la moneda"
-                            value={field.value || ""}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            className="w-full"
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Notas */}
@@ -982,7 +994,7 @@ const PendingAccountsPage = () => {
                       <FormControl>
                         <textarea
                           {...field}
-                          placeholder="Información adicional sobre la cuenta pendiente..."
+                          placeholder="Información adicional sobre la cobranza..."
                           className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           rows={3}
                           disabled={isSubmitting}
@@ -1010,7 +1022,7 @@ const PendingAccountsPage = () => {
                 <Button
                   type="submit"
                   className="w-full sm:w-auto"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !formIsValid}
                 >
                   {isSubmitting
                     ? "Guardando..."
