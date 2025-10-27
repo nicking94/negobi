@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -46,11 +46,10 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useDocuments } from "@/hooks/documents/useDocuments";
 import { Document } from "@/services/documents/documents.service";
-import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
-import { SelectSearchable } from "@/components/ui/select-searchable";
-import { useTranslation } from "@/hooks/translation/useTranslation";
 import { documentTypeTranslations } from "@/utils/documentTypeTranslations";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
+import { PriceDisplay } from "@/components/PriceDisplay";
+import useUserCompany from "@/hooks/auth/useUserCompany"; // Importar el hook
 
 // Tipo Bill basado en Document
 export type Bill = {
@@ -82,44 +81,31 @@ const BillsPage = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
-    null
-  );
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null
   );
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Obtener las empresas
-  const { companies: companiesResponse, loading: companiesLoading } =
-    useGetAllCompanies();
-
-  const companyOptions = useMemo(() => {
-    return companiesResponse.map((company) => ({
-      value: company.id.toString(),
-      label: company.name,
-    }));
-  }, [companiesResponse]);
-
-  useEffect(() => {
-    if (companiesResponse.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId(companiesResponse[0].id);
-    }
-  }, [companiesResponse, selectedCompanyId]);
+  // Obtener la empresa del usuario logueado
+  const {
+    companyId,
+    isLoading: companyLoading,
+    userCompany,
+  } = useUserCompany();
 
   const {
     documents,
     loading: documentsLoading,
     error: documentsError,
   } = useDocuments(
-    selectedCompanyId
+    companyId
       ? {
           document_type: "invoice",
-          companyId: selectedCompanyId,
+          companyId: companyId,
         }
       : {
           document_type: "invoice",
-          companyId: -1,
+          companyId: -1, // Evitar consultas si no hay companyId
         }
   );
 
@@ -151,7 +137,7 @@ const BillsPage = () => {
       seller:
         doc.responsibleUserId?.toString() ||
         doc.salesperson_external_code ||
-        "No especificado",
+        "Cod. no especificado",
       status: mapDocumentStatusToBillStatus(doc.status),
     }));
   }, [documents]);
@@ -198,7 +184,6 @@ const BillsPage = () => {
     });
   }, [bills, searchTerm, sellerFilter, clientFilter, dateRange]);
 
-  // Resto del código permanece igual...
   const handleViewOrder = (bill: Bill) => {
     setSelectedDocumentId(bill.id);
     setIsDetailsModalOpen(true);
@@ -259,21 +244,14 @@ const BillsPage = () => {
       ),
     },
     {
-      accessorKey: "issued_date",
-      header: "Emitido",
-      cell: ({ row }) => {
-        const date = row.getValue("issued_date") as Date;
-        return <div className="font-medium">{formatDate(date)}</div>;
-      },
-    },
-    {
       accessorKey: "total",
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
-        return <div className="font-medium">{formatCurrency(total)}</div>;
+        return <PriceDisplay value={total} variant="table" />;
       },
     },
+
     {
       id: "actions",
       header: () => <div className="text-center">Acciones</div>,
@@ -394,25 +372,21 @@ const BillsPage = () => {
                 </DropdownMenu>
               </div>
             </div>
+
+            {/* Mostrar información de la empresa actual en lugar del selector */}
             <div className="flex items-center gap-2">
-              <Label htmlFor="company-selector" className="text-sm font-medium">
-                Seleccionar Empresa:
-              </Label>
-              <div className="flex items-center gap-2">
-                <SelectSearchable
-                  value={selectedCompanyId?.toString() || ""}
-                  onValueChange={(value) => setSelectedCompanyId(Number(value))}
-                  placeholder="Buscar empresa..."
-                  options={companyOptions}
-                  emptyMessage="No se encontraron empresas."
-                  searchPlaceholder="Buscar empresa por nombre..."
-                  className="w-full md:w-64"
-                />
-              </div>
+              <Building className="h-5 w-5 text-gray_m" />
+              <span className="text-sm font-medium text-gray_b">
+                {userCompany?.name || "Cargando empresa..."}
+              </span>
             </div>
           </div>
 
-          {selectedCompanyId ? (
+          {companyLoading ? (
+            <div className="text-center py-8 text-gray-500">
+              Cargando información de la empresa...
+            </div>
+          ) : companyId ? (
             <DataTable<Bill, Bill>
               columns={columns}
               data={filteredBills}
@@ -426,7 +400,7 @@ const BillsPage = () => {
             />
           ) : (
             <div className="text-center py-8 text-gray-500">
-              Selecciona una compañía para ver las facturas
+              No se pudo cargar la información de la empresa
             </div>
           )}
         </main>
@@ -479,7 +453,7 @@ const BillsPage = () => {
                           {formatDate(bill.issued_date)}
                         </td>
                         <td className="border border-gray_xl px-4 py-2">
-                          {formatCurrency(bill.total)}
+                          <PriceDisplay value={bill.total} variant="default" />
                         </td>
                         <td className="border border-gray_xl px-4 py-2">
                           <span

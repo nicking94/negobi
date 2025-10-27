@@ -50,6 +50,8 @@ import useGetClients from "@/hooks/clients/useGetClients";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter"; // Importar el hook
+import { PriceDisplay } from "@/components/PriceDisplay"; // Importar el componente
 
 export type DeliveryNote = {
   id: string;
@@ -81,6 +83,10 @@ const DeliveryNotesPage = () => {
   });
   const [clientFilter, setClientFilter] = useState<string>("all");
 
+  // Usar el hook de formateo de moneda
+  const { formatPrice, formatForTable, getNumericValue } =
+    useCurrencyFormatter();
+
   const { clientsResponse, loading: clientsLoading } = useGetClients({
     search: searchTerm,
   });
@@ -94,7 +100,7 @@ const DeliveryNotesPage = () => {
     valueClass = "",
   }: {
     label: string;
-    value: string | number;
+    value: React.ReactNode;
     valueClass?: string;
   }) => (
     <div className="flex items-center justify-between py-2">
@@ -240,13 +246,7 @@ const DeliveryNotesPage = () => {
     toast.success(`Nota de entrega ${note.correlative} procesada exitosamente`);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
-  };
-
+  // REMOVER la función formatCurrency anterior
   const formatDate = (date: Date) => {
     return format(date, "dd/MM/yyyy hh:mm a");
   };
@@ -322,7 +322,8 @@ const DeliveryNotesPage = () => {
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
-        return <div className="font-medium">{formatCurrency(total)}</div>;
+        // Usar PriceDisplay en lugar de formatCurrency
+        return <PriceDisplay value={total} variant="table" />;
       },
     },
     {
@@ -699,15 +700,23 @@ const DeliveryNotesPage = () => {
                     <div className="space-y-2">
                       <InfoRow
                         label="Subtotal"
-                        value={formatCurrency(
-                          selectedDeliveryNote.total * 0.85
-                        )}
+                        // Usar PriceDisplay para subtotal
+                        value={
+                          <PriceDisplay
+                            value={selectedDeliveryNote.total * 0.85}
+                            variant="default"
+                          />
+                        }
                       />
                       <InfoRow
                         label="IVA (15%)"
-                        value={formatCurrency(
-                          selectedDeliveryNote.total * 0.15
-                        )}
+                        // Usar PriceDisplay para IVA
+                        value={
+                          <PriceDisplay
+                            value={selectedDeliveryNote.total * 0.15}
+                            variant="default"
+                          />
+                        }
                         valueClass="text-blue-600"
                       />
                     </div>
@@ -715,9 +724,12 @@ const DeliveryNotesPage = () => {
                     <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200">
                       <div className="flex justify-between items-center pt-2">
                         <span className="font-bold text-gray-900">Total</span>
-                        <span className="font-bold text-lg text-green-600">
-                          {formatCurrency(selectedDeliveryNote.total)}
-                        </span>
+                        {/* Usar PriceDisplay para el total */}
+                        <PriceDisplay
+                          value={selectedDeliveryNote.total}
+                          variant="summary"
+                          className="font-bold text-lg text-green-600"
+                        />
                       </div>
                     </div>
                   </div>

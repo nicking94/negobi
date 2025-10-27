@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -46,8 +46,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useReturns } from "@/hooks/documents/useReturns";
 import { Document } from "@/services/documents/documents.service";
-import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
-import { SelectSearchable } from "@/components/ui/select-searchable";
+import { useUserCompany } from "@/hooks/auth/useUserCompany"; // Importar el hook
+import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
+import { PriceDisplay } from "@/components/PriceDisplay";
 
 export type Devolution = {
   id: string;
@@ -88,27 +89,17 @@ const DevolutionsPage = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
-    null
-  );
 
-  const { companies: companiesResponse } = useGetAllCompanies();
+  // Usar el hook de usuario para obtener la empresa actual
+  const { companyId, isLoading: userLoading, userCompany } = useUserCompany();
 
-  const companyOptions = useMemo(() => {
-    return companiesResponse.map((company) => ({
-      value: company.id.toString(),
-      label: company.name,
-    }));
-  }, [companiesResponse]);
+  // Usar el hook de formateo de moneda
+  const { formatPrice, formatForTable, getNumericValue } =
+    useCurrencyFormatter();
 
-  useEffect(() => {
-    if (companiesResponse.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId(companiesResponse[0].id);
-    }
-  }, [companiesResponse, selectedCompanyId]);
-
+  // Usar el hook de devoluciones con la empresa del usuario logeado
   const { returns, error: returnsError } = useReturns(
-    selectedCompanyId ? { companyId: selectedCompanyId } : { companyId: -1 }
+    companyId ? { companyId } : { companyId: -1 }
   );
 
   const getOperationType = (documentType: string): string => {
@@ -162,7 +153,7 @@ const DevolutionsPage = () => {
         seller:
           returnDoc.responsibleUserId?.toString() ||
           returnDoc.salesperson_external_code ||
-          "No especificado",
+          "Cod. especificado",
         status: mapReturnStatus(returnDoc.status),
         bill_reference: billReference,
         reason: reason,
@@ -245,13 +236,6 @@ const DevolutionsPage = () => {
   const handleViewClientDevolutions = (client: string) => {
     setSelectedClient(client);
     setIsClientDevolutionsDialogOpen(true);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
   };
 
   const formatDate = (date: Date) => {
@@ -340,7 +324,7 @@ const DevolutionsPage = () => {
       header: "Total Devuelto",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
-        return <div className="font-medium">{formatCurrency(total)}</div>;
+        return <PriceDisplay value={total} variant="table" />;
       },
     },
     {
@@ -401,7 +385,7 @@ const DevolutionsPage = () => {
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
-              Devoluciones
+              Devoluciones de facturas
             </h1>
           </div>
 
@@ -500,26 +484,13 @@ const DevolutionsPage = () => {
                 </DropdownMenu>
               </div>
             </div>
-            {/* Selector de empresa */}
-            <div className="flex items-center gap-2 mb-4">
-              <Label htmlFor="company-selector" className="text-sm font-medium">
-                Seleccionar Empresa:
-              </Label>
-              <div className="flex items-center gap-2">
-                <SelectSearchable
-                  value={selectedCompanyId?.toString() || ""}
-                  onValueChange={(value) => setSelectedCompanyId(Number(value))}
-                  placeholder="Buscar empresa..."
-                  options={companyOptions}
-                  emptyMessage="No se encontraron empresas."
-                  searchPlaceholder="Buscar empresa por nombre..."
-                  className="w-full md:w-64"
-                />
-              </div>
-            </div>
           </div>
 
-          {selectedCompanyId ? (
+          {userLoading ? (
+            <div className="text-center py-8 text-gray-500">
+              Cargando información de la empresa...
+            </div>
+          ) : companyId ? (
             <DataTable<Devolution, Devolution>
               columns={columns}
               data={filteredDevolutions}
@@ -533,7 +504,7 @@ const DevolutionsPage = () => {
             />
           ) : (
             <div className="text-center py-8 text-gray-500">
-              Selecciona una compañía para ver las devoluciones
+              No se pudo determinar la empresa del usuario
             </div>
           )}
 
@@ -545,6 +516,7 @@ const DevolutionsPage = () => {
         </main>
       </div>
 
+      {/* Los diálogos se mantienen igual */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -628,21 +600,25 @@ const DevolutionsPage = () => {
                 <div className="w-full md:w-1/3">
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Subtotal:</span>
-                    <span>
-                      {formatCurrency(selectedDevolution.total * 0.85)}
-                    </span>
+                    <PriceDisplay
+                      value={selectedDevolution.total * 0.85}
+                      variant="default"
+                    />
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">IVA (15%):</span>
-                    <span>
-                      {formatCurrency(selectedDevolution.total * 0.15)}
-                    </span>
+                    <PriceDisplay
+                      value={selectedDevolution.total * 0.15}
+                      variant="default"
+                    />
                   </div>
                   <div className="flex justify-between py-2 border-t">
                     <span className="font-medium">Total a Devolver:</span>
-                    <span className="font-bold">
-                      {formatCurrency(selectedDevolution.total)}
-                    </span>
+                    <PriceDisplay
+                      value={selectedDevolution.total}
+                      variant="summary"
+                      className="font-bold"
+                    />
                   </div>
                 </div>
               </div>
@@ -682,7 +658,6 @@ const DevolutionsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para ver devoluciones del cliente */}
       <Dialog
         open={isClientDevolutionsDialogOpen}
         onOpenChange={setIsClientDevolutionsDialogOpen}
@@ -726,7 +701,10 @@ const DevolutionsPage = () => {
                           {formatDate(devolution.issued_date)}
                         </td>
                         <td className="border border-gray_l px-4 py-2">
-                          {formatCurrency(devolution.total)}
+                          <PriceDisplay
+                            value={devolution.total}
+                            variant="table"
+                          />
                         </td>
                         <td className="border border-gray_l px-4 py-2">
                           {getStatusBadge(devolution.status)}

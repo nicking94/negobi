@@ -34,6 +34,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/translation/useTranslation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { usePermissions } from "@/hooks/auth/usePermissions";
+import { CurrencySelector } from "../CurrencySelector";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -138,29 +139,7 @@ const DashboardHeader = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
-          {/* Selector de Moneda */}
-          <div className="flex bg-gray_xxl rounded-lg p-1 shadow-inner gap-1">
-            <button
-              onClick={() => setCurrency("VES")}
-              className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
-                currency === "VES"
-                  ? "bg-gradient-to-r from-green_m to-green_b text-white"
-                  : "bg-white hover:bg-gray_xxl text-gray_m hover:shadow-sm"
-              }`}
-            >
-              VES
-            </button>
-            <button
-              onClick={() => setCurrency("USD")}
-              className={`px-2 md:px-3 lg:px-4 py-1 md:py-2 text-xs font-medium rounded-md shadow-sm transition-all duration-300 ${
-                currency === "USD"
-                  ? "bg-gradient-to-r from-green_m to-green_b text-white"
-                  : "bg-white hover:bg-gray_xxl text-gray_m hover:shadow-sm"
-              }`}
-            >
-              USD
-            </button>
-          </div>
+          <CurrencySelector />
 
           {/* Dropdown del Usuario */}
           <DropdownMenu>

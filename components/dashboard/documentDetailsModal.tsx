@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDocumentDetails } from "@/hooks/documents/useDocumentDetails";
 import { Document } from "@/services/documents/documents.service";
-import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/formatDate";
 import { FileText, Calendar, Hash, Send } from "lucide-react";
+import { PriceDisplay } from "@/components/PriceDisplay";
+import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 
 interface DocumentDetailsModalProps {
   documentId: string | null;
@@ -29,6 +30,10 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 }) => {
   const { loading, error, getDocumentDetails } = useDocumentDetails();
   const [document, setDocument] = useState<Document | null>(null);
+
+  // Usar el hook de formateo de moneda
+  const { formatPrice, formatForTable, getNumericValue } =
+    useCurrencyFormatter();
 
   useEffect(() => {
     if (isOpen && documentId) {
@@ -88,8 +93,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
     valueClass = "",
   }: {
     label: string;
-    value: string | number;
-
+    value: React.ReactNode; // Cambiar a React.ReactNode para aceptar PriceDisplay
     valueClass?: string;
   }) => (
     <div className="flex items-center justify-between py-2">
@@ -102,12 +106,10 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
 
   const InfoCard = ({
     title,
-
     children,
     className = "",
   }: {
     title: string;
-
     children: React.ReactNode;
     className?: string;
   }) => (
@@ -277,52 +279,77 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                   <div className="space-y-2">
                     <InfoRow
                       label="Subtotal"
-                      value={formatCurrency(calculateSubtotal(document))}
+                      value={
+                        <PriceDisplay
+                          value={calculateSubtotal(document)}
+                          variant="default"
+                        />
+                      }
                     />
                     {parseFloat(document.discount_1?.toString() || "0") > 0 && (
                       <InfoRow
                         label="Descuento"
-                        value={formatCurrency(
-                          parseFloat(document.discount_1?.toString() || "0")
-                        )}
-                        valueClass="text-red-600"
+                        value={
+                          <PriceDisplay
+                            value={parseFloat(
+                              document.discount_1?.toString() || "0"
+                            )}
+                            variant="default"
+                            className="text-red-600"
+                          />
+                        }
                       />
                     )}
                     <InfoRow
                       label="Monto Exento"
-                      value={formatCurrency(
-                        parseFloat(document.exempt_amount?.toString() || "0")
-                      )}
+                      value={
+                        <PriceDisplay
+                          value={parseFloat(
+                            document.exempt_amount?.toString() || "0"
+                          )}
+                          variant="default"
+                        />
+                      }
                     />
                   </div>
 
                   <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200">
                     <InfoRow
                       label="Base Imponible"
-                      value={formatCurrency(
-                        parseFloat(document.taxable_base?.toString() || "0")
-                      )}
+                      value={
+                        <PriceDisplay
+                          value={parseFloat(
+                            document.taxable_base?.toString() || "0"
+                          )}
+                          variant="default"
+                        />
+                      }
                     />
                     <InfoRow
                       label="IVA"
-                      value={formatCurrency(
-                        parseFloat(document.tax?.toString() || "0")
-                      )}
-                      valueClass="text-blue-600"
+                      value={
+                        <PriceDisplay
+                          value={parseFloat(document.tax?.toString() || "0")}
+                          variant="default"
+                          className="text-blue-600"
+                        />
+                      }
                     />
                     <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
                       <span className="font-bold text-gray-900">Total</span>
-                      <span className="font-bold text-lg text-green-600">
-                        {formatCurrency(
-                          parseFloat(document.total_amount?.toString() || "0")
+                      <PriceDisplay
+                        value={parseFloat(
+                          document.total_amount?.toString() || "0"
                         )}
-                      </span>
+                        variant="summary"
+                        className="font-bold text-lg text-green-600"
+                      />
                     </div>
                   </div>
                 </div>
 
                 {/* Información adicional relevante */}
-                <div className="grid grid-cols-1  gap-4 pt-3 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-4 pt-3 border-t border-gray-200">
                   <InfoRow
                     label="Moneda"
                     value={document.currency?.currency_name || "Bolivar"}
@@ -350,18 +377,20 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
             {(parseFloat(document.credit_amount?.toString() || "0") > 0 ||
               parseFloat(document.cash_amount?.toString() || "0") > 0) && (
               <InfoCard title="Métodos de Pago">
-                <div className=" grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {parseFloat(document.credit_amount?.toString() || "0") >
                     0 && (
                     <div className="flex justify-between items-center p-2 bg-blue-50 rounded border border-blue-200">
                       <span className="text-sm font-medium text-blue-700">
                         Crédito
                       </span>
-                      <span className="font-bold text-blue-700">
-                        {formatCurrency(
-                          parseFloat(document.credit_amount?.toString() || "0")
+                      <PriceDisplay
+                        value={parseFloat(
+                          document.credit_amount?.toString() || "0"
                         )}
-                      </span>
+                        variant="default"
+                        className="font-bold text-blue-700"
+                      />
                     </div>
                   )}
                   {parseFloat(document.cash_amount?.toString() || "0") > 0 && (
@@ -369,11 +398,13 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                       <span className="text-sm font-medium text-green-700">
                         Efectivo
                       </span>
-                      <span className="font-bold text-green-700">
-                        {formatCurrency(
-                          parseFloat(document.cash_amount?.toString() || "0")
+                      <PriceDisplay
+                        value={parseFloat(
+                          document.cash_amount?.toString() || "0"
                         )}
-                      </span>
+                        variant="default"
+                        className="font-bold text-green-700"
+                      />
                     </div>
                   )}
                 </div>

@@ -49,15 +49,14 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Badge } from "@/components/ui/badge";
 import {
-  Document as ApiDocument,
   DOCUMENT_STATUSES,
   DocumentStatus,
 } from "@/services/documents/documents.service";
 import { useDocuments } from "@/hooks/documents/useDocuments";
-
-import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
-import { SelectSearchable } from "@/components/ui/select-searchable";
+import { useUserCompany } from "@/hooks/auth/useUserCompany"; // Importar el hook
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
+import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
+import { PriceDisplay } from "@/components/PriceDisplay";
 
 // Fixed OrderItem type with id property
 export type OrderItem = {
@@ -106,9 +105,13 @@ const OrdersPage = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
-    null
-  );
+
+  // Usar el hook de usuario para obtener la empresa actual
+  const { companyId, isLoading: userLoading, userCompany } = useUserCompany();
+
+  // Usar el hook de formateo de moneda
+  const { formatPrice, formatForTable, getNumericValue } =
+    useCurrencyFormatter();
 
   // Actualizar el mapeo de estados
   const mapApiStatusToLocalStatus = (apiStatus: string): Order["status"] => {
@@ -176,15 +179,14 @@ const OrdersPage = () => {
     }
   };
 
-  const { companies: companiesResponse } = useGetAllCompanies();
-
+  // Usar el hook de documentos con la empresa del usuario logeado
   const {
     documents: documentsData,
     loading: documentsLoading,
     error: documentsError,
     updateDocumentStatus,
   } = useDocuments({
-    companyId: selectedCompanyId || 0,
+    companyId: companyId || 0,
     document_type: "order",
   });
 
@@ -219,22 +221,6 @@ const OrdersPage = () => {
       company_id: doc.companyId,
     }));
   }, [documentsData]);
-
-  const companyOptions = useMemo(() => {
-    return companiesResponse.map((company) => ({
-      value: company.id.toString(),
-      label: company.name,
-    }));
-  }, [companiesResponse]);
-
-  // Efecto para seleccionar automáticamente la primera compañía
-  useEffect(() => {
-    if (companiesResponse.length > 0 && !selectedCompanyId) {
-      const firstCompany = companiesResponse[0];
-
-      setSelectedCompanyId(firstCompany.id);
-    }
-  }, [companiesResponse, selectedCompanyId]);
 
   const clients = useMemo(() => {
     const uniqueClients = Array.from(
@@ -340,13 +326,6 @@ const OrdersPage = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
-  };
-
   const formatDate = (date: Date | null) => {
     if (!date) return "No especificada";
     return format(date, "dd/MM/yyyy hh:mm a");
@@ -440,7 +419,7 @@ const OrdersPage = () => {
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
-        return <div className="font-medium">{formatCurrency(total)}</div>;
+        return <PriceDisplay value={total} variant="table" />;
       },
     },
     {
@@ -522,11 +501,11 @@ const OrdersPage = () => {
         <main className="bg-gradient-to-br from-gray-50 to-gray-100 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-              Pedidos
+              Pedidos {userCompany && `- ${userCompany.name}`}
             </h1>
           </div>
 
-          {/* Filtros y selección de empresa */}
+          {/* Filtros - ELIMINADO EL SELECTOR DE EMPRESA */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -649,35 +628,22 @@ const OrdersPage = () => {
                 </DropdownMenu>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="company-selector" className="text-sm font-medium">
-                Seleccionar empresa:
-              </Label>
-              <div className="flex items-center gap-2">
-                <SelectSearchable
-                  value={selectedCompanyId?.toString() || ""}
-                  onValueChange={(value) => {
-                    const companyId = value ? Number(value) : null;
-                    setSelectedCompanyId(companyId);
-                  }}
-                  placeholder="Buscar empresa..."
-                  options={companyOptions}
-                  emptyMessage="No se encontraron empresas."
-                  searchPlaceholder="Buscar empresa por nombre..."
-                  className="w-full md:w-64"
-                />
-              </div>
-            </div>
           </div>
 
-          {/* TABLA DE PEDIDOS ACTUALIZADA - CORREGIDO */}
-          {documentsLoading ? ( // Cambiado de ordersLoading a documentsLoading
+          {/* TABLA DE PEDIDOS */}
+          {userLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">
+                Cargando información de la empresa...
+              </p>
+            </div>
+          ) : documentsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Cargando pedidos...</p>
             </div>
-          ) : documentsError ? ( // Cambiado de ordersError a documentsError
+          ) : documentsError ? (
             <div className="text-center py-8">
               <div className="text-red-600 mb-4">Error: {documentsError}</div>
               <Button
@@ -686,6 +652,12 @@ const OrdersPage = () => {
               >
                 Reintentar
               </Button>
+            </div>
+          ) : !companyId ? (
+            <div className="text-center py-8">
+              <div className="text-yellow-600 mb-4">
+                No se pudo determinar la empresa del usuario
+              </div>
             </div>
           ) : (
             <div>
@@ -797,10 +769,16 @@ const OrdersPage = () => {
                             <td className="p-3">{item.product_name}</td>
                             <td className="p-3 text-center">{item.quantity}</td>
                             <td className="p-3 text-right">
-                              {formatCurrency(item.unit_price)}
+                              <PriceDisplay
+                                value={item.unit_price}
+                                variant="table"
+                              />
                             </td>
                             <td className="p-3 text-right">
-                              {formatCurrency(item.total)}
+                              <PriceDisplay
+                                value={item.total}
+                                variant="table"
+                              />
                             </td>
                           </tr>
                         ))}
@@ -825,9 +803,11 @@ const OrdersPage = () => {
                 <div className="w-full md:w-1/3">
                   <div className="flex justify-between py-2 border-t">
                     <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      {formatCurrency(selectedOrder.total)}
-                    </span>
+                    <PriceDisplay
+                      value={selectedOrder.total}
+                      variant="summary"
+                      className="font-bold"
+                    />
                   </div>
                 </div>
               </div>

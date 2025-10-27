@@ -54,16 +54,15 @@ import { es } from "date-fns/locale";
 import { registerLocale } from "react-datepicker";
 import { useUserCompany } from "@/hooks/auth/useUserCompany";
 import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
-
 import {
   Document,
   DocumentStatus,
   CreateDocumentData,
   documentService,
 } from "@/services/documents/documents.service";
-
 import useGetClients from "@/hooks/clients/useGetClients";
 import { SelectSearchable } from "@/components/ui/select-searchable";
+import { PriceDisplay } from "@/components/PriceDisplay"; // Importar el componente
 
 const esLocale = {
   ...es,
@@ -183,6 +182,7 @@ const BudgetsPage = () => {
 
     return options;
   }, [clients, companyId]);
+
   // Mapear documentos a formato Budget
   const mappedBudgets: Budget[] = useMemo(() => {
     return budgets.map((doc) => ({
@@ -495,13 +495,7 @@ const BudgetsPage = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
-  };
-
+  // REMOVER la función formatCurrency anterior
   const formatDate = (date: string | Date) => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return format(dateObj, "dd/MM/yyyy hh:mm a");
@@ -590,7 +584,8 @@ const BudgetsPage = () => {
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total_amount") || "0");
-        return <div className="font-medium">{formatCurrency(total)}</div>;
+        // Usar PriceDisplay en lugar de formatCurrency
+        return <PriceDisplay value={total} variant="table" />;
       },
     },
     {
@@ -930,28 +925,39 @@ const BudgetsPage = () => {
                 <div className="w-full md:w-1/3">
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Base Imponible:</span>
-                    <span>
-                      {formatCurrency(selectedBudget.taxable_base || 0)}
-                    </span>
+                    {/* Usar PriceDisplay para base imponible */}
+                    <PriceDisplay
+                      value={selectedBudget.taxable_base || 0}
+                      variant="default"
+                    />
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">IVA:</span>
-                    <span>{formatCurrency(selectedBudget.tax || 0)}</span>
+                    {/* Usar PriceDisplay para IVA */}
+                    <PriceDisplay
+                      value={selectedBudget.tax || 0}
+                      variant="default"
+                    />
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Descuentos:</span>
-                    <span>
-                      {formatCurrency(
+                    {/* Usar PriceDisplay para descuentos */}
+                    <PriceDisplay
+                      value={
                         (selectedBudget.discount_1 || 0) +
-                          (selectedBudget.discount_2 || 0)
-                      )}
-                    </span>
+                        (selectedBudget.discount_2 || 0)
+                      }
+                      variant="default"
+                    />
                   </div>
                   <div className="flex justify-between py-2 border-t">
                     <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      {formatCurrency(selectedBudget.total_amount || 0)}
-                    </span>
+                    {/* Usar PriceDisplay para el total */}
+                    <PriceDisplay
+                      value={selectedBudget.total_amount || 0}
+                      variant="summary"
+                      className="font-bold"
+                    />
                   </div>
                 </div>
               </div>
@@ -1033,7 +1039,11 @@ const BudgetsPage = () => {
                           {formatDate(budget.document_date)}
                         </td>
                         <td className="border border-gray_l px-4 py-2">
-                          {formatCurrency(budget.total_amount || 0)}
+                          {/* Usar PriceDisplay en la tabla de presupuestos del cliente */}
+                          <PriceDisplay
+                            value={budget.total_amount || 0}
+                            variant="table"
+                          />
                         </td>
                         <td className="border border-gray_l px-4 py-2">
                           {getStatusBadge(budget.status)}
@@ -1080,6 +1090,7 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Los modales de crear, editar y eliminar permanecen igual */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="w-full bg-gray_xxl sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -1289,7 +1300,7 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para editar presupuesto - ACTUALIZADO CON SELECTSEARCHABLE */}
+      {/* Modal para editar presupuesto */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -1565,9 +1576,12 @@ const BudgetsPage = () => {
             </p>
             <p className="text-sm text-gray-600">
               Total:{" "}
-              {selectedBudget
-                ? formatCurrency(selectedBudget.total_amount || 0)
-                : "0.00"}
+              {selectedBudget && (
+                <PriceDisplay
+                  value={selectedBudget.total_amount || 0}
+                  variant="default"
+                />
+              )}
             </p>
           </div>
 

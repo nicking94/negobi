@@ -133,14 +133,14 @@ const formatDecimalForAPI = (value: number | undefined): number => {
 
 class PendingAccountsService {
   async create(data: CreatePendingAccountData): Promise<PendingAccount> {
-    // ALTERNATIVA: Enviar como strings formateados
+    // ✅ ENVIAR COMO STRINGS FORMATEADOS
     const formattedData = {
       ...data,
-      amount_due: data.amount_due.toFixed(2), // Enviar como string "15000.00"
-      balance_due: data.balance_due.toFixed(2), // Enviar como string "0.00"
+      amount_due: data.amount_due.toFixed(2), // "12000.00"
+      balance_due: data.balance_due.toFixed(2), // "0.00"
     };
 
-    console.log("🚀 ENVIANDO COMO STRING:", {
+    console.log("🚀 ENVIANDO COMO STRINGS FORMATEADOS:", {
       payload: formattedData,
       amount_due_type: typeof formattedData.amount_due,
       balance_due_type: typeof formattedData.balance_due,
@@ -215,8 +215,38 @@ class PendingAccountsService {
       queryParams.append("status", params.status);
     }
 
+    console.log("🔍 GET URL Params:", queryParams.toString());
+
     const response = await api.get(`${GetPendingAccounts}?${queryParams}`);
-    return response.data.data;
+
+    console.log("🔍 GET Response completa:", response.data);
+
+    // ✅ NORMALIZAR LA RESPUESTA - convertir objetos anidados a IDs planos
+    if (response.data.data && Array.isArray(response.data.data)) {
+      const normalizedAccounts = response.data.data.map((account: any) => ({
+        ...account,
+        // Extraer IDs de objetos anidados
+        companyId: account.company?.id || account.companyId,
+        clientId: account.client?.id || account.clientId,
+        supplierId: account.supplier?.id || account.supplierId,
+        currencyId: account.currency?.id || account.currencyId,
+        documentId: account.document?.id || account.documentId,
+        // Convertir strings a números si es necesario
+        amount_due:
+          typeof account.amount_due === "string"
+            ? parseFloat(account.amount_due)
+            : account.amount_due,
+        balance_due:
+          typeof account.balance_due === "string"
+            ? parseFloat(account.balance_due)
+            : account.balance_due,
+      }));
+
+      console.log("✅ Cuentas normalizadas:", normalizedAccounts);
+      return normalizedAccounts;
+    }
+
+    return response.data.data || [];
   }
 
   // Actualizar una cuenta pendiente

@@ -26,10 +26,11 @@ export interface UsePendingAccountsFilters {
 }
 
 export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
-  const { companyId, selectedCompanyId } = useUserCompany(); // ✅ Obtener selectedCompanyId también
+  const { companyId, selectedCompanyId } = useUserCompany();
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO: trigger para recargas
 
   const loadPendingAccounts = async (
     customFilters?: Partial<UsePendingAccountsFilters>
@@ -38,17 +39,15 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // ✅ VERIFICACIÓN MÁS ROBUSTA
-      const targetCompanyId = companyId;
+      const targetCompanyId = selectedCompanyId || companyId;
 
-      console.log("🔍 Verificando companyId:", {
+      console.log("🔍 Verificando companyId para GET:", {
         companyId,
+        selectedCompanyId,
         targetCompanyId,
-        tipo: typeof targetCompanyId,
-        esNumero: !isNaN(Number(targetCompanyId)),
+        filters,
       });
 
-      // Validar que companyId es un número válido
       if (!targetCompanyId || isNaN(Number(targetCompanyId))) {
         console.warn("⚠️ companyId no válido, no se hará la petición");
         setPendingAccounts([]);
@@ -69,14 +68,36 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         combinedFilters
       );
 
+      console.log("📥 RESPUESTA DEL GET (RAW):", pendingAccountsData);
+
       if (Array.isArray(pendingAccountsData)) {
-        setPendingAccounts(pendingAccountsData);
-        console.log("✅ Cuentas cargadas:", pendingAccountsData.length);
+        // ✅ NORMALIZACIÓN ADICIONAL POR SI ACASO
+        const normalizedAccounts = pendingAccountsData.map((account) => ({
+          ...account,
+          // Asegurar que los IDs estén presentes
+          companyId: account.companyId || (account as any).company?.id,
+          clientId: account.clientId || (account as any).client?.id,
+          supplierId: account.supplierId || (account as any).supplier?.id,
+          currencyId: account.currencyId || (account as any).currency?.id,
+          // Asegurar tipos numéricos
+          amount_due:
+            typeof account.amount_due === "string"
+              ? parseFloat(account.amount_due)
+              : account.amount_due,
+          balance_due:
+            typeof account.balance_due === "string"
+              ? parseFloat(account.balance_due)
+              : account.balance_due,
+        }));
+
+        console.log("✅ Cuentas finales para estado:", normalizedAccounts);
+        setPendingAccounts(normalizedAccounts);
       } else {
         console.warn("⚠️ Estructura inesperada:", pendingAccountsData);
         setPendingAccounts([]);
       }
     } catch (err: any) {
+      console.error("❌ Error en loadPendingAccounts:", err);
       const errorMessage =
         err.response?.data?.message ||
         (err instanceof Error
@@ -89,7 +110,11 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     }
   };
 
-  // Crear cuenta pendiente
+  const forceRefresh = () => {
+    console.log("🔄 Forzando recarga de cuentas pendientes...");
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   const createPendingAccount = async (
     pendingAccountData: CreatePendingAccountData
   ): Promise<PendingAccount | null> => {
@@ -99,7 +124,10 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
       const newPendingAccount = await pendingAccountsService.create(
         pendingAccountData
       );
-      setPendingAccounts((prev) => [...prev, newPendingAccount]);
+
+      console.log("✅ Cobranza creada, forzando recarga...");
+      forceRefresh();
+
       return newPendingAccount;
     } catch (err: any) {
       const errorMessage =
@@ -114,7 +142,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     }
   };
 
-  // Actualizar cuenta pendiente
+  // Actualizar cuenta pendiente - MODIFICADO
   const updatePendingAccount = async (
     id: string,
     updates: UpdatePendingAccountData
@@ -126,11 +154,11 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         id,
         updates
       );
-      setPendingAccounts((prev) =>
-        prev.map((account) =>
-          account.id.toString() === id ? updatedPendingAccount : account
-        )
-      );
+
+      // ✅ FORZAR RECARGA DESPUÉS DE ACTUALIZAR
+      console.log("✅ Cobranza actualizada, forzando recarga...");
+      forceRefresh();
+
       return updatedPendingAccount;
     } catch (err: any) {
       const errorMessage =
@@ -145,15 +173,17 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     }
   };
 
-  // Eliminar cuenta pendiente
+  // Eliminar cuenta pendiente - MODIFICADO
   const deletePendingAccount = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await pendingAccountsService.delete(id);
-      setPendingAccounts((prev) =>
-        prev.filter((account) => account.id.toString() !== id)
-      );
+
+      // ✅ FORZAR RECARGA DESPUÉS DE ELIMINAR
+      console.log("✅ Cobranza eliminada, forzando recarga...");
+      forceRefresh();
+
       return true;
     } catch (err: any) {
       const errorMessage =
@@ -190,7 +220,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     }
   };
 
-  // Aplicar pago a cuenta pendiente
+  // Aplicar pago a cuenta pendiente - MODIFICADO
   const applyPayment = async (
     accountId: string,
     paymentAmount: number
@@ -202,11 +232,11 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
         accountId,
         paymentAmount
       );
-      setPendingAccounts((prev) =>
-        prev.map((account) =>
-          account.id.toString() === accountId ? updatedAccount : account
-        )
-      );
+
+      // ✅ FORZAR RECARGA DESPUÉS DE APLICAR PAGO
+      console.log("✅ Pago aplicado, forzando recarga...");
+      forceRefresh();
+
       return updatedAccount;
     } catch (err: any) {
       const errorMessage =
@@ -223,6 +253,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     loadPendingAccounts();
   }, [
     companyId,
+    selectedCompanyId, // ✅ AGREGAR selectedCompanyId como dependencia
     filters.account_type,
     filters.clientId,
     filters.supplierId,
@@ -233,6 +264,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     filters.due_date,
     filters.status,
     filters.search,
+    refreshTrigger, // ✅ NUEVA DEPENDENCIA para forzar recargas
   ]);
 
   return {
@@ -245,6 +277,7 @@ export const usePendingAccounts = (filters: UsePendingAccountsFilters = {}) => {
     getPendingAccountById,
     applyPayment,
     refetch: loadPendingAccounts,
+    forceRefresh, // ✅ EXPORTAR forceRefresh
   };
 };
 
@@ -255,6 +288,7 @@ export const useReceivableAccounts = (companyId?: number) => {
   >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadReceivableAccounts = async (id?: number) => {
     const targetCompanyId = id || companyId;
@@ -279,15 +313,21 @@ export const useReceivableAccounts = (companyId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     loadReceivableAccounts();
-  }, [companyId]);
+  }, [companyId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     receivableAccounts,
     loading,
     error,
     refetch: loadReceivableAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -296,6 +336,7 @@ export const usePayableAccounts = (companyId?: number) => {
   const [payableAccounts, setPayableAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadPayableAccounts = async (id?: number) => {
     const targetCompanyId = id || companyId;
@@ -317,15 +358,21 @@ export const usePayableAccounts = (companyId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     loadPayableAccounts();
-  }, [companyId]);
+  }, [companyId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     payableAccounts,
     loading,
     error,
     refetch: loadPayableAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -334,6 +381,7 @@ export const useOverdueAccounts = (companyId?: number) => {
   const [overdueAccounts, setOverdueAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadOverdueAccounts = async (id?: number) => {
     const targetCompanyId = id || companyId;
@@ -355,15 +403,21 @@ export const useOverdueAccounts = (companyId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     loadOverdueAccounts();
-  }, [companyId]);
+  }, [companyId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     overdueAccounts,
     loading,
     error,
     refetch: loadOverdueAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -372,6 +426,7 @@ export const useClientPendingAccounts = (clientId?: number) => {
   const [clientAccounts, setClientAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadClientAccounts = async (id?: number) => {
     const targetClientId = id || clientId;
@@ -399,17 +454,23 @@ export const useClientPendingAccounts = (clientId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     if (clientId) {
       loadClientAccounts();
     }
-  }, [clientId]);
+  }, [clientId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     clientAccounts,
     loading,
     error,
     refetch: loadClientAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -420,6 +481,7 @@ export const useSupplierPendingAccounts = (supplierId?: number) => {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadSupplierAccounts = async (id?: number) => {
     const targetSupplierId = id || supplierId;
@@ -447,17 +509,23 @@ export const useSupplierPendingAccounts = (supplierId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     if (supplierId) {
       loadSupplierAccounts();
     }
-  }, [supplierId]);
+  }, [supplierId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     supplierAccounts,
     loading,
     error,
     refetch: loadSupplierAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -476,6 +544,7 @@ export const usePendingAccountsTotals = (companyId?: number) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadTotals = async (id?: number) => {
     const targetCompanyId = id || companyId;
@@ -504,15 +573,21 @@ export const usePendingAccountsTotals = (companyId?: number) => {
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     loadTotals();
-  }, [companyId]);
+  }, [companyId, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     totals,
     loading,
     error,
     refetch: loadTotals,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -526,6 +601,7 @@ export const useDueDateManager = (
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // ✅ NUEVO
 
   const loadUpcomingAccounts = async (id?: number, range?: number) => {
     const targetCompanyId = id || companyId;
@@ -561,17 +637,23 @@ export const useDueDateManager = (
     }
   };
 
+  // ✅ NUEVO: Función para forzar recarga
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   useEffect(() => {
     if (companyId) {
       loadUpcomingAccounts();
     }
-  }, [companyId, daysRange]);
+  }, [companyId, daysRange, refreshTrigger]); // ✅ AGREGAR refreshTrigger
 
   return {
     upcomingAccounts,
     loading,
     error,
     refetch: loadUpcomingAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };
 
@@ -581,20 +663,32 @@ export const useFinancialDashboard = (companyId?: number) => {
     totals,
     loading: totalsLoading,
     error: totalsError,
+    forceRefresh: refreshTotals,
   } = usePendingAccountsTotals(companyId);
+
   const {
     overdueAccounts,
     loading: overdueLoading,
     error: overdueError,
+    forceRefresh: refreshOverdue,
   } = useOverdueAccounts(companyId);
+
   const {
     upcomingAccounts,
     loading: upcomingLoading,
     error: upcomingError,
+    forceRefresh: refreshUpcoming,
   } = useDueDateManager(companyId, 7);
 
   const loading = totalsLoading || overdueLoading || upcomingLoading;
   const error = totalsError || overdueError || upcomingError;
+
+  // ✅ NUEVO: Función para forzar recarga de todo el dashboard
+  const forceRefresh = () => {
+    refreshTotals();
+    refreshOverdue();
+    refreshUpcoming();
+  };
 
   const dashboardData = {
     totals,
@@ -618,5 +712,6 @@ export const useFinancialDashboard = (companyId?: number) => {
     error,
     overdueAccounts,
     upcomingAccounts,
+    forceRefresh, // ✅ EXPORTAR
   };
 };

@@ -41,7 +41,7 @@ const CTA = () => {
               }
               rel="noopener noreferrer"
             >
-              Descargar Sincronizador
+              Descargar Sync
             </a>
           </Button>
         </div>

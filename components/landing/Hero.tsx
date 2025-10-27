@@ -21,14 +21,14 @@ const Hero = () => {
               Negobi digitaliza, controla y potencia todo tu proceso comercial,
               desde la toma de pedidos hasta la entrega final.
             </p>
-            <div className="flex flex-col-reverse lg:flex-row  gap-4">
+            <div className="flex flex-col-reverse lg:flex-row gap-4">
               <Button variant="outline" asChild>
                 <a
                   href="https://negobi.nyc3.digitaloceanspaces.com/negobi-sync/latest/Nesync-1.6.4-setup.exe"
                   rel="noopener noreferrer"
-                  className="text-black backdrop-blur-md border-green_m "
+                  className="text-black backdrop-blur-md border-green_m"
                 >
-                  Descargar Sincronizador
+                  Descargar Sync
                 </a>
               </Button>
 

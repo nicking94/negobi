@@ -137,19 +137,18 @@ const formatDecimal = (value: number | string): string => {
   return num.toLocaleString("es-ES", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-    useGrouping: false, // No usar separadores de miles
+    useGrouping: false,
   });
 };
-// ✅ Función mejorada para convertir string con coma a número
+
 const parseDecimal = (value: string): number => {
   if (!value || value.trim() === "") return 0;
-
-  // Reemplazar coma por punto y eliminar espacios
   const normalizedValue = value.replace(",", ".").replace(/\s/g, "");
   const parsed = parseFloat(normalizedValue);
+  if (isNaN(parsed)) return 0;
 
-  // Verificar que es un número válido y no NaN
-  return isNaN(parsed) ? 0 : parsed;
+  // ✅ FORZAR 2 DECIMALES
+  return parseFloat(parsed.toFixed(2));
 };
 
 const PendingAccountsPage = () => {
@@ -440,8 +439,11 @@ const PendingAccountsPage = () => {
     setEditingAccount(null);
   };
 
-  // ✅ Función para formatear input en tiempo real
-  const handleAmountInput = (field: any, value: string) => {
+  // ✅ Función para formatear input en tiempo real - CORREGIDA
+  const handleAmountInput = (
+    field: { onChange: (value: string) => void },
+    value: string
+  ) => {
     // Permitir solo números y coma
     const cleanedValue = value.replace(/[^\d,]/g, "");
 
@@ -871,7 +873,7 @@ const PendingAccountsPage = () => {
                           <FormControl>
                             <Input
                               {...field}
-                              type="text" // ✅ Cambiado a text para permitir coma
+                              type="text"
                               placeholder="0,00"
                               className="w-full"
                               disabled={isSubmitting}
