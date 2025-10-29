@@ -258,7 +258,7 @@ const DashboardHeader = ({
                       </Link>
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                    {/* <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                       <Link
                         href="/dashboard/settings/general"
                         className="flex items-center w-full"
@@ -284,7 +284,7 @@ const DashboardHeader = ({
                         <Calendar className="w-4 h-4 mr-2" />
                         Planificación
                       </Link>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>

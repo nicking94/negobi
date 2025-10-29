@@ -13,7 +13,7 @@ export default function LoginPage() {
   // Redirigir si ya está autenticado
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/dashboard"); // Usar replace en lugar de push
+      router.replace("/dashboard/settings/profile"); // Usar replace en lugar de push
     }
   }, [user, isAuthenticated, isLoading, router]);
 

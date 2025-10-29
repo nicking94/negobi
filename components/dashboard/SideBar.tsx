@@ -47,7 +47,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { icon: FaHome, label: "Inicio", path: "/dashboard" },
+  // { icon: FaHome, label: "Inicio", path: "/dashboard" },
   {
     icon: FaFileAlt,
     label: "Documentos",
@@ -80,29 +80,29 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  {
-    icon: FaCogs,
-    label: "Operaciones",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        icon: FaCreditCard,
-        label: "Cobranzas",
-        path: "/dashboard/collections",
-      },
-      {
-        icon: FaUsers,
-        label: "Visitas",
-        path: "/dashboard/visits",
-      },
-      {
-        icon: FaMapMarkerAlt,
-        label: "Geolocalización",
-        path: "/dashboard/geolocalization",
-      },
-    ],
-  },
-  // En tu archivo Sidebar.tsx, actualiza la sección de Maestros:
+  // {
+  //   icon: FaCogs,
+  //   label: "Operaciones",
+  //   hasSubmenu: true,
+  //   submenuItems: [
+  //     {
+  //       icon: FaCreditCard,
+  //       label: "Cobranzas",
+  //       path: "/dashboard/collections",
+  //     },
+  //     {
+  //       icon: FaUsers,
+  //       label: "Visitas",
+  //       path: "/dashboard/visits",
+  //     },
+  //     {
+  //       icon: FaMapMarkerAlt,
+  //       label: "Geolocalización",
+  //       path: "/dashboard/geolocalization",
+  //     },
+  //   ],
+  // },
+
   {
     icon: FaFolder,
     label: "Maestros",
@@ -146,34 +146,34 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  {
-    icon: FaChartBar,
-    label: "Indicadores",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        icon: FaChartLine,
-        label: "Operaciones",
-        path: "/dashboard/indicators/operations",
-      },
-      {
-        icon: FaDollarSign,
-        label: "Ventas",
-        path: "/dashboard/indicators/sales",
-      },
-      {
-        icon: FaBox,
-        label: "Productos",
-        path: "/dashboard/indicators/products",
-      },
-      {
-        icon: FaUserFriends,
-        label: "Vendedores",
-        path: "/dashboard/indicators/sellers",
-      },
-    ],
-  },
-  { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
+  // {
+  //   icon: FaChartBar,
+  //   label: "Indicadores",
+  //   hasSubmenu: true,
+  //   submenuItems: [
+  //     {
+  //       icon: FaChartLine,
+  //       label: "Operaciones",
+  //       path: "/dashboard/indicators/operations",
+  //     },
+  //     {
+  //       icon: FaDollarSign,
+  //       label: "Ventas",
+  //       path: "/dashboard/indicators/sales",
+  //     },
+  //     {
+  //       icon: FaBox,
+  //       label: "Productos",
+  //       path: "/dashboard/indicators/products",
+  //     },
+  //     {
+  //       icon: FaUserFriends,
+  //       label: "Vendedores",
+  //       path: "/dashboard/indicators/sellers",
+  //     },
+  //   ],
+  // },
+  // { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
 ];
 
 const Sidebar = () => {
