@@ -120,6 +120,16 @@ export interface Document {
     latitude?: number;
     longitude?: number;
   };
+  items?: DocumentItem[];
+  operation_type?: {
+    id: number;
+    name: string;
+  };
+  payment_term?: {
+    id: number;
+    name: string;
+  };
+
   supplier?: {
     id: number;
     name: string;
@@ -427,9 +437,16 @@ export const documentService = {
     return response.data.data || [];
   },
 
-  // Obtener un documento por ID
   getDocumentById: async (id: string): Promise<Document> => {
+    console.log("🔍 documentService.getDocumentById - ID:", id);
     const response = await api.get(`${GetDocumentById}/${id}`);
+
+    console.log("📦 documentService.getDocumentById - Respuesta COMPLETA:", {
+      response,
+      responseData: response.data,
+      responseDataData: response.data?.data,
+    });
+
     return response.data.data;
   },
 

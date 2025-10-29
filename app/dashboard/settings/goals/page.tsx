@@ -408,7 +408,7 @@ const GoalsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDeleteGoal(goal)}
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>

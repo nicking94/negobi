@@ -119,7 +119,7 @@ const BudgetsPage = () => {
     to: new Date(),
   });
 
-  // Estados para el formulario de crear/editar
+  // Estados para el formulario de crear/editar - ACTUALIZAR
   const [formData, setFormData] = useState({
     document_number: "",
     document_date: new Date().toISOString().split("T")[0],
@@ -133,6 +133,16 @@ const BudgetsPage = () => {
     tax: 0,
     total_amount: 0,
     due_date: "",
+    items: [] as Array<{
+      line_number: number;
+      product_id: number;
+      quantity: number;
+      unit_price: number;
+      discount_amount?: number;
+      tax_amount?: number;
+      total_amount?: number;
+      product_name?: string;
+    }>,
   });
 
   useEffect(() => {
@@ -289,6 +299,7 @@ const BudgetsPage = () => {
       tax: 0,
       total_amount: 0,
       due_date: "",
+      items: [],
     });
     setIsCreateDialogOpen(true);
   };
@@ -308,6 +319,7 @@ const BudgetsPage = () => {
       tax: budget.tax || 0,
       total_amount: budget.total_amount || 0,
       due_date: budget.due_date ? budget.due_date.split("T")[0] : "",
+      items: budget.items || [],
     });
     setIsEditDialogOpen(true);
   };
@@ -337,12 +349,18 @@ const BudgetsPage = () => {
     try {
       const budgetDetails = await getDocumentDetails(budget.id.toString());
       if (budgetDetails) {
-        setSelectedBudget({
-          ...budgetDetails,
-          clientName: budgetDetails.client?.legal_name,
-          sellerName: budgetDetails.salesperson_external_code,
-          validity_days: 30,
-        });
+        // Usar el budget original y combinar con los detalles obtenidos
+        const detailedBudget: Budget = {
+          ...budget, // Mantener todas las propiedades originales
+          ...budgetDetails.document, // Sobrescribir con los detalles actualizados
+          clientName:
+            budgetDetails.document.client?.legal_name || budget.clientName,
+          sellerName:
+            budgetDetails.document.salesperson_external_code ||
+            budget.sellerName,
+          validity_days: budget.validity_days || 30,
+        };
+        setSelectedBudget(detailedBudget);
         setIsViewDialogOpen(true);
       }
     } catch (err) {
@@ -645,7 +663,7 @@ const BudgetsPage = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => handleDeleteBudget(budget)}
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -1098,15 +1116,6 @@ const BudgetsPage = () => {
               Crear Nuevo Presupuesto
             </DialogTitle>
             <DialogDescription>
-              {companyId && (
-                <div className="bg-blue-50 p-2 rounded-md text-sm">
-                  <strong>Empresa:</strong>{" "}
-                  {userProfile?.company?.name || `ID: ${companyId}`}
-                  <br />
-                  <strong>Usuario:</strong> {userProfile?.first_name}{" "}
-                  {userProfile?.last_name}
-                </div>
-              )}
               Complete la información para crear un nuevo presupuesto
             </DialogDescription>
           </DialogHeader>
@@ -1560,7 +1569,7 @@ const BudgetsPage = () => {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl text-red-600">
+            <DialogTitle className="text-lg sm:text-xl text-red_m">
               Eliminar Presupuesto
             </DialogTitle>
             <DialogDescription>

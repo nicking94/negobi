@@ -53,7 +53,7 @@ import {
   DocumentStatus,
 } from "@/services/documents/documents.service";
 import { useDocuments } from "@/hooks/documents/useDocuments";
-import { useUserCompany } from "@/hooks/auth/useUserCompany"; // Importar el hook
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 import { PriceDisplay } from "@/components/PriceDisplay";
@@ -297,10 +297,6 @@ const OrdersPage = () => {
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
-    setIsViewDialogOpen(true);
-  };
-
-  const handleViewDocument = (order: Order) => {
     setSelectedDocumentId(order.id);
     setIsDocumentModalOpen(true);
   };
@@ -443,13 +439,6 @@ const OrdersPage = () => {
                 >
                   <Eye className="h-4 w-4" />
                   <span>Detalles del pedido</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleViewDocument(order)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Detalles de factura</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
@@ -645,7 +634,7 @@ const OrdersPage = () => {
             </div>
           ) : documentsError ? (
             <div className="text-center py-8">
-              <div className="text-red-600 mb-4">Error: {documentsError}</div>
+              <div className="text-red_m mb-4">Error: {documentsError}</div>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"
@@ -677,167 +666,7 @@ const OrdersPage = () => {
         </main>
       </div>
 
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Detalle de Pedido {selectedOrder?.order_number}
-            </DialogTitle>
-            <DialogDescription>
-              Información completa del pedido seleccionado
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="grid gap-4 py-4">
-              {/* Información del cliente y estado */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Información del Cliente
-                  </h3>
-                  <p className="text-sm">{selectedOrder.client}</p>
-                  <p className="text-sm mt-1">
-                    <span className="font-medium">Vendedor:</span>{" "}
-                    {selectedOrder.seller}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Estado del Pedido</h3>
-                  <Badge
-                    variant={getStatusVariant(selectedOrder.status)}
-                    className={getStatusClassName(selectedOrder.status)}
-                  >
-                    {getStatusIcon(selectedOrder.status)}
-                    {getStatusLabel(selectedOrder.status)}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Información básica */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Número de Pedido</h3>
-                  <p className="text-sm">{selectedOrder.order_number}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Tipo de Operación</h3>
-                  <p className="text-sm">{selectedOrder.operation_type}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Fecha de Pedido</h3>
-                  <p className="text-sm">
-                    {formatDate(selectedOrder.order_date)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Ubicación y entrega */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Ubicación</h3>
-                  <p className="text-sm">{selectedOrder.location}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Fecha de Entrega</h3>
-                  <p className="text-sm">
-                    {formatDate(selectedOrder.delivery_date)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Productos */}
-              {selectedOrder.items.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2">Productos</h3>
-                  <div className="border border-gray-200 rounded-md overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="text-left p-3">Producto</th>
-                          <th className="text-center p-3">Cantidad</th>
-                          <th className="text-right p-3">Precio Unitario</th>
-                          <th className="text-right p-3">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedOrder.items.map((item) => (
-                          <tr
-                            key={item.id}
-                            className="border-t border-gray-200"
-                          >
-                            <td className="p-3">{item.product_name}</td>
-                            <td className="p-3 text-center">{item.quantity}</td>
-                            <td className="p-3 text-right">
-                              <PriceDisplay
-                                value={item.unit_price}
-                                variant="table"
-                              />
-                            </td>
-                            <td className="p-3 text-right">
-                              <PriceDisplay
-                                value={item.total}
-                                variant="table"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Notas */}
-              {selectedOrder.notes && (
-                <div>
-                  <h3 className="font-semibold mb-2">Notas</h3>
-                  <p className="text-sm bg-yellow-50 p-3 rounded-md">
-                    {selectedOrder.notes}
-                  </p>
-                </div>
-              )}
-
-              {/* Total */}
-              <div className="flex justify-end">
-                <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2 border-t">
-                    <span className="font-medium">Total:</span>
-                    <PriceDisplay
-                      value={selectedOrder.total}
-                      variant="summary"
-                      className="font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-            >
-              Cerrar
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                handleViewDocument(selectedOrder!);
-                setIsViewDialogOpen(false);
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Detalles de factura
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Documento */}
+      {/* Modal de Documento para mostrar detalles del pedido */}
       <DocumentDetailsModal
         documentId={selectedDocumentId}
         isOpen={isDocumentModalOpen}
@@ -845,6 +674,11 @@ const OrdersPage = () => {
           setIsDocumentModalOpen(false);
           setSelectedDocumentId(null);
         }}
+        title="Detalles del Pedido"
+        description="Información completa del pedido seleccionado"
+        itemsTitle="Productos del Pedido"
+        emptyItemsMessage="No hay productos en este pedido"
+        resendButtonText="Reenviar Pedido"
       />
     </div>
   );

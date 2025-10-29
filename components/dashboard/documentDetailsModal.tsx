@@ -12,41 +12,54 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDocumentDetails } from "@/hooks/documents/useDocumentDetails";
 import { Document } from "@/services/documents/documents.service";
+import { DocumentItem } from "@/services/documentItems/documentItems.service";
 import { formatDate } from "@/lib/formatDate";
-import { FileText, Calendar, Hash, Send } from "lucide-react";
+import { FileText, Calendar, Hash, Send, Package } from "lucide-react";
 import { PriceDisplay } from "@/components/PriceDisplay";
-import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 
 interface DocumentDetailsModalProps {
   documentId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string;
+  itemsTitle?: string;
+  emptyItemsMessage?: string;
+  showResendButton?: boolean;
+  resendButtonText?: string;
 }
 
 export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
   documentId,
   isOpen,
   onClose,
+  title = "Detalles del Documento",
+  description = "Información completa del documento seleccionado",
+  itemsTitle = "Productos",
+  emptyItemsMessage = "No hay items en este documento",
+  showResendButton = true,
+  resendButtonText = "Reenviar Documento",
 }) => {
   const { loading, error, getDocumentDetails } = useDocumentDetails();
   const [document, setDocument] = useState<Document | null>(null);
-
-  // Usar el hook de formateo de moneda
-  const { formatPrice, formatForTable, getNumericValue } =
-    useCurrencyFormatter();
+  const [items, setItems] = useState<DocumentItem[]>([]);
 
   useEffect(() => {
     if (isOpen && documentId) {
       loadDocumentDetails();
     } else {
       setDocument(null);
+      setItems([]);
     }
   }, [isOpen, documentId]);
 
   const loadDocumentDetails = async () => {
     if (!documentId) return;
-    const doc = await getDocumentDetails(documentId);
-    setDocument(doc);
+    const details = await getDocumentDetails(documentId);
+    if (details) {
+      setDocument(details.document);
+      setItems(details.items);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -93,7 +106,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
     valueClass = "",
   }: {
     label: string;
-    value: React.ReactNode; // Cambiar a React.ReactNode para aceptar PriceDisplay
+    value: React.ReactNode;
     valueClass?: string;
   }) => (
     <div className="flex items-center justify-between py-2">
@@ -123,20 +136,92 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
     </Card>
   );
 
+  // Componente para mostrar la tabla de items
+  const DocumentItemsTable = () => (
+    <InfoCard title={itemsTitle}>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                Producto
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                Cantidad
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                Precio Unit.
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                Descuento
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                IVA
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td className="px-4 py-2 text-sm">
+                  <div>
+                    <p className="font-medium">
+                      {item.description || `Producto ${item.product_id}`}
+                    </p>
+                    {item.product_external_code && (
+                      <p className="text-xs text-gray-500">
+                        Código: {item.product_external_code}
+                      </p>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-2 text-sm">{item.quantity}</td>
+                <td className="px-4 py-2 text-sm">
+                  <PriceDisplay value={item.unit_price} variant="default" />
+                </td>
+                <td className="px-4 py-2 text-sm">
+                  <PriceDisplay
+                    value={item.discount_amount}
+                    variant="default"
+                  />
+                </td>
+                <td className="px-4 py-2 text-sm">
+                  <PriceDisplay value={item.tax_amount} variant="default" />
+                </td>
+                <td className="px-4 py-2 text-sm font-medium">
+                  <PriceDisplay value={item.total_amount} variant="default" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p>{emptyItemsMessage}</p>
+          </div>
+        )}
+      </div>
+    </InfoCard>
+  );
+
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full bg-gray_xxl border border-gray-200 sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-2">
-        <DialogHeader className="p-6 border-b border-gray-200 ">
+      <DialogContent className="w-full bg-gray_xxl border border-gray-200 sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-2">
+        <DialogHeader className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
-                <FileText className="h-6 w-6 text-green-600" />
+                <FileText className="h-6 w-6 text-green_m" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                  Detalle de Factura
+                  {title}
                   {document && (
                     <Badge
                       variant="outline"
@@ -149,7 +234,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                   )}
                 </DialogTitle>
                 <DialogDescription className="text-gray-600 mt-1">
-                  Información resumida de la factura
+                  {description}
                 </DialogDescription>
               </div>
             </div>
@@ -181,9 +266,16 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
           </div>
         )}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="m-6 text-center py-8">
+            <p className="text-gray-600">Cargando detalles del documento...</p>
+          </div>
+        )}
+
         {/* Document Content */}
         {document && !loading && (
-          <div className=" p-6 space-y-6">
+          <div className="p-6 space-y-6">
             {/* Información Básica */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-white border border-gray-200">
@@ -237,6 +329,13 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                       value={document.client.id}
                       valueClass="text-gray-500"
                     />
+                    {document.client.tax_id && (
+                      <InfoRow
+                        label="RIF/Cédula"
+                        value={document.client.tax_id}
+                        valueClass="text-gray-500"
+                      />
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500 text-center py-2">
@@ -271,6 +370,9 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                 </p>
               </InfoCard>
             )}
+
+            {/* Tabla de Items */}
+            <DocumentItemsTable />
 
             <InfoCard title="Resumen Financiero">
               <div className="space-y-3">
@@ -342,7 +444,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                           document.total_amount?.toString() || "0"
                         )}
                         variant="summary"
-                        className="font-bold text-lg text-green-600"
+                        className="font-bold text-lg text-green_m"
                       />
                     </div>
                   </div>
@@ -414,11 +516,11 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
         )}
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 ">
+        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
           <Button type="button" variant="outline" onClick={onClose}>
             Cerrar
           </Button>
-          {document && (
+          {document && showResendButton && (
             <Button
               type="button"
               onClick={() => {
@@ -426,7 +528,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               }}
             >
               <Send className="h-4 w-4 mr-2" />
-              Reenviar Factura
+              {resendButtonText}
             </Button>
           )}
         </div>

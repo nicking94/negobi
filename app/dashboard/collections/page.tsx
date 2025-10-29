@@ -497,7 +497,7 @@ const PendingAccountsPage = () => {
         return (
           <div
             className={`font-medium text-right ${
-              isOverdue ? "text-red-600 font-bold" : ""
+              isOverdue ? "text-red_m font-bold" : ""
             }`}
           >
             ${formatDecimal(balance)} {/* ✅ FORMATO DECIMAL */}
@@ -512,10 +512,10 @@ const PendingAccountsPage = () => {
         const dueDate = new Date(row.getValue("due_date"));
         const isOverdue = dueDate < new Date() && row.original.balance_due > 0;
         return (
-          <div className={`font-medium ${isOverdue ? "text-red-600" : ""}`}>
+          <div className={`font-medium ${isOverdue ? "text-red_m" : ""}`}>
             {format(dueDate, "dd/MM/yyyy")}
             {isOverdue && (
-              <AlertTriangle className="h-4 w-4 text-red-600 inline ml-1" />
+              <AlertTriangle className="h-4 w-4 text-red_m inline ml-1" />
             )}
           </div>
         );
@@ -567,7 +567,7 @@ const PendingAccountsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(account)}
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -651,7 +651,7 @@ const PendingAccountsPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Vencidas</p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-2xl font-bold text-red_m">
                     {stats.overdueCount}
                   </p>
                 </div>
@@ -768,7 +768,7 @@ const PendingAccountsPage = () => {
             </div>
           ) : error ? (
             <div className="flex justify-center items-center py-8">
-              <div className="text-center text-red-600">
+              <div className="text-center text-red_m">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
                 <p>Error al cargar las cuentas pendientes</p>
                 <Button

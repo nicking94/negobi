@@ -22,7 +22,7 @@ export const ApiKeyInfo = () => {
             <div className="flex items-center gap-2">
               <span className="font-medium">Estado:</span>
               {isApiKeyExpired() ? (
-                <span className="flex items-center gap-1 text-red-600">
+                <span className="flex items-center gap-1 text-red_m">
                   <AlertTriangle className="h-3 w-3" />
                   Expirada
                 </span>

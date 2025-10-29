@@ -10,10 +10,9 @@ import {
   DocumentStatus,
 } from "../../services/documents/documents.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseDocumentsFilters {
   document_type?: DocumentType;
-  companyId: number; // Ahora es requerido
+  companyId: number;
   search?: string;
   status?: DocumentStatus;
   startDate?: string;
@@ -25,7 +24,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // hooks/documents/useDocuments.ts - En loadDocuments
   const loadDocuments = async (
     customFilters?: Partial<UseDocumentsFilters>
   ) => {
@@ -35,7 +33,7 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
 
       const currentCompanyId = customFilters?.companyId || filters?.companyId;
 
-      if (!currentCompanyId || currentCompanyId === 0) {
+      if (!currentCompanyId || currentCompanyId === -1) {
         setDocuments([]);
         return;
       }
@@ -48,9 +46,12 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
         companyId: currentCompanyId,
       };
 
+      console.log("📋 Cargando documentos con filtros:", combinedFilters);
+
       const documentsData = await documentService.getDocuments(combinedFilters);
 
       if (Array.isArray(documentsData)) {
+        console.log(`✅ Se cargaron ${documentsData.length} documentos`);
         setDocuments(documentsData);
       } else {
         console.warn("⚠️ documentsData no es array:", documentsData);

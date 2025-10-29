@@ -420,9 +420,7 @@ const OrganizationsPage = () => {
                     placeholder="Organizacion 1"
                   />
                   {errors.name && (
-                    <p className="text-xs text-red-600">
-                      {errors.name.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.name.message}</p>
                   )}
                 </div>
               </div>
@@ -440,7 +438,7 @@ const OrganizationsPage = () => {
                     placeholder="12345"
                   />
                   {errors.rif && (
-                    <p className="text-xs text-red-600">{errors.rif.message}</p>
+                    <p className="text-xs text-red_m">{errors.rif.message}</p>
                   )}
                 </div>
               </div>
@@ -459,9 +457,7 @@ const OrganizationsPage = () => {
                     placeholder="tuemail@ejemplo.com"
                   />
                   {errors.email && (
-                    <p className="text-xs text-red-600">
-                      {errors.email.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.email.message}</p>
                   )}
                 </div>
               </div>
@@ -480,9 +476,7 @@ const OrganizationsPage = () => {
                     placeholder="1234567891"
                   />
                   {errors.phone && (
-                    <p className="text-xs text-red-600">
-                      {errors.phone.message}
-                    </p>
+                    <p className="text-xs text-red_m">{errors.phone.message}</p>
                   )}
                 </div>
               </div>

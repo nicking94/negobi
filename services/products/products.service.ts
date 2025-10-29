@@ -8,7 +8,7 @@ import {
   SyncProducts,
 } from "./products.routes";
 
-// Interfaces para parámetros de búsqueda - CORREGIR
+// Interfaces para parámetros de búsqueda - ACTUALIZADO
 export interface GetProductsParams {
   page?: number;
   itemsPerPage?: number;
@@ -17,7 +17,7 @@ export interface GetProductsParams {
   companyId?: number;
   product_name?: string;
   sku?: string;
-  categoryId?: number;
+  category_id?: number; // ← USAR category_id para queries (Swagger)
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -29,8 +29,26 @@ export interface GetProductsParams {
   is_active?: boolean;
 }
 
-// Interface principal del producto
-// Interface principal del producto - CORREGIR
+// Interface para uso interno (mantener categoryId para responses)
+export interface UseProductsFilters {
+  page?: number;
+  itemsPerPage?: number;
+  companyId?: number;
+  product_name?: string;
+  sku?: string;
+  categoryId?: number; // ← Mantener para uso interno
+  brand_id?: number;
+  unit_id?: number;
+  default_warehouse_id?: number;
+  manages_serials?: boolean;
+  manages_lots?: boolean;
+  is_tax_exempt?: boolean;
+  show_in_ecommerce?: boolean;
+  show_in_sales_app?: boolean;
+  is_active?: boolean;
+  search?: string;
+}
+
 export interface Product {
   // Campos del sistema
   id: number;
@@ -93,20 +111,21 @@ export interface Product {
   // Códigos ERP
   erp_code_inst: string;
 
-  companyId?: number;
-  categoryId?: number; // ← Mantener para compatibilidad
+  // Relaciones - OBLIGATORIAS según Swagger
+  companyId: number;
+  categoryId: number;
   category?: {
-    // ← AGREGAR para manejar la respuesta del backend
     id: number;
-    category_name?: string; // Opcional: para mostrar nombre directamente
+    category_name?: string;
   };
   brand_id?: number;
 }
+
 // Interface para crear producto
 export interface CreateProductData {
   product_name: string;
   companyId: number;
-  categoryId?: number;
+  categoryId?: number; // ← Mantener categoryId para POST
   code: string;
   sku: string;
   description?: string;
@@ -146,7 +165,7 @@ export interface CreateProductData {
 // Interface para actualizar producto
 export interface UpdateProductData {
   product_name?: string;
-  categoryId?: number;
+  categoryId?: number; // ← Mantener categoryId para PATCH
   code?: string;
   sku?: string;
   description?: string;
@@ -182,6 +201,7 @@ export interface UpdateProductData {
   erp_code_inst?: string;
   external_code?: string;
   sync_with_erp?: boolean;
+  location?: Record<string, any>;
 }
 
 // Interface para sincronización
@@ -251,18 +271,20 @@ export interface ProductUnit {
   is_active: boolean;
 }
 
+// Interface CORREGIDA - SIN DUPLICACIÓN
 export interface ProductUnitsResponse {
   success: boolean;
   data: {
     message: string;
-    units?: ProductUnit[];
+    units?: ProductUnit[]; // ← AGREGAR units aquí para evitar el error
   };
+  message?: string;
+  statusCode?: number;
 }
 
 export interface ProductResponse {
   success: boolean;
   data: Product;
-  // Agregar propiedades opcionales según Swagger
   message?: string;
   statusCode?: number;
 }
@@ -294,25 +316,8 @@ export interface DeleteProductResponse {
   statusCode?: number;
 }
 
-export interface ProductUnitsResponse {
-  success: boolean;
-  data: {
-    message: string;
-    units?: ProductUnit[];
-  };
-  message?: string;
-  statusCode?: number;
-}
-
-export interface SyncProductsResponse {
-  success: boolean;
-  data: SyncProductResponse[];
-  message?: string;
-  statusCode?: number;
-}
-
 export const productService = {
-  // Crear un nuevo producto (ACTUALIZADO)
+  // Crear un nuevo producto
   createProduct: async (productData: CreateProductData): Promise<Product> => {
     try {
       const response = await api.post<ProductResponse>(
@@ -323,11 +328,9 @@ export const productService = {
         throw new Error(response.data.message || "Error al crear producto");
       }
 
-      // MAPEAR LA RESPUESTA PARA MANEJAR category object
       const productResponse = response.data.data;
       return {
         ...productResponse,
-        // Asegurar que categoryId esté disponible tanto si viene en category object como directamente
         categoryId: productResponse.category?.id || productResponse.categoryId,
       };
     } catch (error: any) {
@@ -337,6 +340,7 @@ export const productService = {
     }
   },
 
+  // Obtener productos - ACTUALIZADO para usar category_id
   getProducts: async (
     params?: GetProductsParams
   ): Promise<PaginatedProductsResponse["data"]> => {
@@ -357,7 +361,7 @@ export const productService = {
                 "page",
                 "itemsPerPage",
                 "companyId",
-                "categoryId",
+                "category_id", // ← ACTUALIZADO: usar category_id
                 "brand_id",
                 "unit_id",
                 "default_warehouse_id",
@@ -422,7 +426,7 @@ export const productService = {
     }
   },
 
-  // Obtener producto por ID (ACTUALIZADO)
+  // Obtener producto por ID
   getProductById: async (id: string): Promise<Product> => {
     try {
       const response = await api.get<ProductResponse>(`${GetProducts}/${id}`);
@@ -430,7 +434,6 @@ export const productService = {
         throw new Error(response.data.message || "Producto no encontrado");
       }
 
-      // MAPEAR LA RESPUESTA
       const productResponse = response.data.data;
       return {
         ...productResponse,
@@ -443,7 +446,7 @@ export const productService = {
     }
   },
 
-  // Actualizar producto (ACTUALIZADO)
+  // Actualizar producto
   updateProduct: async (
     id: string,
     updates: UpdateProductData
@@ -459,7 +462,6 @@ export const productService = {
         );
       }
 
-      // MAPEAR LA RESPUESTA
       const productResponse = response.data.data;
       return {
         ...productResponse,
@@ -472,7 +474,7 @@ export const productService = {
     }
   },
 
-  // Eliminar producto (CORREGIDO)
+  // Eliminar producto
   deleteProduct: async (id: string): Promise<void> => {
     try {
       const response = await api.delete<DeleteProductResponse>(
@@ -488,15 +490,15 @@ export const productService = {
     }
   },
 
-  // Obtener unidades de productos (CORREGIDO)
+  // Obtener unidades de productos - CORREGIDO
   getProductUnits: async (): Promise<ProductUnit[]> => {
     try {
       const response = await api.get<ProductUnitsResponse>(GetProductUnits);
       if (!response.data.success) {
         throw new Error(response.data.message || "Error al obtener unidades");
       }
-      // Ajustar según la estructura real de tu API
-      return (response.data.data as any).units || [];
+
+      return response.data.data.units || [];
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || "Error al obtener unidades"
@@ -515,6 +517,7 @@ export const productService = {
     return response.data.data;
   },
 
+  // Métodos auxiliares - ACTUALIZADOS para usar category_id
   getProductsByCompany: async (
     companyId: number,
     params?: Partial<GetProductsParams>
@@ -523,7 +526,7 @@ export const productService = {
       companyId,
       ...params,
     });
-    return response.data; // Extraer el array de productos de la respuesta paginada
+    return response.data;
   },
 
   getActiveProducts: async (
@@ -558,7 +561,7 @@ export const productService = {
   ): Promise<Product[]> => {
     const response = await productService.getProducts({
       companyId,
-      categoryId: categoryId,
+      category_id: categoryId, // ← ACTUALIZADO: usar category_id
       ...params,
     });
     return response.data;

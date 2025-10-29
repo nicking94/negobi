@@ -53,7 +53,7 @@ export default function ProtectedRoute({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
+          <h1 className="text-2xl font-bold text-red_m mb-4">
             Acceso Denegado
           </h1>
           <p className="text-gray-600">

@@ -431,7 +431,7 @@ const ServicesPage = () => {
             isSidebarOpen={sidebarOpen}
           />
           <main className="flex-1 p-8 flex items-center justify-center">
-            <div className="text-center text-red-600">
+            <div className="text-center text-red_m">
               <p>Error: {servicesError || categoriesError}</p>
               <Button
                 onClick={() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -46,9 +46,10 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useReturns } from "@/hooks/documents/useReturns";
 import { Document } from "@/services/documents/documents.service";
-import { useUserCompany } from "@/hooks/auth/useUserCompany"; // Importar el hook
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
 import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 import { PriceDisplay } from "@/components/PriceDisplay";
+import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 
 export type Devolution = {
   id: string;
@@ -98,9 +99,117 @@ const DevolutionsPage = () => {
     useCurrencyFormatter();
 
   // Usar el hook de devoluciones con la empresa del usuario logeado
-  const { returns, error: returnsError } = useReturns(
-    companyId ? { companyId } : { companyId: -1 }
-  );
+  const {
+    returns,
+    error: returnsError,
+    loading: returnsLoading,
+  } = useReturns(companyId ? { companyId } : { companyId: -1 });
+
+  // DEBUG: Mostrar información completa de las devoluciones
+  useEffect(() => {
+    console.log("🔍 ===== DEBUG DEVOLUCIONES - INICIO =====");
+    console.log("📋 Parámetros actuales:", {
+      companyId,
+      userLoading,
+      returnsLoading,
+    });
+
+    if (returns) {
+      console.log("📦 RETURNS DATA - ESTRUCTURA COMPLETA:", {
+        returns,
+        type: typeof returns,
+        isArray: Array.isArray(returns),
+        length: returns.length,
+        "returns[0]": returns[0]
+          ? {
+              id: returns[0].id,
+              document_type: returns[0].document_type,
+              document_number: returns[0].document_number,
+              status: returns[0].status,
+              client: returns[0].client,
+              company: returns[0].company,
+              items: returns[0].items, // Verificar si los items vienen en la respuesta principal
+              total_amount: returns[0].total_amount,
+              observations: returns[0].observations,
+            }
+          : "No hay devoluciones",
+      });
+
+      // Mostrar cada devolución con su estructura completa
+      returns.forEach((returnDoc: Document, index: number) => {
+        console.log(`📄 DEVOLUCIÓN ${index + 1}/${returns.length}:`, {
+          id: returnDoc.id,
+          document_type: returnDoc.document_type,
+          document_number: returnDoc.document_number,
+          document_date: returnDoc.document_date,
+          status: returnDoc.status,
+          total_amount: returnDoc.total_amount,
+          taxable_base: returnDoc.taxable_base,
+          tax: returnDoc.tax,
+          client: returnDoc.client
+            ? {
+                id: returnDoc.client.id,
+                legal_name: returnDoc.client.legal_name,
+                tax_id: returnDoc.client.tax_id,
+              }
+            : "Sin cliente",
+          company: returnDoc.company
+            ? {
+                id: returnDoc.company.id,
+                name: returnDoc.company.name,
+              }
+            : "Sin empresa",
+          affected_document_number: returnDoc.affected_document_number,
+          sourceDocumentId: returnDoc.sourceDocumentId,
+          observations: returnDoc.observations,
+          notes: returnDoc.notes,
+          // Verificar si los items vienen incluidos
+          items: returnDoc.items
+            ? {
+                exists: true,
+                count: Array.isArray(returnDoc.items)
+                  ? returnDoc.items.length
+                  : "no es array",
+                sample:
+                  Array.isArray(returnDoc.items) && returnDoc.items.length > 0
+                    ? returnDoc.items[0]
+                    : "sin items",
+              }
+            : "items no incluidos en respuesta principal",
+          // Información adicional
+          credit_amount: returnDoc.credit_amount,
+          cash_amount: returnDoc.cash_amount,
+          exchange_rate: returnDoc.exchange_rate,
+          currency: returnDoc.currency,
+        });
+      });
+
+      // Análisis de estructura
+      console.log("🔬 ANÁLISIS DE ESTRUCTURA:", {
+        "Tipo de returns": typeof returns,
+        "Es array": Array.isArray(returns),
+        "Número de documentos": returns.length,
+        "Tipos de documento encontrados": [
+          ...new Set(returns.map((doc) => doc.document_type)),
+        ],
+        "Estados encontrados": [...new Set(returns.map((doc) => doc.status))],
+        "Documentos con items incluidos": returns.filter(
+          (doc) => doc.items && Array.isArray(doc.items) && doc.items.length > 0
+        ).length,
+        "Documentos con observaciones": returns.filter(
+          (doc) => doc.observations && doc.observations.length > 0
+        ).length,
+        "Documentos con cliente": returns.filter((doc) => doc.client).length,
+      });
+    } else {
+      console.log("❌ No hay datos de returns:", {
+        returns,
+        returnsError,
+        returnsLoading,
+      });
+    }
+    console.log("🔍 ===== DEBUG DEVOLUCIONES - FIN =====");
+  }, [returns, returnsError, returnsLoading, companyId]);
 
   const getOperationType = (documentType: string): string => {
     const typeMap: { [key: string]: string } = {
@@ -125,11 +234,20 @@ const DevolutionsPage = () => {
   };
 
   const devolutions: Devolution[] = useMemo(() => {
+    console.log("🔄 Procesando devoluciones desde returns...");
+
     if (!returns || !Array.isArray(returns)) {
+      console.log("❌ returns no es array o está vacío:", returns);
       return [];
     }
 
-    return returns.map((returnDoc: Document) => {
+    const processedDevolutions = returns.map((returnDoc: Document) => {
+      console.log(`📝 Procesando documento ${returnDoc.id}:`, {
+        document_number: returnDoc.document_number,
+        document_type: returnDoc.document_type,
+        observations: returnDoc.observations,
+      });
+
       const reason =
         returnDoc.observations?.find(
           (obs) =>
@@ -142,7 +260,7 @@ const DevolutionsPage = () => {
         returnDoc.sourceDocumentId?.toString() ||
         "N/A";
 
-      return {
+      const devolution: Devolution = {
         id: returnDoc.id.toString(),
         client: returnDoc.client?.legal_name || "Cliente no especificado",
         correlative: returnDoc.document_number,
@@ -153,7 +271,7 @@ const DevolutionsPage = () => {
         seller:
           returnDoc.responsibleUserId?.toString() ||
           returnDoc.salesperson_external_code ||
-          "Cod. especificado",
+          "No especificado",
         status: mapReturnStatus(returnDoc.status),
         bill_reference: billReference,
         reason: reason,
@@ -164,7 +282,15 @@ const DevolutionsPage = () => {
             }
           : undefined,
       };
+
+      console.log(`✅ Devolución procesada ${returnDoc.id}:`, devolution);
+      return devolution;
     });
+
+    console.log(
+      `🎯 Total de devoluciones procesadas: ${processedDevolutions.length}`
+    );
+    return processedDevolutions;
   }, [returns]);
 
   const clients = useMemo(() => {
@@ -217,6 +343,7 @@ const DevolutionsPage = () => {
   }, [devolutions, searchTerm, clientFilter, statusFilter, dateRange]);
 
   const handleViewDevolution = (devolution: Devolution) => {
+    console.log("👁️ Ver detalles de devolución:", devolution);
     setSelectedDevolution(devolution);
     setIsViewDialogOpen(true);
   };
@@ -355,13 +482,6 @@ const DevolutionsPage = () => {
                 >
                   <Eye className="h-4 w-4" />
                   <span>Ver Detalles</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleViewClientDevolutions(devolution.client)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Ver Devoluciones del Cliente</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -509,153 +629,21 @@ const DevolutionsPage = () => {
           )}
 
           {returnsError && (
-            <div className="text-center py-4 text-red-600">
+            <div className="text-center py-4 text-red_m">
               Error: {returnsError}
             </div>
           )}
         </main>
       </div>
-
-      {/* Los diálogos se mantienen igual */}
+      {/* Diálogo de detalles de devolución */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Detalle de Devolución {selectedDevolution?.correlative}
-            </DialogTitle>
-            <DialogDescription>
-              Información completa de la devolución seleccionada
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedDevolution && (
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center justify-between border-b gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Información del Cliente
-                  </h3>
-                  <p className="text-sm">{selectedDevolution.client}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Información de Venta</h3>
-                  <p className="text-sm">
-                    <span className="font-medium">Vendedor:</span>{" "}
-                    {selectedDevolution.seller}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Ubicación:</span>{" "}
-                    {selectedDevolution.location}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Correlativo</h3>
-                  <p className="text-sm">{selectedDevolution.correlative}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Factura de Referencia</h3>
-                  <p className="text-sm">{selectedDevolution.bill_reference}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Tipo de Operación</h3>
-                  <p className="text-sm">{selectedDevolution.operation_type}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Fecha de Emisión</h3>
-                  <p className="text-sm">
-                    {formatDate(selectedDevolution.issued_date)}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Estado</h3>
-                  <p className="text-sm">
-                    {getStatusBadge(selectedDevolution.status)}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Motivo de Devolución</h3>
-                <div className="border rounded-md p-4">
-                  <p className="text-sm">{selectedDevolution.reason}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Productos Devueltos</h3>
-                <div className="border rounded-md p-4">
-                  <p className="text-sm text-center text-gray_m">
-                    Aquí iría el detalle de los productos devueltos
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Subtotal:</span>
-                    <PriceDisplay
-                      value={selectedDevolution.total * 0.85}
-                      variant="default"
-                    />
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">IVA (15%):</span>
-                    <PriceDisplay
-                      value={selectedDevolution.total * 0.15}
-                      variant="default"
-                    />
-                  </div>
-                  <div className="flex justify-between py-2 border-t">
-                    <span className="font-medium">Total a Devolver:</span>
-                    <PriceDisplay
-                      value={selectedDevolution.total}
-                      variant="summary"
-                      className="font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-            >
-              Cerrar
-            </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                selectedDevolution && handleResendDevolution(selectedDevolution)
-              }
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Reenviar Devolución
-            </Button>
-            {selectedDevolution?.status === "pending" && (
-              <Button
-                type="button"
-                onClick={() =>
-                  selectedDevolution &&
-                  handleProcessDevolution(selectedDevolution)
-                }
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Procesar
-              </Button>
-            )}
-          </div>
-        </DialogContent>
+        {selectedDevolution && (
+          <DocumentDetailsModal
+            documentId={selectedDevolution.id}
+            isOpen={isViewDialogOpen}
+            onClose={() => setIsViewDialogOpen(false)}
+          />
+        )}
       </Dialog>
 
       <Dialog

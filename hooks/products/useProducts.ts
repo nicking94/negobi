@@ -16,7 +16,7 @@ export interface UseProductsFilters {
   companyId?: number;
   product_name?: string;
   sku?: string;
-  categoryId?: number;
+  categoryId?: number; // ← Mantener para uso interno
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -39,32 +39,31 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
   const [totalPage, setTotalPage] = useState(0);
   const [modified, setModified] = useState(false);
 
-  // En useProducts.ts - MODIFICAR loadProducts
+  // Función helper para convertir valores a número de forma segura
+  const safeNumber = (value: any): number | undefined => {
+    if (value === undefined || value === null || value === "") return undefined;
+    const num = Number(value);
+    return isNaN(num) ? undefined : num;
+  };
+
   const loadProducts = async (customFilters?: Partial<UseProductsFilters>) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Función helper para convertir valores a número de forma segura
-      const safeNumber = (value: any): number | undefined => {
-        if (value === undefined || value === null || value === "")
-          return undefined;
-        const num = Number(value);
-        return isNaN(num) ? undefined : num;
-      };
-
-      // Combinar filtros - USAR categoryId (sin guión bajo)
+      // Combinar filtros y transformar categoryId → category_id
       const combinedFilters: GetProductsParams = {
         ...filters,
         ...customFilters,
         page: customFilters?.page || page,
         itemsPerPage: customFilters?.itemsPerPage || itemsPerPage,
-        // Usar categoryId que es lo que espera el backend
-        categoryId:
+        // Transformar categoryId a category_id para la API
+        category_id:
           safeNumber(customFilters?.categoryId) ||
           safeNumber(filters.categoryId),
       };
 
+      // Limpiar parámetros undefined
       Object.keys(combinedFilters).forEach((key) => {
         if (combinedFilters[key as keyof GetProductsParams] === undefined) {
           delete combinedFilters[key as keyof GetProductsParams];
@@ -121,7 +120,7 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Actualizar producto (MEJORADO)
+  // Actualizar producto
   const updateProduct = async (
     id: string,
     updates: UpdateProductData
@@ -144,7 +143,7 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Eliminar producto (MEJORADO)
+  // Eliminar producto
   const deleteProduct = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -361,7 +360,7 @@ export const useProductSearch = (companyId?: number) => {
   };
 };
 
-// Hook para gestión de productos por categoría
+// Hook para gestión de productos por categoría - ACTUALIZADO
 export const useProductsByCategory = (
   companyId?: number,
   categoryId?: number

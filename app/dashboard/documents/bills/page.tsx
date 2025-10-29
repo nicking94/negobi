@@ -10,6 +10,8 @@ import {
   Filter,
   FileText,
   Building,
+  XCircle,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,12 +46,13 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useDocuments } from "@/hooks/documents/useDocuments";
+
 import { Document } from "@/services/documents/documents.service";
 import { documentTypeTranslations } from "@/utils/documentTypeTranslations";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 import { PriceDisplay } from "@/components/PriceDisplay";
 import useUserCompany from "@/hooks/auth/useUserCompany"; // Importar el hook
+import { useInvoices } from "@/hooks/documents/useInvoices";
 
 // Tipo Bill basado en Document
 export type Bill = {
@@ -94,35 +97,53 @@ const BillsPage = () => {
   } = useUserCompany();
 
   const {
-    documents,
+    invoices: documents,
     loading: documentsLoading,
     error: documentsError,
-  } = useDocuments(
+    markAsPaid,
+    cancelInvoice,
+  } = useInvoices(
     companyId
       ? {
-          document_type: "invoice",
           companyId: companyId,
+          status: "all",
         }
       : {
-          document_type: "invoice",
-          companyId: -1, // Evitar consultas si no hay companyId
+          companyId: -1,
         }
   );
 
   const mapDocumentStatusToBillStatus = (
     docStatus: string
   ): "pending" | "paid" | "cancelled" => {
-    switch (docStatus) {
+    switch (docStatus?.toLowerCase()) {
       case "completed":
       case "approved":
+      case "paid":
         return "paid";
       case "cancelled":
+      case "voided":
         return "cancelled";
       case "draft":
       case "pending":
+      case "sent":
       default:
         return "pending";
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap = {
+      paid: { label: "Pagada", className: "bg-green_xxl text-green_b" },
+      pending: {
+        label: "Pendiente",
+        className: "bg-yellow-100 text-yellow-800",
+      },
+      cancelled: { label: "Cancelada", className: "bg-red_xxl text-red_b" },
+    };
+
+    const billStatus = mapDocumentStatusToBillStatus(status);
+    return statusMap[billStatus];
   };
 
   const bills: Bill[] = useMemo(() => {
@@ -213,6 +234,18 @@ const BillsPage = () => {
 
   const columns: ColumnDef<Bill>[] = [
     {
+      accessorKey: "document_number",
+      header: "N° Factura",
+      cell: ({ row }) => (
+        <div className="font-medium">
+          <div>{row.original.correlative}</div>
+          <div className="text-xs text-gray_m">
+            {formatDate(row.original.issued_date)}
+          </div>
+        </div>
+      ),
+    },
+    {
       accessorKey: "client",
       header: "Cliente",
       cell: ({ row }) => (
@@ -257,6 +290,7 @@ const BillsPage = () => {
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
         const bill = row.original;
+        const isPending = bill.status === "pending";
         return (
           <div className="flex justify-center">
             <DropdownMenu>
@@ -268,12 +302,51 @@ const BillsPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => handleViewClientBills(bill.client)}
+                  onClick={() => handleViewOrder(bill)}
                   className="cursor-pointer flex items-center gap-2"
                 >
-                  <FileText className="h-4 w-4" />
-                  <span>Ver Facturas del Cliente</span>
+                  <Eye className="h-4 w-4" />
+                  <span>Ver Detalles</span>
                 </DropdownMenuItem>
+
+                {isPending && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          await markAsPaid(bill.id);
+                          toast.success(
+                            `Factura ${bill.correlative} marcada como pagada`
+                          );
+                        } catch (error) {
+                          toast.error("Error al marcar como pagada");
+                        }
+                      }}
+                      className="cursor-pointer flex items-center gap-2 text-green_m hover:text-green_b"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Marcar como Pagada</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          await cancelInvoice(bill.id);
+                          toast.success(
+                            `Factura ${bill.correlative} cancelada`
+                          );
+                        } catch (error) {
+                          toast.error("Error al cancelar factura");
+                        }
+                      }}
+                      className="cursor-pointer flex items-center gap-2 text-red_m hover:text-red_b "
+                    >
+                      <XCircle className="h-4 w-4" />
+                      <span>Cancelar Factura</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -371,14 +444,6 @@ const BillsPage = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
-
-            {/* Mostrar información de la empresa actual en lugar del selector */}
-            <div className="flex items-center gap-2">
-              <Building className="h-5 w-5 text-gray_m" />
-              <span className="text-sm font-medium text-gray_b">
-                {userCompany?.name || "Cargando empresa..."}
-              </span>
             </div>
           </div>
 

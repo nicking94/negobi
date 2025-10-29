@@ -168,6 +168,9 @@ export interface PaginatedDocumentItemsResponse {
     data: DocumentItem[];
     totalPages: number;
     total: number;
+    page: number;
+    itemsPerPage: number;
+    order: "ASC" | "DESC";
   };
 }
 
@@ -247,10 +250,45 @@ export const documentItemService = {
   getDocumentItemsByDocument: async (
     documentId: number
   ): Promise<DocumentItem[]> => {
-    return documentItemService.getDocumentItems({
-      documentId,
-      itemsPerPage: 10,
-    });
+    try {
+      const response = await documentItemService.getDocumentItems({
+        documentId,
+        itemsPerPage: 100,
+      });
+
+      console.log("🔍 Respuesta completa de items:", response);
+
+      // Manejar diferentes estructuras de respuesta con tipos seguros
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response && typeof response === "object") {
+        // Si es la estructura paginada que vemos en los logs
+        if ("data" in response && Array.isArray((response as any).data)) {
+          return (response as any).data;
+        }
+        // Si tiene propiedad data con sub-propiedad data (respuesta paginada estructurada)
+        if (
+          "data" in response &&
+          (response as any).data &&
+          "data" in (response as any).data &&
+          Array.isArray((response as any).data.data)
+        ) {
+          return (response as any).data.data;
+        }
+        // Si es un objeto con propiedades de array
+        if ("items" in response && Array.isArray((response as any).items)) {
+          return (response as any).items;
+        }
+      }
+
+      console.warn(
+        "⚠️ Estructura de respuesta inesperada, retornando array vacío"
+      );
+      return [];
+    } catch (error) {
+      console.error("❌ Error al obtener items del documento:", error);
+      return [];
+    }
   },
 
   getDocumentItemsByProduct: async (

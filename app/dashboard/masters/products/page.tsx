@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
@@ -9,6 +9,11 @@ import {
   Plus,
   Search,
   Filter,
+  Package,
+  Ruler,
+  Box,
+  Globe,
+  Barcode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +53,8 @@ import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -66,16 +73,30 @@ import { useBrands } from "@/hooks/brands/useBrands";
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import { useCurrency } from "@/context/CurrencyContext";
 
+// Schema COMPLETO según Swagger
 const productSchema = z.object({
+  // Información básica
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  sku: z.string().min(1, "El SKU es requerido"),
-  code: z.string().min(1, "El código es requerido"), // AÑADIDO
+  code: z.string().min(1, "El código es requerido"),
+  sku: z.string().optional(),
   description: z.string().optional(),
-  base_price: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
+
+  // Relaciones
   companyId: z.number().min(1, "La compañía es requerida"),
   categoryId: z.number().min(1, "La categoría es requerida"),
   brand_id: z.number().optional().nullable(),
+
+  // Precios y costos
+  base_price: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
   current_cost: z.number().min(0, "El costo actual debe ser mayor o igual a 0"),
+  previous_cost: z
+    .number()
+    .min(0, "El costo anterior debe ser mayor o igual a 0"),
+  average_cost: z
+    .number()
+    .min(0, "El costo promedio debe ser mayor o igual a 0"),
+
+  // Niveles de precio
   price_level_1: z
     .number()
     .min(0, "El precio nivel 1 debe ser mayor o igual a 0"),
@@ -85,7 +106,51 @@ const productSchema = z.object({
   price_level_3: z
     .number()
     .min(0, "El precio nivel 3 debe ser mayor o igual a 0"),
+  price_level_4: z
+    .number()
+    .min(0, "El precio nivel 4 debe ser mayor o igual a 0"),
+  price_level_5: z
+    .number()
+    .min(0, "El precio nivel 5 debe ser mayor o igual a 0"),
+
+  // Gestión de inventario
+  manages_serials: z.boolean(),
+  manages_lots: z.boolean(),
+  uses_decimals_in_quantity: z.boolean(),
+  uses_scale_for_weight: z.boolean(),
+
+  // Impuestos
+  is_tax_exempt: z.boolean(),
+
+  // Dimensiones y peso
+  weight_value: z.number().min(0, "El peso debe ser mayor o igual a 0"),
+  weight_unit: z.string(),
+  volume_value: z.number().min(0, "El volumen debe ser mayor o igual a 0"),
+  volume_unit: z.string(),
+  length_value: z.number().min(0, "La longitud debe ser mayor o igual a 0"),
+  width_value: z.number().min(0, "El ancho debe ser mayor o igual a 0"),
+  height_value: z.number().min(0, "La altura debe ser mayor o igual a 0"),
+  dimension_unit: z.string(),
+
+  // Visibilidad
+  show_in_ecommerce: z.boolean(),
+  show_in_sales_app: z.boolean(),
+
+  // Stock
+  stock_quantity: z.number().min(0, "El stock debe ser mayor o igual a 0"),
+  total_quantity_reserved: z
+    .number()
+    .min(0, "La cantidad reservada debe ser mayor o igual a 0"),
+  total_quantity_on_order: z
+    .number()
+    .min(0, "La cantidad en orden debe ser mayor o igual a 0"),
+
+  // Estado
   is_active: z.boolean(),
+
+  // Códigos ERP
+  erp_code_inst: z.string().optional(),
+  external_code: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -100,9 +165,18 @@ const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("basic");
 
-  // Asumimos que la primera instancia es la compañía activa
   const activeCompanyId = 4;
+
+  // Debounce para la búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const {
     products,
@@ -120,52 +194,96 @@ const ProductsPage = () => {
     refetch: refetchProducts,
   } = useProducts({
     companyId: activeCompanyId,
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     categoryId:
       selectedCategory !== "all" ? parseInt(selectedCategory) : undefined,
     is_active: true,
   });
 
-  // Obtener categorías reales usando el hook useProductCategories
+  // Obtener categorías
   const {
     productCategories: categories,
     loading: categoriesLoading,
     error: categoriesError,
-    refetch: refetchCategories,
   } = useProductCategories({
     is_active: true,
     page: 1,
     itemsPerPage: 100,
   });
 
-  // Obtener marcas usando el hook useBrands
-  const {
-    brands,
-    loading: brandsLoading,
-    error: brandsError,
-    refetch: refetchBrands,
-  } = useBrands({
-    is_active: true, // Solo marcas activas
+  // Obtener marcas
+  const { brands, loading: brandsLoading } = useBrands({
+    is_active: true,
   });
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
+      // Información básica
       product_name: "",
+      code: "",
       sku: "",
       description: "",
-      base_price: 0,
+
+      // Relaciones
+      companyId: activeCompanyId,
       categoryId: 0,
       brand_id: undefined,
+
+      // Precios y costos
+      base_price: 0,
       current_cost: 0,
+      previous_cost: 0,
+      average_cost: 0,
+
+      // Niveles de precio
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
+      price_level_4: 0,
+      price_level_5: 0,
+
+      // Gestión de inventario
+      manages_serials: false,
+      manages_lots: false,
+      uses_decimals_in_quantity: false,
+      uses_scale_for_weight: false,
+
+      // Impuestos
+      is_tax_exempt: false,
+
+      // Dimensiones y peso
+      weight_value: 0,
+      weight_unit: "kg",
+      volume_value: 0,
+      volume_unit: "m³",
+      length_value: 0,
+      width_value: 0,
+      height_value: 0,
+      dimension_unit: "cm",
+
+      // Visibilidad
+      show_in_ecommerce: false,
+      show_in_sales_app: false,
+
+      // Stock
+      stock_quantity: 0,
+      total_quantity_reserved: 0,
+      total_quantity_on_order: 0,
+
+      // Estado
       is_active: true,
+
+      // Códigos ERP
+      erp_code_inst: "",
+      external_code: "",
     },
   });
 
-  const displayProducts = products;
+  // Filtrar productos por stock
+  const displayProducts = inStockOnly
+    ? products.filter((product) => product.stock_quantity > 0)
+    : products;
 
   const brandOptions = brands.map((brand) => ({
     value: brand.id.toString(),
@@ -183,67 +301,81 @@ const ProductsPage = () => {
         toast.error("No se ha seleccionado una compañía");
         return;
       }
-      const commonData = {
+
+      // Preparar datos COMPLETOS según Swagger
+      const productData: CreateProductData | UpdateProductData = {
+        // Información básica
         product_name: data.product_name,
-        sku: data.sku,
         code: data.code,
+        sku: data.sku,
         description: data.description || "",
-        base_price: data.base_price,
+
+        // Relaciones
         companyId: activeCompanyId,
         categoryId: data.categoryId,
         brand_id: data.brand_id || null,
+
+        // Precios y costos
+        base_price: data.base_price,
         current_cost: data.current_cost,
+        previous_cost: data.previous_cost,
+        average_cost: data.average_cost,
+
+        // Niveles de precio
         price_level_1: data.price_level_1,
         price_level_2: data.price_level_2,
         price_level_3: data.price_level_3,
+        price_level_4: data.price_level_4,
+        price_level_5: data.price_level_5,
+
+        // Gestión de inventario
+        manages_serials: data.manages_serials,
+        manages_lots: data.manages_lots,
+        uses_decimals_in_quantity: data.uses_decimals_in_quantity,
+        uses_scale_for_weight: data.uses_scale_for_weight,
+
+        // Impuestos
+        is_tax_exempt: data.is_tax_exempt,
+
+        // Dimensiones y peso
+        weight_value: data.weight_value,
+        weight_unit: data.weight_unit,
+        volume_value: data.volume_value,
+        volume_unit: data.volume_unit,
+        length_value: data.length_value,
+        width_value: data.width_value,
+        height_value: data.height_value,
+        dimension_unit: data.dimension_unit,
+
+        // Visibilidad
+        show_in_ecommerce: data.show_in_ecommerce,
+        show_in_sales_app: data.show_in_sales_app,
+
+        // Stock
+        stock_quantity: data.stock_quantity,
+        total_quantity_reserved: data.total_quantity_reserved,
+        total_quantity_on_order: data.total_quantity_on_order,
+
+        // Estado
         is_active: data.is_active,
+
+        // Códigos ERP
+        erp_code_inst: data.erp_code_inst || "",
+        external_code: data.external_code || "",
       };
 
       if (editingProduct && editingProduct.id) {
         // Actualizar producto existente
-        const updateData: UpdateProductData = {
-          ...commonData,
-        };
-
         const result = await updateProduct(
           editingProduct.id.toString(),
-          updateData
+          productData
         );
         if (result) {
           toast.success("Producto actualizado exitosamente");
         }
       } else {
         // Crear nuevo producto
-        const createData: CreateProductData = {
-          ...commonData,
-          // Campos con valores por defecto
-          manages_serials: false,
-          manages_lots: false,
-          uses_decimals_in_quantity: false,
-          uses_scale_for_weight: false,
-          is_tax_exempt: false,
-          weight_value: 0,
-          weight_unit: "kg",
-          volume_value: 0,
-          volume_unit: "m3",
-          length_value: 0,
-          width_value: 0,
-          height_value: 0,
-          dimension_unit: "cm",
-          show_in_ecommerce: true,
-          show_in_sales_app: true,
-          stock_quantity: 0,
-          total_quantity_reserved: 0,
-          total_quantity_on_order: 0,
-          erp_code_inst: "",
-          external_code: "",
-          previous_cost: 0,
-          average_cost: 0,
-          price_level_4: 0,
-          price_level_5: 0,
-        };
-
-        const result = await createProduct(createData);
+        const result = await createProduct(productData as CreateProductData);
         if (result) {
           toast.success("Producto creado exitosamente");
         }
@@ -259,16 +391,8 @@ const ProductsPage = () => {
   };
 
   const handleCategoryChange = (categoryId: string) => {
-    // Convertir a número si no es "all"
-    const categoryIdNum = categoryId !== "all" ? Number(categoryId) : undefined;
     setSelectedCategory(categoryId);
     setPage(1);
-
-    // Actualizar el filtro con el número
-    if (categoryIdNum !== undefined && !isNaN(categoryIdNum)) {
-      // Aquí deberías actualizar el filtro que se pasa al hook useProducts
-      // Depende de cómo tengas implementada la actualización de filtros
-    }
   };
 
   const handleDelete = async (product: ProductType) => {
@@ -282,8 +406,7 @@ const ProductsPage = () => {
         <div className="bg-white rounded-lg shadow-lg p-4 border">
           <h3 className="font-semibold mb-2">¿Eliminar producto?</h3>
           <p className="text-sm text-gray-600 mb-4">
-            {`¿Estás seguro de que quieres eliminar "${product.product_name}"? Esta
-            acción no se puede deshacer.`}
+            {`¿Estás seguro de que quieres eliminar "${product.product_name}"? Esta acción no se puede deshacer.`}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -309,53 +432,121 @@ const ProductsPage = () => {
           </div>
         </div>
       ),
-      {
-        duration: 10000,
-      }
+      { duration: 10000 }
     );
   };
 
   const handleEdit = (product: ProductType) => {
     setEditingProduct(product);
-
-    // OBTENER categoryId CONSISTENTEMENTE
     const categoryId = product.categoryId || product.category?.id;
 
     form.reset({
+      // Información básica
       product_name: product.product_name,
-      sku: product.sku,
       code: product.code || product.sku,
+      sku: product.sku,
       description: product.description || "",
-      base_price: product.base_price,
+
+      // Relaciones
       companyId: product.companyId || activeCompanyId,
       categoryId: categoryId || 0,
       brand_id: product.brand_id || undefined,
+
+      // Precios y costos
+      base_price: product.base_price,
       current_cost: product.current_cost,
+      previous_cost: product.previous_cost,
+      average_cost: product.average_cost,
+
+      // Niveles de precio
       price_level_1: product.price_level_1,
       price_level_2: product.price_level_2,
       price_level_3: product.price_level_3,
+      price_level_4: product.price_level_4,
+      price_level_5: product.price_level_5,
+
+      // Gestión de inventario
+      manages_serials: product.manages_serials,
+      manages_lots: product.manages_lots,
+      uses_decimals_in_quantity: product.uses_decimals_in_quantity,
+      uses_scale_for_weight: product.uses_scale_for_weight,
+
+      // Impuestos
+      is_tax_exempt: product.is_tax_exempt,
+
+      // Dimensiones y peso
+      weight_value: product.weight_value,
+      weight_unit: product.weight_unit || "kg",
+      volume_value: product.volume_value,
+      volume_unit: product.volume_unit || "m³",
+      length_value: product.length_value,
+      width_value: product.width_value,
+      height_value: product.height_value,
+      dimension_unit: product.dimension_unit || "cm",
+
+      // Visibilidad
+      show_in_ecommerce: product.show_in_ecommerce,
+      show_in_sales_app: product.show_in_sales_app,
+
+      // Stock
+      stock_quantity: product.stock_quantity,
+      total_quantity_reserved: product.total_quantity_reserved,
+      total_quantity_on_order: product.total_quantity_on_order,
+
+      // Estado
       is_active: product.is_active,
+
+      // Códigos ERP
+      erp_code_inst: product.erp_code_inst || "",
+      external_code: product.external_code || "",
     });
+
     setIsModalOpen(true);
+    setActiveTab("basic");
   };
 
   const resetForm = () => {
     form.reset({
       product_name: "",
+      code: "",
       sku: "",
-      code: "", // AÑADIDO
       description: "",
-      base_price: 0,
-      companyId: activeCompanyId, // INCLUIR companyId
+      companyId: activeCompanyId,
       categoryId: 0,
       brand_id: undefined,
+      base_price: 0,
       current_cost: 0,
+      previous_cost: 0,
+      average_cost: 0,
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
+      price_level_4: 0,
+      price_level_5: 0,
+      manages_serials: false,
+      manages_lots: false,
+      uses_decimals_in_quantity: false,
+      uses_scale_for_weight: false,
+      is_tax_exempt: false,
+      weight_value: 0,
+      weight_unit: "kg",
+      volume_value: 0,
+      volume_unit: "m³",
+      length_value: 0,
+      width_value: 0,
+      height_value: 0,
+      dimension_unit: "cm",
+      show_in_ecommerce: false,
+      show_in_sales_app: false,
+      stock_quantity: 0,
+      total_quantity_reserved: 0,
+      total_quantity_on_order: 0,
       is_active: true,
+      erp_code_inst: "",
+      external_code: "",
     });
     setEditingProduct(null);
+    setActiveTab("basic");
   };
 
   const getBrandName = (brandId: number | undefined) => {
@@ -373,13 +564,8 @@ const ProductsPage = () => {
       const category = categories.find((c) => c.id === categoryId);
       if (category) {
         return category.category_name;
-      } else {
-        console.log(
-          `❌ Categoría ID ${categoryId} no encontrada en categorías globales`
-        );
       }
     }
-
     return "Sin categoría";
   };
 
@@ -440,14 +626,6 @@ const ProductsPage = () => {
       },
     },
     {
-      accessorKey: "price_level_1",
-      header: "Precio 1",
-      cell: ({ row }) => {
-        const price = parseFloat(row.getValue("price_level_1"));
-        return <div className="font-medium">{formatPrice(price)}</div>;
-      },
-    },
-    {
       accessorKey: "is_active",
       header: "Estado",
       cell: ({ row }) => {
@@ -455,7 +633,7 @@ const ProductsPage = () => {
         return (
           <div
             className={`font-medium ${
-              isActive ? "text-green-600" : "text-red-600"
+              isActive ? "text-green-600" : "text-red_m"
             }`}
           >
             {isActive ? "Activo" : "Inactivo"}
@@ -487,7 +665,7 @@ const ProductsPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(product)}
-                  className="cursor-pointer flex items-center gap-2 text-red-600"
+                  className="cursor-pointer flex items-center gap-2 text-red_m"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar</span>
@@ -525,7 +703,7 @@ const ProductsPage = () => {
     );
   }
 
-  if (productsError || categoriesError || brandsError) {
+  if (productsError || categoriesError) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
         <Sidebar />
@@ -535,16 +713,9 @@ const ProductsPage = () => {
             isSidebarOpen={sidebarOpen}
           />
           <main className="flex-1 p-8 flex items-center justify-center">
-            <div className="text-center text-red-600">
-              <p>Error: {productsError || categoriesError || brandsError}</p>
-              <Button
-                onClick={() => {
-                  refetchProducts();
-                  refetchCategories();
-                  refetchBrands();
-                }}
-                className="mt-4"
-              >
+            <div className="text-center text-red_m">
+              <p>Error: {productsError || categoriesError}</p>
+              <Button onClick={() => refetchProducts()} className="mt-4">
                 Reintentar
               </Button>
             </div>
@@ -559,7 +730,6 @@ const ProductsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -567,7 +737,7 @@ const ProductsPage = () => {
         />
 
         <main className="bg-gradient-to-br from-gray_xxl to-gray_l/20 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Productos
             </h1>
@@ -638,19 +808,17 @@ const ProductsPage = () => {
               </DropdownMenu>
             </div>
             <div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button
-                  onClick={() => {
-                    resetForm();
-                    setIsModalOpen(true);
-                  }}
-                  className="gap-2 w-full sm:w-auto"
-                  disabled={productsLoading}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Nuevo producto</span>
-                </Button>
-              </div>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsModalOpen(true);
+                }}
+                className="gap-2 w-full sm:w-auto"
+                disabled={productsLoading}
+              >
+                <Plus className="h-4 w-4" />
+                <span>Nuevo producto</span>
+              </Button>
             </div>
           </div>
 
@@ -670,9 +838,9 @@ const ProductsPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar producto */}
+      {/* Modal para crear/editar producto - COMPLETO */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               {editingProduct ? "Editar producto" : "Nuevo producto"}
@@ -681,285 +849,870 @@ const ProductsPage = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-              <div className="grid gap-4 py-2 sm:py-4">
-                <FormField
-                  control={form.control}
-                  name="product_name"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                      <FormLabel className="pt-2 sm:text-right">
-                        Nombre
-                      </FormLabel>
-                      <div className="w-full col-span-1 sm:col-span-3">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full"
-                            placeholder="Arroz"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                <TabsList className="bg-white shadow grid w-full grid-cols-5">
+                  <TabsTrigger
+                    value="basic"
+                    className="flex items-center gap-2"
+                  >
+                    <Package className="h-4 w-4" />
+                    <span className="hidden sm:inline">Básico</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="pricing"
+                    className="flex items-center gap-2"
+                  >
+                    <Barcode className="h-4 w-4" />
+                    <span className="hidden sm:inline">Precios</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="inventory"
+                    className="flex items-center gap-2"
+                  >
+                    <Box className="h-4 w-4" />
+                    <span className="hidden sm:inline">Inventario</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="dimensions"
+                    className="flex items-center gap-2"
+                  >
+                    <Ruler className="h-4 w-4" />
+                    <span className="hidden sm:inline">Medidas</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="visibility"
+                    className="flex items-center gap-2"
+                  >
+                    <Globe className="h-4 w-4" />
+                    <span className="hidden sm:inline">Visibilidad</span>
+                  </TabsTrigger>
+                </TabsList>
 
-                <FormField
-                  control={form.control}
-                  name="sku"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                      <FormLabel className="pt-2 sm:text-right">SKU</FormLabel>
-                      <div className="w-full col-span-1 sm:col-span-3">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full"
-                            placeholder="BEB-COC-4821"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                {/* Pestaña: Información Básica */}
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        Información Básica
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="product_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nombre del Producto *</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Nombre del producto"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                      <FormLabel className="pt-2 sm:text-right">
-                        Código
-                      </FormLabel>
-                      <div className="w-full col-span-1 sm:col-span-3">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full"
-                            placeholder="Código interno"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col sm:grid sm:grid-cols-4 items-start gap-2">
-                      <FormLabel className="pt-2 sm:text-right">
-                        Descripción
-                      </FormLabel>
-                      <div className="w-full col-span-1 sm:col-span-3">
-                        <FormControl>
-                          <textarea
-                            {...field}
-                            className="bg-white flex w-full rounded-md border border-input  px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            rows={3}
-                            placeholder="Escribe aquí..."
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Select Searchable para Categorías */}
-                  <FormField
-                    control={form.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Categoría *</FormLabel>
-                        <FormControl>
-                          <SelectSearchable
-                            value={field.value ? field.value.toString() : ""}
-                            onValueChange={(value) =>
-                              field.onChange(value ? parseInt(value) : 0)
-                            }
-                            placeholder="Selecciona una categoría"
-                            options={categoryOptions}
-                            searchPlaceholder="Buscar categoría..."
-                            emptyMessage="No se encontraron categorías."
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Select Searchable para Marcas - CORREGIDO */}
-                  <FormField
-                    control={form.control}
-                    name="brand_id"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Marca</FormLabel>{" "}
-                        {/* Removido el asterisco */}
-                        <FormControl>
-                          <SelectSearchable
-                            value={field.value?.toString()}
-                            onValueChange={(value) =>
-                              field.onChange(
-                                value ? parseInt(value) : undefined
-                              )
-                            }
-                            placeholder="Selecciona una marca (opcional)"
-                            options={brandOptions}
-                            searchPlaceholder="Buscar marca..."
-                            emptyMessage="No se encontraron marcas."
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="current_cost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Costo Actual</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="base_price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio Base</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price_level_1"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio N1</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="price_level_2"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio N2</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="price_level_3"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio N3</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="code"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Código *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Código interno"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Producto activo</FormLabel>
-                        <FormDescription className="text-xs sm:text-sm">
-                          Los productos inactivos no estarán disponibles para la
-                          venta
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+                        <FormField
+                          control={form.control}
+                          name="sku"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>SKU</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="SKU del producto"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Descripción</FormLabel>
+                            <FormControl>
+                              <textarea
+                                {...field}
+                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                                placeholder="Descripción del producto"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="categoryId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Categoría *</FormLabel>
+                              <FormControl>
+                                <SelectSearchable
+                                  value={
+                                    field.value ? field.value.toString() : ""
+                                  }
+                                  onValueChange={(value) =>
+                                    field.onChange(value ? parseInt(value) : 0)
+                                  }
+                                  placeholder="Selecciona una categoría"
+                                  options={categoryOptions}
+                                  searchPlaceholder="Buscar categoría..."
+                                  emptyMessage="No se encontraron categorías."
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="brand_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Marca</FormLabel>
+                              <FormControl>
+                                <SelectSearchable
+                                  value={field.value?.toString()}
+                                  onValueChange={(value) =>
+                                    field.onChange(
+                                      value ? parseInt(value) : undefined
+                                    )
+                                  }
+                                  placeholder="Selecciona una marca"
+                                  options={brandOptions}
+                                  searchPlaceholder="Buscar marca..."
+                                  emptyMessage="No se encontraron marcas."
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="erp_code_inst"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Código ERP</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Código del ERP"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="external_code"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Código Externo</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Código externo"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Pestaña: Precios y Costos */}
+                <TabsContent value="pricing" className="space-y-4 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        Precios y Costos
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="base_price"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Precio Base *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="current_cost"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Costo Actual</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="previous_cost"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Costo Anterior</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="average_cost"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Costo Promedio</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <FormField
+                            key={level}
+                            control={form.control}
+                            name={
+                              `price_level_${level}` as `price_level_${
+                                | 1
+                                | 2
+                                | 3
+                                | 4
+                                | 5}`
+                            }
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Precio {level}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    {...field}
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    }
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Pestaña: Gestión de Inventario */}
+                <TabsContent value="inventory" className="space-y-4 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        Gestión de Inventario
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="stock_quantity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Stock Inicial</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="total_quantity_reserved"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Cantidad Reservada</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="total_quantity_on_order"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cantidad en Orden</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(parseInt(e.target.value) || 0)
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="manages_serials"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Gestiona Seriales</FormLabel>
+                                <FormDescription>
+                                  El producto requiere números de serie
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="manages_lots"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Gestiona Lotes</FormLabel>
+                                <FormDescription>
+                                  El producto requiere control por lotes
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="uses_decimals_in_quantity"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Usa Decimales</FormLabel>
+                                <FormDescription>
+                                  Permite cantidades decimales
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="uses_scale_for_weight"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Usa Báscula</FormLabel>
+                                <FormDescription>
+                                  Se pesa al momento de la venta
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="is_tax_exempt"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Exento de Impuestos</FormLabel>
+                              <FormDescription>
+                                El producto no paga impuestos
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Pestaña: Dimensiones y Peso */}
+                <TabsContent value="dimensions" className="space-y-4 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        Dimensiones y Peso
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="weight_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Peso</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="weight_unit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unidad de Peso</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona unidad" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="kg">
+                                    Kilogramos (kg)
+                                  </SelectItem>
+                                  <SelectItem value="g">Gramos (g)</SelectItem>
+                                  <SelectItem value="lb">
+                                    Libras (lb)
+                                  </SelectItem>
+                                  <SelectItem value="oz">Onzas (oz)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="volume_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Volumen</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="volume_unit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unidad de Volumen</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona unidad" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="m³">
+                                    Metros cúbicos (m³)
+                                  </SelectItem>
+                                  <SelectItem value="cm³">
+                                    Centímetros cúbicos (cm³)
+                                  </SelectItem>
+                                  <SelectItem value="l">Litros (l)</SelectItem>
+                                  <SelectItem value="ml">
+                                    Mililitros (ml)
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="length_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Longitud</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="width_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ancho</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="height_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Altura</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="dimension_unit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unidad de Dimensión</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona unidad" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="cm">
+                                  Centímetros (cm)
+                                </SelectItem>
+                                <SelectItem value="m">Metros (m)</SelectItem>
+                                <SelectItem value="in">
+                                  Pulgadas (in)
+                                </SelectItem>
+                                <SelectItem value="ft">Pies (ft)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Pestaña: Visibilidad y Estado */}
+                <TabsContent value="visibility" className="space-y-4 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        Visibilidad y Estado
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="show_in_ecommerce"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Mostrar en E-commerce</FormLabel>
+                                <FormDescription>
+                                  Visible en tienda online
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="show_in_sales_app"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Mostrar en App de Ventas</FormLabel>
+                                <FormDescription>
+                                  Visible en aplicación móvil
+                                </FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="is_active"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Producto Activo</FormLabel>
+                              <FormDescription>
+                                El producto está disponible para venta
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -969,19 +1722,64 @@ const ProductsPage = () => {
                   }}
                   className="w-full sm:w-auto"
                 >
-                  Cerrar
+                  Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  className="w-full sm:w-auto"
-                  disabled={form.formState.isSubmitting}
-                >
-                  {form.formState.isSubmitting
-                    ? "Guardando..."
-                    : editingProduct
-                    ? "Actualizar"
-                    : "Guardar"}
-                </Button>
+                <div className="flex gap-2">
+                  {activeTab !== "basic" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const tabs = [
+                          "basic",
+                          "pricing",
+                          "inventory",
+                          "dimensions",
+                          "visibility",
+                        ];
+                        const currentIndex = tabs.indexOf(activeTab);
+                        if (currentIndex > 0) {
+                          setActiveTab(tabs[currentIndex - 1]);
+                        }
+                      }}
+                    >
+                      Anterior
+                    </Button>
+                  )}
+                  {activeTab !== "visibility" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const tabs = [
+                          "basic",
+                          "pricing",
+                          "inventory",
+                          "dimensions",
+                          "visibility",
+                        ];
+                        const currentIndex = tabs.indexOf(activeTab);
+                        if (currentIndex < tabs.length - 1) {
+                          setActiveTab(tabs[currentIndex + 1]);
+                        }
+                      }}
+                    >
+                      Siguiente
+                    </Button>
+                  )}
+                  {activeTab === "visibility" && (
+                    <Button
+                      type="submit"
+                      disabled={form.formState.isSubmitting}
+                    >
+                      {form.formState.isSubmitting
+                        ? "Guardando..."
+                        : editingProduct
+                        ? "Actualizar"
+                        : "Crear"}
+                    </Button>
+                  )}
+                </div>
               </DialogFooter>
             </form>
           </Form>

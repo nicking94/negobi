@@ -415,7 +415,7 @@ const InstancesPage = () => {
 
                 {/* Eliminar */}
                 <DropdownMenuItem
-                  className={`cursor-pointer flex items-center gap-2 text-red-600 ${
+                  className={`cursor-pointer flex items-center gap-2 text-red_m ${
                     !hasValidId ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                   onClick={() => handleDelete(category)}
@@ -463,7 +463,7 @@ const InstancesPage = () => {
             isSidebarOpen={sidebarOpen}
           />
           <main className="flex-1 p-8 flex items-center justify-center">
-            <div className="text-center text-red-600">
+            <div className="text-center text-red_m">
               <p>Error: {error}</p>
               <Button
                 onClick={() => setModified((prev) => !prev)}
@@ -541,7 +541,7 @@ const InstancesPage = () => {
                     {...register("category_name")}
                   />
                   {errors.category_name && (
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_name.message}
                     </p>
                   )}
@@ -559,7 +559,7 @@ const InstancesPage = () => {
                     disabled={!!editingCategory}
                   />
                   {errors.category_code && (
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.category_code.message}
                     </p>
                   )}
@@ -578,7 +578,7 @@ const InstancesPage = () => {
                     rows={3}
                   />
                   {errors.description && (
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.description.message}
                     </p>
                   )}
@@ -595,7 +595,7 @@ const InstancesPage = () => {
                     {...register("prefix")}
                   />
                   {errors.prefix && (
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.prefix.message}
                     </p>
                   )}
@@ -613,7 +613,7 @@ const InstancesPage = () => {
                     {...register("correlative_length", { valueAsNumber: true })}
                   />
                   {errors.correlative_length && (
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red_m text-sm mt-1">
                       {errors.correlative_length.message}
                     </p>
                   )}
