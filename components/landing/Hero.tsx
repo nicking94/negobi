@@ -2,6 +2,8 @@ import Image from "next/image";
 import { Button } from "../ui/button";
 import playIcon from "@/public/images/google-play-store.png";
 import Metrics from "./Metrics";
+
+import mockupLogo from "@/public/images/mockup.png";
 const Hero = () => {
   return (
     <section className="relative bg-gradient-to-br from-green_m to-green_b text-white py-28 px-4 overflow-hidden">
@@ -52,7 +54,7 @@ const Hero = () => {
           <div className="hidden lg:block w-1/2">
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2 border border-white/10 shadow-2xl">
               <Image
-                src="/images/mockup.png"
+                src={mockupLogo}
                 alt="Negobi"
                 width={600}
                 height={500}
