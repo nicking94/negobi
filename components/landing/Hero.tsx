@@ -61,6 +61,7 @@ const Hero = () => {
                 className="rounded"
               />
             </div>
+            {/* comentario para build */}
           </div>
         </div>
       </div>
