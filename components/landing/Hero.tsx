@@ -59,6 +59,7 @@ const Hero = () => {
                 width={600}
                 height={500}
                 className="rounded"
+                //comentario para hacer build
               />
             </div>
           </div>
