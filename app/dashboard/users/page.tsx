@@ -47,6 +47,11 @@ import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import * as z from "zod";
 import useGetUsers from "@/hooks/users/useGetUsers";
@@ -76,7 +81,6 @@ const createUserSchema = (availableRoles: string[] = []) => {
     last_name: z.string().min(1, "El apellido es obligatorio"),
     phone: z.string().optional(),
 
-    // 🚀 validación dinámica de roles
     role: z.string().refine((val) => availableRoles.includes(val), {
       message: "Selecciona un rol válido",
     }),
@@ -104,7 +108,6 @@ const UsersPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   const getAvailableRoles = useMemo(() => {
     if (!rolesData) return [];
@@ -133,7 +136,6 @@ const UsersPage = () => {
 
   const userSchema = createUserSchema(availableRoles);
 
-  // Usar los hooks
   const {
     users,
     page,
@@ -215,7 +217,6 @@ const UsersPage = () => {
     }
   }, [availableRoles, form, selectedUser]);
 
-  // Efecto para resetear form cuando se cierran los diálogos
   useEffect(() => {
     if (!isEditDialogOpen && !isCreateDialogOpen) {
       form.reset();
@@ -223,7 +224,6 @@ const UsersPage = () => {
     }
   }, [isEditDialogOpen, isCreateDialogOpen, form]);
 
-  // Efecto para cargar datos del usuario en edición
   useEffect(() => {
     if (selectedUser && isEditDialogOpen && availableRoles.length > 0) {
       form.reset({
@@ -301,6 +301,10 @@ const UsersPage = () => {
     });
   };
 
+  const handleClearFilters = () => {
+    setRoleFilter("all");
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "No especificada";
     try {
@@ -348,10 +352,7 @@ const UsersPage = () => {
       accessorKey: "role",
       header: "Rol",
       cell: ({ row }) => (
-        <div className="font-medium">
-          {/* ✅ Usar translateRole aquí */}
-          {translateRole(row.getValue("role"))}
-        </div>
+        <div className="font-medium">{translateRole(row.getValue("role"))}</div>
       ),
     },
     {
@@ -425,7 +426,6 @@ const UsersPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -453,52 +453,60 @@ const UsersPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu
-                  open={isFilterDropdownOpen}
-                  onOpenChange={setIsFilterDropdownOpen}
-                >
-                  <DropdownMenuTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-[18rem]"
-                    onInteractOutside={(e) => {
-                      // Permitir que el clic fuera cierre el dropdown
-                      const target = e.target as HTMLElement;
-                      if (!target.closest("[data-radix-select-content]")) {
-                        setIsFilterDropdownOpen(false);
-                      }
-                    }}
-                  >
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="role-filter">Rol</Label>
-                      <Select
-                        value={roleFilter}
-                        onValueChange={(value) => {
-                          setRoleFilter(value);
-                          // Cerrar el dropdown después de seleccionar
-                          setTimeout(() => setIsFilterDropdownOpen(false), 100);
-                        }}
-                      >
-                        <SelectTrigger id="role-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los roles" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los roles</SelectItem>
-                          {availableRoles.map((role: string, index: number) => (
-                            <SelectItem key={index} value={role}>
-                              {translateRole(role)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="role-filter">Rol</Label>
+                        <Select
+                          value={roleFilter}
+                          onValueChange={setRoleFilter}
+                        >
+                          <SelectTrigger id="role-filter">
+                            <SelectValue placeholder="Todos los roles" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos los roles</SelectItem>
+                            {availableRoles.map(
+                              (role: string, index: number) => (
+                                <SelectItem key={index} value={role}>
+                                  {translateRole(role)}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearFilters}
+                        >
+                          Limpiar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            document.dispatchEvent(
+                              new KeyboardEvent("keydown", { key: "Escape" })
+                            );
+                          }}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <Button
@@ -525,7 +533,6 @@ const UsersPage = () => {
         </main>
       </div>
 
-      {/* Modal para ver detalles de usuario */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -581,7 +588,7 @@ const UsersPage = () => {
                   </Label>
                   <div className="flex items-center mt-1 gap-2">
                     <BadgeCheck className="h-4 w-4 text-gray_m" />
-                    {/* ✅ Usar translateRole aquí */}
+
                     <p>{translateRole(selectedUser.role)}</p>
                   </div>
                 </div>
@@ -667,7 +674,6 @@ const UsersPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para crear/editar usuario */}
       <Dialog
         open={isEditDialogOpen || isCreateDialogOpen}
         onOpenChange={(open) => {
@@ -799,7 +805,6 @@ const UsersPage = () => {
                         <SelectContent>
                           {availableRoles.map((role: string, index: number) => (
                             <SelectItem key={index} value={role}>
-                              {/* ✅ Usar translateRole aquí también */}
                               {translateRole(role)}
                             </SelectItem>
                           ))}

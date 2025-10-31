@@ -7,49 +7,37 @@ import {
   DeleteBarCode,
 } from "../barCodes/barCodes.route";
 
-// Parámetros para obtener códigos de barras
 export interface GetBarCodesParams {
   page?: number;
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId: string; // Requerido según el swagger
+  companyId: string;
   productId?: string;
 }
 
-// Interfaz principal del código de barras
 export interface BarCode {
-  // Campos principales
   id: number;
   code: string;
-
-  // Campos de relación (opcionales en response)
   product_id?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
-
-  // Campos adicionales del response de lista
   externalId?: number;
 }
 
-// Datos para crear un código de barras
 export interface CreateBarCodeData {
   code: string;
   product_id?: number;
 }
 
-// Datos para actualizar un código de barras
 export interface UpdateBarCodeData {
   code?: string;
   product_id?: number;
 }
 
-// Interfaces de respuesta
 export interface BarCodeResponse {
   success: boolean;
   data: BarCode;
@@ -72,36 +60,31 @@ export interface PaginatedBarCodesResponse {
   data: BarCodesListResponse["data"];
 }
 
-// Interfaz para código de barras con información extendida
 export interface BarCodeWithDetails extends BarCode {
   product_name?: string;
   product_code?: string;
 }
 
-// Tipos de códigos de barras soportados
 export const BAR_CODE_TYPES = {
-  EAN13: "EAN13", // 13 dígitos
-  EAN8: "EAN8", // 8 dígitos
-  UPC_A: "UPC_A", // 12 dígitos
-  UPC_E: "UPC_E", // 6-8 dígitos
-  CODE128: "CODE128", // Variable length
-  CODE39: "CODE39", // Variable length
+  EAN13: "EAN13",
+  EAN8: "EAN8",
+  UPC_A: "UPC_A",
+  UPC_E: "UPC_E",
+  CODE128: "CODE128",
+  CODE39: "CODE39",
 } as const;
 
 export type BarCodeType = (typeof BAR_CODE_TYPES)[keyof typeof BAR_CODE_TYPES];
 
 export const barCodeService = {
-  // Crear un nuevo código de barras
   createBarCode: async (barCodeData: CreateBarCodeData): Promise<BarCode> => {
     const response = await api.post(PostBarCode, barCodeData);
     return response.data.data;
   },
 
-  // Obtener todos los códigos de barras
   getBarCodes: async (params: GetBarCodesParams): Promise<BarCode[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
@@ -109,7 +92,6 @@ export const barCodeService = {
     );
     queryParams.append("companyId", params.companyId);
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -121,16 +103,14 @@ export const barCodeService = {
     }
 
     const response = await api.get(`${GetBarCodes}?${queryParams}`);
-    return response.data.data.data; // Acceder a data.data por la estructura de respuesta
+    return response.data.data.data;
   },
 
-  // Obtener un código de barras por ID
   getBarCodeById: async (id: string): Promise<BarCode> => {
     const response = await api.get(`${GetBarCodeById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar un código de barras
   updateBarCode: async (
     id: string,
     updates: UpdateBarCodeData
@@ -139,12 +119,10 @@ export const barCodeService = {
     return response.data.data;
   },
 
-  // Eliminar un código de barras
   deleteBarCode: async (id: string): Promise<void> => {
     await api.delete(`${DeleteBarCode}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getBarCodesByCompany: async (companyId: string): Promise<BarCode[]> => {
     return barCodeService.getBarCodes({
       companyId,
@@ -174,7 +152,6 @@ export const barCodeService = {
     });
   },
 
-  // Buscar por código exacto
   getBarCodeByCode: async (
     companyId: string,
     code: string
@@ -192,7 +169,6 @@ export const barCodeService = {
     }
   },
 
-  // Verificar si existe un código de barras
   checkBarCodeExists: async (
     companyId: string,
     code: string
@@ -206,7 +182,6 @@ export const barCodeService = {
     }
   },
 
-  // Asignar código de barras a producto
   assignBarCodeToProduct: async (
     barCodeId: string,
     productId: number
@@ -214,19 +189,16 @@ export const barCodeService = {
     return barCodeService.updateBarCode(barCodeId, { product_id: productId });
   },
 
-  // Desasignar código de barras de producto
   unassignBarCodeFromProduct: async (barCodeId: string): Promise<BarCode> => {
     return barCodeService.updateBarCode(barCodeId, { product_id: undefined });
   },
 
-  // Validar formato de código de barras
   validateBarCodeFormat: (
     code: string
   ): { isValid: boolean; type?: BarCodeType; errors: string[] } => {
     const errors: string[] = [];
     let type: BarCodeType | undefined;
 
-    // Remover espacios y guiones
     const cleanCode = code.replace(/[\s-]/g, "");
 
     if (!cleanCode) {
@@ -234,12 +206,10 @@ export const barCodeService = {
       return { isValid: false, errors };
     }
 
-    // Validar que solo contenga números (para la mayoría de tipos)
     if (!/^\d+$/.test(cleanCode)) {
       errors.push("El código de barras debe contener solo números");
     }
 
-    // Validar longitudes específicas
     const length = cleanCode.length;
 
     switch (length) {
@@ -265,7 +235,7 @@ export const barCodeService = {
       case 7:
       case 8:
         type = BAR_CODE_TYPES.UPC_E;
-        // UPC-E tiene validación más compleja, asumimos válido por ahora
+
         break;
       default:
         if (length >= 1 && length <= 255) {
@@ -282,7 +252,6 @@ export const barCodeService = {
     };
   },
 
-  // Validar dígito de control EAN-13
   validateEAN13: (code: string): boolean => {
     if (code.length !== 13) return false;
 
@@ -297,7 +266,6 @@ export const barCodeService = {
     return checkDigit === digits[12];
   },
 
-  // Validar dígito de control EAN-8
   validateEAN8: (code: string): boolean => {
     if (code.length !== 8) return false;
 
@@ -312,7 +280,6 @@ export const barCodeService = {
     return checkDigit === digits[7];
   },
 
-  // Validar dígito de control UPC-A
   validateUPCA: (code: string): boolean => {
     if (code.length !== 12) return false;
 
@@ -327,7 +294,6 @@ export const barCodeService = {
     return checkDigit === digits[11];
   },
 
-  // Generar dígito de control para EAN-13
   generateEAN13CheckDigit: (code: string): string => {
     if (code.length !== 12)
       throw new Error("Se requieren 12 dígitos para EAN-13");
@@ -343,7 +309,6 @@ export const barCodeService = {
     return checkDigit.toString();
   },
 
-  // Formatear código de barras para visualización
   formatBarCode: (code: string, type?: BarCodeType): string => {
     const cleanCode = code.replace(/[\s-]/g, "");
 
@@ -365,14 +330,12 @@ export const barCodeService = {
         }
         break;
       default:
-        // Para otros tipos, agrupar cada 4 dígitos
         return cleanCode.replace(/(.{4})/g, "$1 ").trim();
     }
 
     return cleanCode;
   },
 
-  // Obtener estadísticas de códigos de barras
   getBarCodesStatistics: async (
     companyId: string
   ): Promise<{
@@ -409,7 +372,6 @@ export const barCodeService = {
     }
   },
 
-  // Crear múltiples códigos de barras
   createMultipleBarCodes: async (
     companyId: string,
     barCodesData: CreateBarCodeData[]
@@ -429,15 +391,8 @@ export const barCodeService = {
     return createdBarCodes;
   },
 
-  // Buscar productos sin código de barras (simulado - en una implementación real esto vendría del backend)
-  findProductsWithoutBarCodes: async (companyId: string): Promise<number[]> => {
-    // Esta es una implementación simulada
-    // En una implementación real, esto consultaría la base de datos
-    console.log(
-      "Buscando productos sin códigos de barras para company:",
-      companyId
-    );
-    return []; // Retornar array vacío como placeholder
+  findProductsWithoutBarCodes: async (): Promise<number[]> => {
+    return [];
   },
 
   generateSequentialBarCodes: (

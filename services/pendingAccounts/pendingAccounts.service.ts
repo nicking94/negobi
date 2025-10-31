@@ -23,7 +23,6 @@ export interface GetPendingAccountsParams {
   status?: string;
 }
 
-// Tipos para los valores enumerados
 export type AccountType = "receivable" | "payable";
 
 export type AccountStatus =
@@ -34,7 +33,6 @@ export type AccountStatus =
   | "Cancelled";
 
 export interface PendingAccount {
-  // Campos del response (GET)
   id: number;
   account_type: AccountType;
   amount_due: number;
@@ -42,15 +40,11 @@ export interface PendingAccount {
   due_date: string;
   status: AccountStatus;
   notes: string;
-
-  // Campos de relación (IDs)
   companyId?: number;
   clientId?: number;
   supplierId?: number;
   documentId?: number;
   currencyId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -59,15 +53,12 @@ export interface PendingAccount {
 }
 
 export interface CreatePendingAccountData {
-  // Campos requeridos para crear una cuenta pendiente
   account_type: AccountType;
   companyId: number;
   amount_due: number;
   balance_due: number;
   due_date: string;
   status: AccountStatus;
-
-  // Campos opcionales para creación
   clientId?: number;
   supplierId?: number;
   documentId?: number;
@@ -77,7 +68,6 @@ export interface CreatePendingAccountData {
 }
 
 export interface UpdatePendingAccountData {
-  // Todos los campos son opcionales para actualización
   account_type?: AccountType;
   companyId?: number;
   clientId?: number;
@@ -92,7 +82,6 @@ export interface UpdatePendingAccountData {
   external_code?: string;
 }
 
-// Response interfaces
 export interface PendingAccountResponse {
   success: boolean;
   data: PendingAccount;
@@ -112,7 +101,6 @@ export interface PaginatedPendingAccountsResponse {
   };
 }
 
-// Función corregida para formatear números decimales
 const formatDecimalForAPI = (value: number | undefined): number => {
   if (value === undefined || value === null) return 0;
 
@@ -121,30 +109,16 @@ const formatDecimalForAPI = (value: number | undefined): number => {
 
   const formatted = parseFloat(numValue.toFixed(2));
 
-  console.log("🔢 FormatDecimalForAPI CORREGIDA:", {
-    input: value,
-    output: formatted,
-    stringified: formatted.toString(),
-    hasDecimals: formatted.toString().includes("."),
-  });
-
   return formatted;
 };
 
 class PendingAccountsService {
   async create(data: CreatePendingAccountData): Promise<PendingAccount> {
-    // ✅ ENVIAR COMO STRINGS FORMATEADOS
     const formattedData = {
       ...data,
-      amount_due: data.amount_due.toFixed(2), // "12000.00"
-      balance_due: data.balance_due.toFixed(2), // "0.00"
+      amount_due: data.amount_due.toFixed(2),
+      balance_due: data.balance_due.toFixed(2),
     };
-
-    console.log("🚀 ENVIANDO COMO STRINGS FORMATEADOS:", {
-      payload: formattedData,
-      amount_due_type: typeof formattedData.amount_due,
-      balance_due_type: typeof formattedData.balance_due,
-    });
 
     try {
       const response = await api.post(PostPendingAccount, formattedData);
@@ -160,15 +134,12 @@ class PendingAccountsService {
     const numValue = Number(value);
     if (isNaN(numValue)) return 0;
 
-    // Forzar siempre 2 decimales
     return parseFloat(numValue.toFixed(2));
   }
 
-  // Obtener todas las cuentas pendientes
   async getAll(params?: GetPendingAccountsParams): Promise<PendingAccount[]> {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
@@ -215,23 +186,18 @@ class PendingAccountsService {
       queryParams.append("status", params.status);
     }
 
-    console.log("🔍 GET URL Params:", queryParams.toString());
-
     const response = await api.get(`${GetPendingAccounts}?${queryParams}`);
 
-    console.log("🔍 GET Response completa:", response.data);
-
-    // ✅ NORMALIZAR LA RESPUESTA - convertir objetos anidados a IDs planos
     if (response.data.data && Array.isArray(response.data.data)) {
       const normalizedAccounts = response.data.data.map((account: any) => ({
         ...account,
-        // Extraer IDs de objetos anidados
+
         companyId: account.company?.id || account.companyId,
         clientId: account.client?.id || account.clientId,
         supplierId: account.supplier?.id || account.supplierId,
         currencyId: account.currency?.id || account.currencyId,
         documentId: account.document?.id || account.documentId,
-        // Convertir strings a números si es necesario
+
         amount_due:
           typeof account.amount_due === "string"
             ? parseFloat(account.amount_due)
@@ -242,14 +208,12 @@ class PendingAccountsService {
             : account.balance_due,
       }));
 
-      console.log("✅ Cuentas normalizadas:", normalizedAccounts);
       return normalizedAccounts;
     }
 
     return response.data.data || [];
   }
 
-  // Actualizar una cuenta pendiente
   async update(
     id: string,
     data: UpdatePendingAccountData
@@ -263,8 +227,6 @@ class PendingAccountsService {
       formattedData.balance_due = this.ensureTwoDecimals(data.balance_due);
     }
 
-    console.log("🔄 ACTUALIZANDO (CORREGIDO):", formattedData);
-
     const response = await api.patch(
       `${PatchPendingAccount}/${id}`,
       formattedData
@@ -272,18 +234,15 @@ class PendingAccountsService {
     return response.data.data;
   }
 
-  // Eliminar una cuenta pendiente
   async delete(id: string): Promise<void> {
     await api.delete(`${DeletePendingAccount}/${id}`);
   }
 
-  // Obtener una cuenta pendiente por ID
   async getById(id: string): Promise<PendingAccount> {
     const response = await api.get(`${GetPendingAccounts}/${id}`);
     return response.data.data;
   }
 
-  // Métodos adicionales útiles
   async getReceivableAccounts(companyId?: number): Promise<PendingAccount[]> {
     const params: GetPendingAccountsParams = {
       account_type: "receivable",
@@ -351,7 +310,6 @@ class PendingAccountsService {
     });
   }
 
-  // Calcular totales
   async calculateTotals(companyId?: number): Promise<{
     totalReceivable: number;
     totalPayable: number;
@@ -360,7 +318,7 @@ class PendingAccountsService {
   }> {
     const allAccounts = await this.getAll({
       companyId,
-      itemsPerPage: 1000, // Alto para obtener todas las cuentas
+      itemsPerPage: 1000,
     });
 
     const today = new Date();
@@ -392,7 +350,6 @@ class PendingAccountsService {
     };
   }
 
-  // Aplicar pago a cuenta pendiente
   async applyPayment(
     accountId: string,
     paymentAmount: number
@@ -416,7 +373,6 @@ class PendingAccountsService {
 
 export const pendingAccountsService = new PendingAccountsService();
 
-// Exportar también los métodos legacy para compatibilidad
 export const pendingAccountService = {
   createPendingAccount: (data: CreatePendingAccountData) =>
     pendingAccountsService.create(data),

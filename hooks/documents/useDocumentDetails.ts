@@ -23,29 +23,20 @@ export const useDocumentDetails = () => {
       setLoading(true);
       setError(null);
 
-      console.log("📋 Obteniendo detalles del documento:", documentId);
-
-      // Obtener el documento
       const document = await documentService.getDocumentById(documentId);
-      console.log("📄 Documento obtenido:", document);
 
-      // Obtener los items del documento
       let items: DocumentItem[] = [];
       try {
         const itemsResponse =
           await documentItemService.getDocumentItemsByDocument(
             parseInt(documentId)
           );
-        console.log("📦 Items obtenidos:", itemsResponse);
 
-        // Asegurarnos de que items sea un array - VERSIÓN CON TIPOS SEGUROS
         if (Array.isArray(itemsResponse)) {
           items = itemsResponse;
         } else if (itemsResponse && typeof itemsResponse === "object") {
-          // Usar type assertion para evitar errores de TypeScript
           const response = itemsResponse as any;
 
-          // Verificar diferentes estructuras posibles
           if (Array.isArray(response.data)) {
             items = response.data;
           } else if (Array.isArray(response.items)) {
@@ -57,8 +48,6 @@ export const useDocumentDetails = () => {
             items = [];
           }
         }
-
-        console.log("✅ Items procesados:", items);
       } catch (itemsError) {
         console.warn(
           "⚠️ Error al obtener items, continuando sin items:",

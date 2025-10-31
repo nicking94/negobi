@@ -1,4 +1,4 @@
-// components/ProtectedRoute.tsx (actualizado)
+// components/ProtectedRoute.tsx
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -17,7 +17,6 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Usar replace para evitar que el usuario vuelva atrás
       router.replace("/login");
     } else if (
       !isLoading &&
@@ -26,12 +25,10 @@ export default function ProtectedRoute({
       requiredRole &&
       user.role !== requiredRole
     ) {
-      // Redirigir si no tiene el rol requerido
       router.replace("/unauthorized");
     }
   }, [user, isAuthenticated, isLoading, router, pathname, requiredRole]);
 
-  // Mostrar loading mientras verifica
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -43,12 +40,10 @@ export default function ProtectedRoute({
     );
   }
 
-  // No renderizar nada si no está autenticado (será redirigido)
   if (!isAuthenticated) {
     return null;
   }
 
-  // Verificar rol si es requerido
   if (requiredRole && user && user.role !== requiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

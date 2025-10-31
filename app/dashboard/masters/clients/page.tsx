@@ -64,7 +64,13 @@ import { useClientTypes } from "@/hooks/clients/useClientTypes";
 import { clientTypeTranslations } from "@/utils/clientTypeTranslations";
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
 import { SelectSearchable } from "@/components/ui/select-searchable";
-import { useUserCompany } from "@/hooks/auth/useUserCompany"; // ✅ IMPORTAR EL HOOK
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type Client = {
   id?: string;
@@ -146,7 +152,6 @@ const clientSchema = z.object({
     .string()
     .min(1, "El número de documento fiscal es requerido"),
   client_type: z.string().min(1, "El tipo de cliente es requerido"),
-  // ✅ CORREGIDO: Usar camelCase
   fiscalCountryId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   fiscalStateId: z.union([z.number(), z.string(), z.undefined()]).optional(),
   fiscalCityId: z.union([z.number(), z.string(), z.undefined()]).optional(),
@@ -212,13 +217,9 @@ const ClientsPage = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
+  const [activeClientsOnly, setActiveClientsOnly] = useState(true);
 
-  const {
-    companyId,
-    isLoading: companyLoading,
-    isSuperAdmin,
-    userCompany,
-  } = useUserCompany();
+  const { isLoading: companyLoading } = useUserCompany();
 
   const { users: sellers, loading: sellersLoading } = useGetSellers();
   const {
@@ -243,7 +244,6 @@ const ClientsPage = () => {
     label: seller.name,
   }));
 
-  // Agregar opción "Sin vendedor"
   const sellerOptionsWithEmpty = [
     { value: "0", label: "Sin vendedor" },
     ...sellerSelectOptions,
@@ -255,7 +255,6 @@ const ClientsPage = () => {
     error: paymentTermsError,
   } = useGetPaymentTerms();
 
-  // ✅ EL HOOK useGetClients AHORA FILTRA AUTOMÁTICAMENTE POR companyId
   const {
     clientsResponse,
     page,
@@ -267,10 +266,10 @@ const ClientsPage = () => {
     setModified,
     updateClientInState,
     loading: clientsLoading,
-    companyId: currentCompanyId,
   } = useGetClients({
     search: searchTerm,
     salespersonUserId: selectedSeller !== "all" ? selectedSeller : undefined,
+    is_active: activeClientsOnly ? true : undefined,
   });
 
   const { createClient, isLoading: isCreating } = useAddClient({
@@ -419,7 +418,6 @@ const ClientsPage = () => {
     try {
       const isSpecialTaxpayer = values.client_type === "special_taxpayer";
 
-      // ✅ Datos base
       const cleanData: Record<string, unknown> = {
         client_code: values.client_code,
         legal_name: values.legal_name,
@@ -436,7 +434,6 @@ const ClientsPage = () => {
           return null;
         }
 
-        // ✅ MANTENER la lógica de salespersonUserId
         if (fieldName === "salespersonUserId") {
           if (value === "0" || value === 0 || value === null) {
             return null;
@@ -480,10 +477,9 @@ const ClientsPage = () => {
         return value;
       };
 
-      // ✅ INCLUIR salespersonUserId en los campos opcionales
       const optionalFields = [
         "businessTypeId",
-        "salespersonUserId", // ← ESTE ES EL ÚNICO CAMPO PARA EL VENDEDOR
+        "salespersonUserId",
         "zoneId",
         "fiscalCountryId",
         "fiscalStateId",
@@ -526,9 +522,7 @@ const ClientsPage = () => {
       } else {
         await createClient(cleanData as Client);
       }
-    } catch {
-      // El error ya se maneja en los callbacks de los hooks
-    }
+    } catch {}
   };
 
   const handleDelete = (client: Client) => {
@@ -544,9 +538,7 @@ const ClientsPage = () => {
         onClick: async () => {
           try {
             await deleteClient(client.id!);
-          } catch {
-            // El error ya se maneja en el callback del hook
-          }
+          } catch {}
         },
       },
       cancel: {
@@ -586,8 +578,6 @@ const ClientsPage = () => {
       currentClient.salespersonUserId !== 0
     ) {
       salespersonUserIdValue = currentClient.salespersonUserId;
-    } else {
-      console.log("❌ No se encontró vendedor asignado");
     }
 
     form.reset({
@@ -726,6 +716,22 @@ const ClientsPage = () => {
     setEditingClient(null);
   };
 
+  const handleSellerChange = (sellerId: string) => {
+    setSelectedSeller(sellerId);
+    setPage(1);
+  };
+
+  const handleActiveClientsChange = (checked: boolean) => {
+    setActiveClientsOnly(checked);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSelectedSeller("all");
+    setActiveClientsOnly(true);
+    setPage(1);
+  };
+
   const columns: ColumnDef<Client>[] = [
     {
       accessorKey: "legal_name",
@@ -788,7 +794,6 @@ const ClientsPage = () => {
           return <div className="font-medium text-gray-500">Sin vendedor</div>;
         }
 
-        // Buscar en sellerOptions usando salespersonUserId
         const sellerIdNum = Number(sellerId);
         const seller = sellerOptions.find((s) => s.id === sellerIdNum);
 
@@ -796,7 +801,6 @@ const ClientsPage = () => {
           return <div className="font-medium">{seller.name}</div>;
         }
 
-        // Fallback: mostrar datos del objeto salesperson
         if (client.salesperson) {
           return (
             <div className="font-medium">
@@ -883,7 +887,6 @@ const ClientsPage = () => {
 
   const isSubmitting = isCreating || isUpdating;
 
-  // ✅ LOADING STATE COMBINADO
   const isLoading = clientsLoading || companyLoading;
 
   return (
@@ -891,7 +894,6 @@ const ClientsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -921,45 +923,84 @@ const ClientsPage = () => {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className=" gap-2"
+                    className="gap-2"
                     disabled={isLoading}
                   >
                     <Filter className="h-4 w-4" />
                     <span>Filtrar</span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[18rem]">
-                  <div className="px-2 py-1.5">
-                    <Label htmlFor="seller-filter">Vendedor</Label>
-                    <Select
-                      value={selectedSeller}
-                      onValueChange={setSelectedSeller}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="seller-filter" className="mt-1">
-                        <SelectValue placeholder="Todos los vendedores" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          Todos los vendedores
-                        </SelectItem>
-                        {sellerOptions.map((seller) => (
-                          <SelectItem
-                            key={seller.id}
-                            value={seller.id.toString()}
-                          >
-                            {seller.name}
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-filter">Vendedor</Label>
+                      <Select
+                        value={selectedSeller}
+                        onValueChange={handleSellerChange}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger id="seller-filter">
+                          <SelectValue placeholder="Todos los vendedores" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            Todos los vendedores
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          {sellerOptions.map((seller) => (
+                            <SelectItem
+                              key={seller.id}
+                              value={seller.id.toString()}
+                            >
+                              {seller.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="active-clients-only"
+                        checked={activeClientsOnly}
+                        onCheckedChange={(checked) =>
+                          handleActiveClientsChange(checked === true)
+                        }
+                      />
+                      <label
+                        htmlFor="active-clients-only"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Solo clientes activos
+                      </label>
+                    </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
                   </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Button
@@ -976,7 +1017,6 @@ const ClientsPage = () => {
             </div>
           </div>
 
-          {/* ✅ MOSTRAR LOADING STATE */}
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
               <div className="text-center">
@@ -1039,7 +1079,6 @@ const ClientsPage = () => {
             >
               <div className="grid gap-4 py-2 sm:py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Información básica */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información Básica</h3>
                     <FormField
@@ -1139,7 +1178,6 @@ const ClientsPage = () => {
                     />
                   </div>
 
-                  {/* Información fiscal */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información Fiscal</h3>
 
@@ -1229,7 +1267,6 @@ const ClientsPage = () => {
                               ) : (
                                 clientTypes.map((type: ClientType) => (
                                   <SelectItem key={type.id} value={type.name}>
-                                    {/* Aplica la traducción aquí */}
                                     {clientTypeTranslations[type.name] ||
                                       type.name}
                                     {type.description &&
@@ -1243,12 +1280,10 @@ const ClientsPage = () => {
                         </FormItem>
                       )}
                     />
-                    {/* ELIMINADO: El checkbox de contribuyente especial ya no es necesario */}
                   </div>
                 </div>
 
                 <div className=" grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {/* Información de contacto */}
                   <div className="space-y-4">
                     <h3 className="font-medium">Información de Contacto</h3>
                     <div className="mt-6.5 space-y-4">
@@ -1370,10 +1405,9 @@ const ClientsPage = () => {
                     </div>
                   </div>
 
-                  {/* Dirección y crédito */}
                   <div className=" space-y-4 ">
                     <h3 className="font-medium">Dirección y Crédito</h3>
-                    {/* En la sección de Dirección y Crédito, antes del delivery_address */}
+
                     <FormField
                       control={form.control}
                       name="fiscal_address"
@@ -1432,7 +1466,6 @@ const ClientsPage = () => {
                       )}
                     />
 
-                    {/* Selector de Términos de Pago - AGREGADO */}
                     <FormField
                       control={form.control}
                       name="payment_term_id"
@@ -1562,7 +1595,6 @@ const ClientsPage = () => {
                   </div>
                 </div>
 
-                {/* Notas y estado */}
                 <div className="space-y-4">
                   <FormField
                     control={form.control}

@@ -7,7 +7,6 @@ import {
   DeleteBrand,
 } from "../brands/brands.route";
 
-// Parámetros para obtener marcas
 export interface GetBrandsParams {
   page?: number;
   itemsPerPage?: number;
@@ -18,15 +17,11 @@ export interface GetBrandsParams {
   is_active?: boolean;
 }
 
-// Interfaz principal de la marca
 export interface Brand {
-  // Campos principales
   id: number;
   brand_name: string;
   description: string;
   is_active: boolean;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -34,21 +29,18 @@ export interface Brand {
   deleted_at?: string | null;
 }
 
-// Datos para crear una marca
 export interface CreateBrandData {
   brand_name: string;
   description: string;
   is_active?: boolean;
 }
 
-// Datos para actualizar una marca
 export interface UpdateBrandData {
   brand_name?: string;
   description?: string;
   is_active?: boolean;
 }
 
-// Interfaces de respuesta
 export interface BrandResponse {
   success: boolean;
   data: Brand;
@@ -69,24 +61,20 @@ export interface PaginatedBrandsResponse {
 }
 
 export const brandService = {
-  // Crear una nueva marca
   createBrand: async (brandData: CreateBrandData): Promise<Brand> => {
     const response = await api.post(PostBrand, brandData);
     return response.data.data;
   },
 
-  // Obtener todas las marcas
   getBrands: async (params?: GetBrandsParams): Promise<Brand[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -107,24 +95,20 @@ export const brandService = {
     return response.data.data;
   },
 
-  // Obtener una marca por ID
   getBrandById: async (id: string): Promise<Brand> => {
     const response = await api.get(`${GetBrandById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar una marca
   updateBrand: async (id: string, updates: UpdateBrandData): Promise<Brand> => {
     const response = await api.patch(`${PatchBrand}/${id}`, updates);
     return response.data.data;
   },
 
-  // Eliminar una marca
   deleteBrand: async (id: string): Promise<void> => {
     await api.delete(`${DeleteBrand}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getActiveBrands: async (): Promise<Brand[]> => {
     return brandService.getBrands({
       is_active: true,
@@ -139,7 +123,6 @@ export const brandService = {
     });
   },
 
-  // Buscar marcas por nombre
   searchBrandsByName: async (searchTerm: string): Promise<Brand[]> => {
     return brandService.getBrands({
       search: searchTerm,
@@ -147,7 +130,6 @@ export const brandService = {
     });
   },
 
-  // Buscar marcas por descripción
   searchBrandsByDescription: async (description: string): Promise<Brand[]> => {
     return brandService.getBrands({
       description: description,
@@ -155,22 +137,18 @@ export const brandService = {
     });
   },
 
-  // Activar/desactivar marca
   toggleBrandStatus: async (id: string, isActive: boolean): Promise<Brand> => {
     return brandService.updateBrand(id, { is_active: isActive });
   },
 
-  // Activar marca
   activateBrand: async (id: string): Promise<Brand> => {
     return brandService.toggleBrandStatus(id, true);
   },
 
-  // Desactivar marca
   deactivateBrand: async (id: string): Promise<Brand> => {
     return brandService.toggleBrandStatus(id, false);
   },
 
-  // Verificar si existe una marca con el mismo nombre
   checkBrandNameExists: async (brandName: string): Promise<boolean> => {
     try {
       const brands = await brandService.getBrands({
@@ -184,7 +162,6 @@ export const brandService = {
     }
   },
 
-  // Obtener marcas para select/dropdown
   getBrandsForSelect: async (): Promise<
     Array<{ value: number; label: string }>
   > => {
@@ -200,7 +177,6 @@ export const brandService = {
     }
   },
 
-  // Obtener marcas con información extendida para select
   getBrandsForSelectWithDescription: async (): Promise<
     Array<{ value: number; label: string; description: string }>
   > => {
@@ -217,7 +193,6 @@ export const brandService = {
     }
   },
 
-  // Obtener estadísticas de marcas
   getBrandsStatistics: async (): Promise<{
     total: number;
     active: number;
@@ -244,12 +219,10 @@ export const brandService = {
     }
   },
 
-  // Obtener marcas populares (más activas - en un caso real esto vendría de estadísticas de uso)
   getPopularBrands: async (limit: number = 10): Promise<Brand[]> => {
     try {
       const brands = await brandService.getActiveBrands();
-      // Ordenar alfabéticamente como placeholder
-      // En una implementación real, esto se basaría en métricas de uso
+
       return brands
         .sort((a, b) => a.brand_name.localeCompare(b.brand_name))
         .slice(0, limit);
@@ -259,7 +232,6 @@ export const brandService = {
     }
   },
 
-  // Validar nombre de marca
   validateBrandName: (
     brandName: string
   ): { isValid: boolean; errors: string[] } => {
@@ -283,7 +255,6 @@ export const brandService = {
     };
   },
 
-  // Validar descripción de marca
   validateBrandDescription: (
     description: string
   ): { isValid: boolean; errors: string[] } => {
@@ -299,7 +270,6 @@ export const brandService = {
     };
   },
 
-  // Crear múltiples marcas
   createMultipleBrands: async (
     brandsData: CreateBrandData[]
   ): Promise<Brand[]> => {

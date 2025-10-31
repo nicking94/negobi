@@ -1,23 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  MoreHorizontal,
-  Eye,
-  Send,
-  Search,
-  Filter,
-  RotateCcw,
-  FileText,
-} from "lucide-react";
+import { MoreHorizontal, Eye, Send, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -44,10 +35,16 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { useReturns } from "@/hooks/documents/useReturns";
 import { Document } from "@/services/documents/documents.service";
 import { useUserCompany } from "@/hooks/auth/useUserCompany";
-import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 import { PriceDisplay } from "@/components/PriceDisplay";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 
@@ -91,125 +88,29 @@ const DevolutionsPage = () => {
     to: new Date(),
   });
 
-  // Usar el hook de usuario para obtener la empresa actual
-  const { companyId, isLoading: userLoading, userCompany } = useUserCompany();
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
 
-  // Usar el hook de formateo de moneda
-  const { formatPrice, formatForTable, getNumericValue } =
-    useCurrencyFormatter();
+  const handleClientChange = (value: string) => {
+    setClientFilter(value);
+  };
 
-  // Usar el hook de devoluciones con la empresa del usuario logeado
-  const {
-    returns,
-    error: returnsError,
-    loading: returnsLoading,
-  } = useReturns(companyId ? { companyId } : { companyId: -1 });
-
-  // DEBUG: Mostrar información completa de las devoluciones
-  useEffect(() => {
-    console.log("🔍 ===== DEBUG DEVOLUCIONES - INICIO =====");
-    console.log("📋 Parámetros actuales:", {
-      companyId,
-      userLoading,
-      returnsLoading,
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setClientFilter("all");
+    setDateRange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date(),
     });
+  };
 
-    if (returns) {
-      console.log("📦 RETURNS DATA - ESTRUCTURA COMPLETA:", {
-        returns,
-        type: typeof returns,
-        isArray: Array.isArray(returns),
-        length: returns.length,
-        "returns[0]": returns[0]
-          ? {
-              id: returns[0].id,
-              document_type: returns[0].document_type,
-              document_number: returns[0].document_number,
-              status: returns[0].status,
-              client: returns[0].client,
-              company: returns[0].company,
-              items: returns[0].items, // Verificar si los items vienen en la respuesta principal
-              total_amount: returns[0].total_amount,
-              observations: returns[0].observations,
-            }
-          : "No hay devoluciones",
-      });
+  const { companyId, isLoading: userLoading } = useUserCompany();
 
-      // Mostrar cada devolución con su estructura completa
-      returns.forEach((returnDoc: Document, index: number) => {
-        console.log(`📄 DEVOLUCIÓN ${index + 1}/${returns.length}:`, {
-          id: returnDoc.id,
-          document_type: returnDoc.document_type,
-          document_number: returnDoc.document_number,
-          document_date: returnDoc.document_date,
-          status: returnDoc.status,
-          total_amount: returnDoc.total_amount,
-          taxable_base: returnDoc.taxable_base,
-          tax: returnDoc.tax,
-          client: returnDoc.client
-            ? {
-                id: returnDoc.client.id,
-                legal_name: returnDoc.client.legal_name,
-                tax_id: returnDoc.client.tax_id,
-              }
-            : "Sin cliente",
-          company: returnDoc.company
-            ? {
-                id: returnDoc.company.id,
-                name: returnDoc.company.name,
-              }
-            : "Sin empresa",
-          affected_document_number: returnDoc.affected_document_number,
-          sourceDocumentId: returnDoc.sourceDocumentId,
-          observations: returnDoc.observations,
-          notes: returnDoc.notes,
-          // Verificar si los items vienen incluidos
-          items: returnDoc.items
-            ? {
-                exists: true,
-                count: Array.isArray(returnDoc.items)
-                  ? returnDoc.items.length
-                  : "no es array",
-                sample:
-                  Array.isArray(returnDoc.items) && returnDoc.items.length > 0
-                    ? returnDoc.items[0]
-                    : "sin items",
-              }
-            : "items no incluidos en respuesta principal",
-          // Información adicional
-          credit_amount: returnDoc.credit_amount,
-          cash_amount: returnDoc.cash_amount,
-          exchange_rate: returnDoc.exchange_rate,
-          currency: returnDoc.currency,
-        });
-      });
-
-      // Análisis de estructura
-      console.log("🔬 ANÁLISIS DE ESTRUCTURA:", {
-        "Tipo de returns": typeof returns,
-        "Es array": Array.isArray(returns),
-        "Número de documentos": returns.length,
-        "Tipos de documento encontrados": [
-          ...new Set(returns.map((doc) => doc.document_type)),
-        ],
-        "Estados encontrados": [...new Set(returns.map((doc) => doc.status))],
-        "Documentos con items incluidos": returns.filter(
-          (doc) => doc.items && Array.isArray(doc.items) && doc.items.length > 0
-        ).length,
-        "Documentos con observaciones": returns.filter(
-          (doc) => doc.observations && doc.observations.length > 0
-        ).length,
-        "Documentos con cliente": returns.filter((doc) => doc.client).length,
-      });
-    } else {
-      console.log("❌ No hay datos de returns:", {
-        returns,
-        returnsError,
-        returnsLoading,
-      });
-    }
-    console.log("🔍 ===== DEBUG DEVOLUCIONES - FIN =====");
-  }, [returns, returnsError, returnsLoading, companyId]);
+  const { returns, error: returnsError } = useReturns(
+    companyId ? { companyId } : { companyId: -1 }
+  );
 
   const getOperationType = (documentType: string): string => {
     const typeMap: { [key: string]: string } = {
@@ -234,20 +135,11 @@ const DevolutionsPage = () => {
   };
 
   const devolutions: Devolution[] = useMemo(() => {
-    console.log("🔄 Procesando devoluciones desde returns...");
-
     if (!returns || !Array.isArray(returns)) {
-      console.log("❌ returns no es array o está vacío:", returns);
       return [];
     }
 
     const processedDevolutions = returns.map((returnDoc: Document) => {
-      console.log(`📝 Procesando documento ${returnDoc.id}:`, {
-        document_number: returnDoc.document_number,
-        document_type: returnDoc.document_type,
-        observations: returnDoc.observations,
-      });
-
       const reason =
         returnDoc.observations?.find(
           (obs) =>
@@ -283,13 +175,9 @@ const DevolutionsPage = () => {
           : undefined,
       };
 
-      console.log(`✅ Devolución procesada ${returnDoc.id}:`, devolution);
       return devolution;
     });
 
-    console.log(
-      `🎯 Total de devoluciones procesadas: ${processedDevolutions.length}`
-    );
     return processedDevolutions;
   }, [returns]);
 
@@ -303,12 +191,10 @@ const DevolutionsPage = () => {
     }));
   }, [devolutions]);
 
-  // Obtener devoluciones de un cliente específico
   const getClientDevolutions = (clientName: string) => {
     return devolutions.filter((devolution) => devolution.client === clientName);
   };
 
-  // Filtrar devoluciones según los criterios
   const filteredDevolutions = useMemo(() => {
     return devolutions.filter((devolution) => {
       const matchesSearch =
@@ -343,7 +229,6 @@ const DevolutionsPage = () => {
   }, [devolutions, searchTerm, clientFilter, statusFilter, dateRange]);
 
   const handleViewDevolution = (devolution: Devolution) => {
-    console.log("👁️ Ver detalles de devolución:", devolution);
     setSelectedDevolution(devolution);
     setIsViewDialogOpen(true);
   };
@@ -352,17 +237,6 @@ const DevolutionsPage = () => {
     toast.success(
       `Devolución ${devolution.correlative} reenviada exitosamente`
     );
-  };
-
-  const handleProcessDevolution = (devolution: Devolution) => {
-    toast.success(
-      `Devolución ${devolution.correlative} procesada exitosamente`
-    );
-  };
-
-  const handleViewClientDevolutions = (client: string) => {
-    setSelectedClient(client);
-    setIsClientDevolutionsDialogOpen(true);
   };
 
   const formatDate = (date: Date) => {
@@ -510,7 +384,7 @@ const DevolutionsPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
@@ -522,22 +396,22 @@ const DevolutionsPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
                         value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        onValueChange={handleStatusChange}
                       >
-                        <SelectTrigger id="status-filter" className="mt-1">
+                        <SelectTrigger id="status-filter">
                           <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
@@ -552,15 +426,13 @@ const DevolutionsPage = () => {
                       </Select>
                     </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="client-filter">Cliente</Label>
                       <Select
                         value={clientFilter}
-                        onValueChange={setClientFilter}
+                        onValueChange={handleClientChange}
                       >
-                        <SelectTrigger id="client-filter" className="mt-1">
+                        <SelectTrigger id="client-filter">
                           <SelectValue placeholder="Todos los clientes" />
                         </SelectTrigger>
                         <SelectContent>
@@ -576,9 +448,7 @@ const DevolutionsPage = () => {
                       </Select>
                     </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="date-range">Período</Label>
                       <div className="mt-1">
                         <DatePicker
@@ -600,9 +470,30 @@ const DevolutionsPage = () => {
                         />
                       </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -635,7 +526,7 @@ const DevolutionsPage = () => {
           )}
         </main>
       </div>
-      {/* Diálogo de detalles de devolución */}
+
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         {selectedDevolution && (
           <DocumentDetailsModal

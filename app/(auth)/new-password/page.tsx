@@ -1,3 +1,4 @@
+//app/new-password/page.tsx
 "use client";
 import { NewPasswordForm } from "@/components/auth/NewPasswordForm";
 import Link from "next/link";

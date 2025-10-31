@@ -36,7 +36,6 @@ const useGetOrganizations = () => {
 
       const responseData = response.data;
 
-      // ✅ ESTRUCTURA CORRECTA: data.data.data
       let organizationsArray: any[] = [];
       let totalPages = 1;
       let totalCount = 0;
@@ -56,7 +55,6 @@ const useGetOrganizations = () => {
         totalCount = 0;
       }
 
-      // Transformar los datos a OrganizationType
       const transformedOrganizations = organizationsArray.map(
         (organization: any) => ({
           id: organization.id?.toString() || "",

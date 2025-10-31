@@ -19,7 +19,7 @@ export interface UseProductCategoriesFilters {
   show_in_sales_app?: boolean;
   page?: number;
   itemsPerPage?: number;
-  companyId?: number; // ✅ Agregar companyId a los filtros
+  companyId?: number;
 }
 
 export const useProductCategories = (
@@ -46,7 +46,7 @@ export const useProductCategories = (
       const combinedFilters: GetProductCategoriesParams = {
         page,
         itemsPerPage,
-        // ✅ Incluir companyId en los filtros si está disponible
+
         ...(filters.companyId && { companyId: filters.companyId }),
         ...(filters.is_active !== undefined && {
           is_active: filters.is_active,
@@ -74,12 +74,10 @@ export const useProductCategories = (
         setTotal(response.total);
         setTotalPage(response.totalPages);
 
-        // Sincronizar la página actual con la respuesta
         if (response.page && response.page !== page) {
           setPage(response.page);
         }
 
-        // Sincronizar itemsPerPage si es diferente
         if (response.itemsPerPage && response.itemsPerPage !== itemsPerPage) {
           setItemsPerPage(response.itemsPerPage);
         }
@@ -102,7 +100,6 @@ export const useProductCategories = (
     }
   };
 
-  // Crear categoría
   const createProductCategory = async (
     categoryData: CreateProductCategoryData
   ): Promise<ProductCategory | null> => {
@@ -112,7 +109,7 @@ export const useProductCategories = (
       const newCategory = await productCategoryService.createProductCategory(
         categoryData
       );
-      // Recargar las categorías después de crear
+
       await loadProductCategories();
       return newCategory;
     } catch (err) {
@@ -123,7 +120,6 @@ export const useProductCategories = (
     }
   };
 
-  // Actualizar categoría
   const updateProductCategory = async (
     id: string,
     updates: UpdateProductCategoryData
@@ -133,7 +129,7 @@ export const useProductCategories = (
       setError(null);
       const updatedCategory =
         await productCategoryService.updateProductCategory(id, updates);
-      // Recargar las categorías después de actualizar
+
       await loadProductCategories();
       return updatedCategory;
     } catch (err) {
@@ -146,13 +142,12 @@ export const useProductCategories = (
     }
   };
 
-  // Eliminar categoría
   const deleteProductCategory = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await productCategoryService.deleteProductCategory(id);
-      // Recargar las categorías después de eliminar
+
       await loadProductCategories();
       return true;
     } catch (err) {
@@ -165,7 +160,6 @@ export const useProductCategories = (
     }
   };
 
-  // Cargar categorías al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadProductCategories();
   }, [

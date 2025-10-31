@@ -1,4 +1,4 @@
-// app/login/page.tsx (actualizado)
+// app/login/page.tsx
 "use client";
 import { useEffect } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -10,14 +10,12 @@ export default function LoginPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Redirigir si ya está autenticado
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/dashboard/settings/profile"); // Usar replace en lugar de push
+      router.replace("/dashboard");
     }
   }, [user, isAuthenticated, isLoading, router]);
 
-  // Mostrar loading mientras verifica autenticación
   if (isLoading) {
     return (
       <div className="p-6 min-h-screen flex flex-col items-center justify-center bg-radial from-green_xl via-green_m to-green_b">
@@ -34,7 +32,6 @@ export default function LoginPage() {
     );
   }
 
-  // No mostrar el formulario si ya está autenticado (será redirigido)
   if (isAuthenticated) {
     return (
       <div className="p-6 min-h-screen flex flex-col items-center justify-center bg-radial from-green_xl via-green_m to-green_b">

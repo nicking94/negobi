@@ -1,4 +1,4 @@
-// hooks/companyBranches/useCompanyBranches.ts - MODIFICADO
+// hooks/companyBranches/useCompanyBranches.ts
 import { useState, useEffect } from "react";
 import {
   companyBranchService,
@@ -21,7 +21,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Obtener la empresa del usuario logeado
   const { companyId, isLoading: userCompanyLoading } = useUserCompany();
 
   const loadCompanyBranches = async () => {
@@ -37,7 +36,7 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
       const params: GetCompanyBranchesParams = {
         page: 1,
         itemsPerPage: 1000,
-        companyId: companyId, // Siempre usar la empresa del usuario
+        companyId: companyId,
       };
 
       const branchesData = await companyBranchService.getCompanyBranches(
@@ -56,7 +55,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Crear sucursal - SOLO para la empresa del usuario
   const createCompanyBranch = async (
     branchData: CreateCompanyBranchData
   ): Promise<CompanyBranch | null> => {
@@ -82,7 +80,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Actualizar sucursal
   const updateCompanyBranch = async (
     id: string,
     updates: UpdateCompanyBranchData
@@ -110,7 +107,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Eliminar sucursal
   const deleteCompanyBranch = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -133,7 +129,6 @@ export const useCompanyBranches = (filters: UseCompanyBranchesFilters) => {
     }
   };
 
-  // Obtener sucursal por ID
   const getCompanyBranchById = async (
     id: string
   ): Promise<CompanyBranch | null> => {

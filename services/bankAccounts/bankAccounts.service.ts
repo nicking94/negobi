@@ -11,13 +11,12 @@ export interface GetBankAccountsParams {
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId: number; // Obligatorio según el swagger
+  companyId: number;
   name?: string;
   code?: string;
 }
 
 export interface BankAccount {
-  // Campos del response (GET)
   id: number;
   payment_method_id: number;
   bank_name: string;
@@ -29,11 +28,7 @@ export interface BankAccount {
   iban: string;
   is_active: boolean;
   notes: string;
-
-  // Campos de relación
   company_id?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -42,7 +37,6 @@ export interface BankAccount {
 }
 
 export interface CreateBankAccountData {
-  // Campos requeridos para crear una cuenta bancaria
   company_id: number;
   payment_method_id: number;
   bank_name: string;
@@ -50,7 +44,6 @@ export interface CreateBankAccountData {
   account_number: string;
   account_holder_name: string;
 
-  // Campos opcionales para creación
   tax_id_holder?: string;
   swift_code?: string;
   iban?: string;
@@ -59,7 +52,6 @@ export interface CreateBankAccountData {
 }
 
 export interface UpdateBankAccountData {
-  // Todos los campos son opcionales para actualización
   company_id?: number;
   payment_method_id?: number;
   bank_name?: string;
@@ -73,7 +65,6 @@ export interface UpdateBankAccountData {
   is_active?: boolean;
 }
 
-// Response interfaces
 export interface BankAccountResponse {
   success: boolean;
   data: BankAccount;
@@ -94,7 +85,6 @@ export interface PaginatedBankAccountsResponse {
 }
 
 export const bankAccountService = {
-  // Crear una nueva cuenta bancaria
   createBankAccount: async (
     bankAccountData: CreateBankAccountData
   ): Promise<BankAccount> => {
@@ -102,13 +92,11 @@ export const bankAccountService = {
     return response.data.data;
   },
 
-  // Obtener todas las cuentas bancarias
   getBankAccounts: async (
     params: GetBankAccountsParams
   ): Promise<BankAccount[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
@@ -116,7 +104,6 @@ export const bankAccountService = {
     );
     queryParams.append("companyId", params.companyId.toString());
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -134,7 +121,6 @@ export const bankAccountService = {
     return response.data.data;
   },
 
-  // Actualizar una cuenta bancaria
   updateBankAccount: async (
     id: string,
     updates: UpdateBankAccountData
@@ -143,18 +129,15 @@ export const bankAccountService = {
     return response.data.data;
   },
 
-  // Eliminar una cuenta bancaria
   deleteBankAccount: async (id: string): Promise<void> => {
     await api.delete(`${DeleteBankAccount}/${id}`);
   },
 
-  // Obtener una cuenta bancaria por ID
   getBankAccountById: async (id: string): Promise<BankAccount> => {
     const response = await api.get(`${GetBankAccounts}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getActiveBankAccounts: async (companyId: number): Promise<BankAccount[]> => {
     const accounts = await bankAccountService.getBankAccounts({
       companyId,

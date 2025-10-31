@@ -17,13 +17,10 @@ export interface GetPaymentMethodsParams {
 }
 
 export interface PaymentMethod {
-  // Campos del response (GET)
   id: number;
   method_name: string;
   description: string;
   is_active: boolean;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -32,22 +29,17 @@ export interface PaymentMethod {
 }
 
 export interface CreatePaymentMethodData {
-  // Campos requeridos para crear un método de pago
   method_name: string;
-
-  // Campos opcionales para creación
   description?: string;
   is_active?: boolean;
 }
 
 export interface UpdatePaymentMethodData {
-  // Todos los campos son opcionales para actualización
   method_name?: string;
   description?: string;
   is_active?: boolean;
 }
 
-// Response interfaces
 export interface PaymentMethodResponse {
   success: boolean;
   data: PaymentMethod;
@@ -68,7 +60,6 @@ export interface PaginatedPaymentMethodsResponse {
 }
 
 export const paymentMethodService = {
-  // Crear un nuevo método de pago
   createPaymentMethod: async (
     paymentMethodData: CreatePaymentMethodData
   ): Promise<PaymentMethod> => {
@@ -76,20 +67,17 @@ export const paymentMethodService = {
     return response.data.data;
   },
 
-  // Obtener todos los métodos de pago
   getPaymentMethods: async (
     params?: GetPaymentMethodsParams
   ): Promise<PaymentMethod[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -110,7 +98,6 @@ export const paymentMethodService = {
     return response.data.data;
   },
 
-  // Actualizar un método de pago
   updatePaymentMethod: async (
     id: string,
     updates: UpdatePaymentMethodData
@@ -119,18 +106,15 @@ export const paymentMethodService = {
     return response.data.data;
   },
 
-  // Eliminar un método de pago
   deletePaymentMethod: async (id: string): Promise<void> => {
     await api.delete(`${DeletePaymentMethod}/${id}`);
   },
 
-  // Obtener un método de pago por ID
   getPaymentMethodById: async (id: string): Promise<PaymentMethod> => {
     const response = await api.get(`${GetPaymentMethods}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getActivePaymentMethods: async (): Promise<PaymentMethod[]> => {
     return paymentMethodService.getPaymentMethods({
       is_active: true,
@@ -153,7 +137,6 @@ export const paymentMethodService = {
     }
   },
 
-  // Métodos predefinidos comunes
   getCommonPaymentMethods: async (): Promise<PaymentMethod[]> => {
     const commonMethods = [
       { method_name: "Efectivo", description: "Pago en efectivo" },
@@ -173,7 +156,6 @@ export const paymentMethodService = {
       { method_name: "Depósito", description: "Depósito bancario" },
     ];
 
-    // Verificar si existen, si no crearlos
     const existingMethods =
       await paymentMethodService.getActivePaymentMethods();
     const results: PaymentMethod[] = [];

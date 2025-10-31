@@ -13,7 +13,6 @@ const useGetAllCompanies = () => {
       setLoading(true);
       setError(null);
 
-      // Solicitar todas las empresas sin paginación
       const { data } = await CompaniesService.getCompanies({
         page: 1,
         itemsPerPage: 1000,

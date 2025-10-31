@@ -62,7 +62,7 @@ import usePutSupplier from "@/hooks/suppliers/usePutSupplier";
 import useDeleteSupplier from "@/hooks/suppliers/useDeleteSupplier";
 import useGetOneSupplier from "@/hooks/suppliers/useGetOneSupplier";
 import { useAuth } from "@/context/AuthContext";
-import useUserCompany from "@/hooks/auth/useUserCompany"; // ✅ IMPORTAR EL HOOK
+import useUserCompany from "@/hooks/auth/useUserCompany";
 import { SupplierCreatePayload, SupplierType, ApiError } from "@/types";
 
 import { TAX_DOCUMENT_TYPES } from "@/utils/constants";
@@ -71,8 +71,13 @@ import useGetCompaniesForSelect from "@/hooks/companies/useGetCompaniesForSelect
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import { supplierService } from "@/services/suppliers/suppliers.service";
 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 const supplierSchema = z.object({
-  // Campos requeridos
   supplier_code: z.string().min(1, "El código es requerido"),
   legal_name: z
     .string()
@@ -80,8 +85,6 @@ const supplierSchema = z.object({
   tax_document_type: z.string().min(1, "El tipo de documento es requerido"),
   tax_document_number: z.string().min(1, "El número de documento es requerido"),
   person_type: z.string().min(1, "El tipo de persona es requerido"),
-
-  // Campos opcionales con validaciones específicas
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   main_phone: z.string().optional().or(z.literal("")),
   mobile_phone: z.string().optional().or(z.literal("")),
@@ -93,14 +96,10 @@ const supplierSchema = z.object({
   zip_code: z.string().optional().or(z.literal("")),
   external_code: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
-
-  // Campos de fecha
   last_purchase_date: z.string().optional().or(z.literal("")),
   last_payment_date: z.string().optional().or(z.literal("")),
   last_purchase_number: z.string().optional().or(z.literal("")),
   last_payment_number: z.string().optional().or(z.literal("")),
-
-  // Campos numéricos con transformación explícita
   paymentTermId: z.union([z.number(), z.null()]).optional(),
   credit_limit: z
     .union([
@@ -145,34 +144,29 @@ const supplierSchema = z.object({
     .pipe(z.number())
     .default(0),
 
-  // Campos de usuario
   created_by: z.string().optional().or(z.literal("")),
   updated_by: z.string().optional().or(z.literal("")),
 });
 
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
-// Función auxiliar para validar y formatear fechas
 const formatDateForAPI = (
   dateString: string | null | undefined
 ): string | undefined => {
   if (!dateString || dateString === "") return undefined;
 
   try {
-    // Intentar parsear la fecha
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return undefined; // Fecha inválida
+      return undefined;
     }
 
-    // Formatear a YYYY-MM-DD para la API
     return date.toISOString().split("T")[0];
   } catch {
     return undefined;
   }
 };
 
-// Interfaz para datos limpios del formulario
 interface CleanedSupplierFormData
   extends Omit<SupplierFormData, "paymentTermId"> {
   paymentTermId?: number | null;
@@ -201,17 +195,14 @@ const SuppliersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const { user } = useAuth();
 
-  // ✅ USAR EL HOOK useUserCompany
-  const {
-    companyId: userCompanyId,
-    isLoading: companyLoading,
-    isSuperAdmin,
-  } = useUserCompany();
+  const { companyId: userCompanyId, isSuperAdmin } = useUserCompany();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(
     null
   );
+
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const {
     suppliersResponse,
@@ -233,7 +224,6 @@ const SuppliersPage = () => {
   const { deleteSupplier } = useDeleteSupplier();
   const { supplier: currentSupplier, loading: loadingOne } =
     useGetOneSupplier(editingSupplierId);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const { paymentTerms: realPaymentTerms, loading: paymentTermsLoading } =
     useGetPaymentTermsForSelect();
   const { companyOptions } = useGetCompaniesForSelect();
@@ -243,6 +233,18 @@ const SuppliersPage = () => {
       setCompanyId(userCompanyId);
     }
   }, [userCompanyId, companyId, setCompanyId]);
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setCompanyId(userCompanyId);
+    setPage(1);
+  };
 
   const filteredSuppliers = useMemo(() => {
     if (!suppliersResponse) return [];
@@ -264,7 +266,6 @@ const SuppliersPage = () => {
     }));
   }, []);
 
-  // Función para verificar posibles duplicados
   const checkForDuplicateFields = async (
     supplierData: SupplierCreatePayload
   ): Promise<string | null> => {
@@ -322,7 +323,6 @@ const SuppliersPage = () => {
         if (exists) return true;
       }
 
-      // Consulta a la API
       const params = {
         companyId,
         supplier_code: supplierCode,
@@ -438,7 +438,6 @@ const SuppliersPage = () => {
     }
   }, [currentSupplier, editingSupplierId, form, user]);
 
-  // Interfaz para datos de actualización de estado
   interface StatusUpdateData {
     companyId: number;
     supplier_code: string;
@@ -472,7 +471,6 @@ const SuppliersPage = () => {
     last_payment_number?: string;
   }
 
-  // Función para cambiar el estado del proveedor (activar/desactivar)
   const handleToggleStatus = async (supplier: SupplierType) => {
     if (!supplier.id) {
       toast.error("No se puede cambiar el estado: ID no disponible");
@@ -480,10 +478,7 @@ const SuppliersPage = () => {
     }
 
     try {
-      // ✅ USAR userCompanyId DEL HOOK
       const effectiveCompanyId = userCompanyId || user?.company_id || 4;
-
-      // Preparar datos limpios para la actualización - SOLO enviar campos necesarios
       const updateData: StatusUpdateData = {
         companyId: effectiveCompanyId,
         supplier_code: supplier.supplier_code,
@@ -491,12 +486,10 @@ const SuppliersPage = () => {
         tax_document_type: supplier.tax_document_type,
         tax_document_number: supplier.tax_document_number,
         person_type: supplier.person_type,
-        // Solo enviar campos que realmente necesitan actualización
         is_active: !supplier.is_active,
         updated_by: user?.username || "admin",
       };
 
-      // Opcional: agregar solo los campos que no estén vacíos
       if (supplier.email) updateData.email = supplier.email;
       if (supplier.main_phone) updateData.main_phone = supplier.main_phone;
       if (supplier.mobile_phone)
@@ -516,8 +509,6 @@ const SuppliersPage = () => {
       if (supplier.notes) updateData.notes = supplier.notes;
       if (supplier.paymentTermId)
         updateData.paymentTermId = supplier.paymentTermId;
-
-      // Campos numéricos - solo si tienen valor
       if (supplier.credit_limit)
         updateData.credit_limit = supplier.credit_limit;
       if (supplier.credit_days) updateData.credit_days = supplier.credit_days;
@@ -529,7 +520,6 @@ const SuppliersPage = () => {
       if (supplier.last_payment_amount)
         updateData.last_payment_amount = supplier.last_payment_amount;
 
-      // Campos de fecha
       if (supplier.last_purchase_date)
         updateData.last_purchase_date = formatDateForAPI(
           supplier.last_purchase_date
@@ -558,7 +548,6 @@ const SuppliersPage = () => {
 
   const onSubmit = async (data: SupplierFormData) => {
     try {
-      // ✅ USAR userCompanyId DEL HOOK
       const effectiveCompanyId = userCompanyId || user?.company_id;
 
       if (!effectiveCompanyId) {
@@ -580,7 +569,6 @@ const SuppliersPage = () => {
           return;
         }
 
-        // Preparar datos para verificar otros campos únicos
         const supplierDataForCheck: SupplierCreatePayload = {
           companyId: effectiveCompanyId,
           supplier_code: cleanedData.supplier_code,
@@ -592,7 +580,6 @@ const SuppliersPage = () => {
           external_code: cleanedData.external_code,
         };
 
-        // Verificar otros campos únicos
         const duplicateField = await checkForDuplicateFields(
           supplierDataForCheck
         );
@@ -630,19 +617,13 @@ const SuppliersPage = () => {
         zip_code: cleanedData.zip_code,
         external_code: cleanedData.external_code,
         notes: cleanedData.notes,
-
-        // Términos de pago
         paymentTermId: cleanedData.paymentTermId || undefined,
-
-        // Campos numéricos
         credit_limit: cleanedData.credit_limit,
         credit_days: cleanedData.credit_days,
         balance_due: cleanedData.balance_due,
         advance_balance: cleanedData.advance_balance,
         last_purchase_amount: cleanedData.last_purchase_amount,
         last_payment_amount: cleanedData.last_payment_amount,
-
-        // Campos de fecha (ya formateados)
         last_purchase_date: cleanedData.last_purchase_date,
         last_payment_date: cleanedData.last_payment_date,
         last_purchase_number: cleanedData.last_purchase_number,
@@ -653,7 +634,6 @@ const SuppliersPage = () => {
       };
 
       if (editingSupplierId) {
-        // En edición, mantener el estado actual del proveedor
         const currentStatus = currentSupplier?.is_active ?? true;
         supplierData.is_active = currentStatus;
 
@@ -681,7 +661,6 @@ const SuppliersPage = () => {
         errorMessage.includes("unique constraint") ||
         errorMessage.includes("already exists")
       ) {
-        // Intentar identificar qué campo está duplicado basado en el mensaje
         if (
           errorMessage.includes("tax_document") ||
           errorMessage.includes("document")
@@ -758,7 +737,6 @@ const SuppliersPage = () => {
     setIsModalOpen(true);
   };
 
-  // Tipo para la función renderNumberInput
   interface NumberInputField {
     value: unknown;
     onChange: (value: unknown) => void;
@@ -831,7 +809,6 @@ const SuppliersPage = () => {
     return new Date(dateString).toLocaleDateString("es-ES");
   };
 
-  // Definir las columnas con tipos correctos
   const columns: ColumnDef<SupplierType>[] = [
     {
       accessorKey: "legal_name",
@@ -1039,7 +1016,7 @@ const SuppliersPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex gap-2 w-full max-w-[30rem] ">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
@@ -1051,22 +1028,22 @@ const SuppliersPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
                         value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        onValueChange={handleStatusChange}
                       >
-                        <SelectTrigger id="status-filter" className="mt-1">
+                        <SelectTrigger id="status-filter">
                           <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1077,35 +1054,53 @@ const SuppliersPage = () => {
                       </Select>
                     </div>
 
-                    {/* ✅ MOSTRAR FILTRO DE COMPAÑÍA SOLO PARA SUPERADMINS */}
                     {isSuperAdmin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <div className="w-full px-2 py-1.5">
-                          <Label htmlFor="company-filter">Compañía</Label>
-                          <SelectSearchable
-                            value={companyId?.toString() || "all"}
-                            onValueChange={(value) =>
-                              setCompanyId(
-                                value === "all" ? undefined : parseInt(value)
-                              )
-                            }
-                            placeholder="Todas las compañías"
-                            options={[
-                              { value: "all", label: "Todas las compañías" },
-                              ...companyOptions,
-                            ]}
-                            emptyMessage="No se encontraron compañías"
-                            searchPlaceholder="Buscar compañía..."
-                            className="w-full mt-1"
-                          />
-                        </div>
-                      </>
+                      <div className="space-y-2">
+                        <Label htmlFor="company-filter">Compañía</Label>
+                        <SelectSearchable
+                          value={companyId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setCompanyId(
+                              value === "all" ? undefined : parseInt(value)
+                            )
+                          }
+                          placeholder="Todas las compañías"
+                          options={[
+                            { value: "all", label: "Todas las compañías" },
+                            ...companyOptions,
+                          ]}
+                          emptyMessage="No se encontraron compañías"
+                          searchPlaceholder="Buscar compañía..."
+                          className="w-full"
+                        />
+                      </div>
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+
             <div>
               <Button
                 onClick={handleCreateNew}
@@ -1155,7 +1150,7 @@ const SuppliersPage = () => {
                             {...field}
                             className="w-full"
                             disabled={isSubmitting}
-                            onBlur={async (e) => {
+                            onBlur={async () => {
                               if (!editingSupplierId && field.value) {
                                 const exists = await checkSupplierCodeExists(
                                   userCompanyId || user?.company_id || 1,
@@ -1511,39 +1506,6 @@ const SuppliersPage = () => {
                   )}
                 />
 
-                {/* Campos de fecha ocultos o eliminados ya que no son necesarios en el formulario */}
-                {/* Si necesitas mostrar campos de fecha, puedes descomentar esto */}
-                {/*
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="last_purchase_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Última Fecha de Compra</FormLabel>
-                        <FormControl>
-                          <DateInput field={field} isSubmitting={isSubmitting} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="last_payment_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Última Fecha de Pago</FormLabel>
-                        <FormControl>
-                          <DateInput field={field} isSubmitting={isSubmitting} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                */}
-
                 <FormField
                   control={form.control}
                   name="notes"
@@ -1563,8 +1525,6 @@ const SuppliersPage = () => {
                     </FormItem>
                   )}
                 />
-
-                {/* NOTA: Se elimina el checkbox de is_active del formulario */}
               </div>
 
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">

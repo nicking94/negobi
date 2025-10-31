@@ -1,4 +1,4 @@
-// hooks/clients/useGetClients.ts - CORREGIDO
+// hooks/clients/useGetClients.ts
 import { useEffect, useState, useCallback } from "react";
 import { ClientsService } from "@/services/clients/clients.service";
 import { Client } from "@/app/dashboard/masters/clients/page";
@@ -9,7 +9,8 @@ interface UseGetClientsParams {
   page?: number;
   itemsPerPage?: number;
   salespersonUserId?: string;
-  companyId?: number; // ✅ AGREGAR ESTA PROPIEDAD
+  companyId?: number;
+  is_active?: boolean;
 }
 
 const useGetClients = (params: UseGetClientsParams = {}) => {
@@ -28,7 +29,6 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
     params?.itemsPerPage || 1000
   );
 
-  // ✅ Usar companyId del parámetro o del usuario
   const effectiveCompanyId = params.companyId || userCompanyId;
 
   const getClients = useCallback(async () => {
@@ -36,7 +36,6 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
       return;
     }
     if (!effectiveCompanyId && !isSuperAdmin) {
-      console.log("❌ No companyId available for non-superadmin user");
       return;
     }
 
@@ -50,11 +49,8 @@ const useGetClients = (params: UseGetClientsParams = {}) => {
         legal_name: params?.search || "",
       };
 
-      // ✅ SOLO INCLUIR companyId SI ESTÁ DISPONIBLE
       if (effectiveCompanyId) {
         queryParams.companyId = effectiveCompanyId;
-      } else if (isSuperAdmin) {
-        console.log(`🔍 Superadmin: buscando clientes sin filtro de empresa`);
       }
 
       if (params?.salespersonUserId && params.salespersonUserId !== "all") {

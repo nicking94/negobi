@@ -13,7 +13,6 @@ interface MonthlySalesChartProps {
   timeRange: "day" | "week" | "month" | "year";
 }
 
-// Datos de ejemplo para diferentes rangos de tiempo
 const dailySalesData = [
   { hour: "00:00", value: 1000 },
   { hour: "04:00", value: 1500 },
@@ -57,7 +56,6 @@ const yearlySalesData = [
 ];
 
 const MonthlySalesChart = ({ timeRange }: MonthlySalesChartProps) => {
-  // Seleccionar datos según el rango de tiempo
   const getData = () => {
     switch (timeRange) {
       case "day":
@@ -74,7 +72,14 @@ const MonthlySalesChart = ({ timeRange }: MonthlySalesChartProps) => {
   };
 
   const data = getData();
-  const xAxisKey = timeRange === "day" ? "hour" : timeRange === "week" ? "day" : timeRange === "month" ? "month" : "year";
+  const xAxisKey =
+    timeRange === "day"
+      ? "hour"
+      : timeRange === "week"
+      ? "day"
+      : timeRange === "month"
+      ? "month"
+      : "year";
 
   return (
     <div className="w-full h-full">

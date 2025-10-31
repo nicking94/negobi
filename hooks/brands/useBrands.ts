@@ -7,7 +7,6 @@ import {
   GetBrandsParams,
 } from "../../services/brands/brands.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseBrandsFilters {
   brand_name?: string;
   description?: string;
@@ -48,7 +47,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Crear marca
   const createBrand = async (
     brandData: CreateBrandData
   ): Promise<Brand | null> => {
@@ -56,7 +54,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos
       const nameValidation = brandService.validateBrandName(
         brandData.brand_name
       );
@@ -73,7 +70,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
         return null;
       }
 
-      // Verificar si ya existe una marca con el mismo nombre
       const exists = await brandService.checkBrandNameExists(
         brandData.brand_name
       );
@@ -93,7 +89,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Actualizar marca
   const updateBrand = async (
     id: string,
     updates: UpdateBrandData
@@ -102,7 +97,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos si se están actualizando
       if (updates.brand_name) {
         const nameValidation = brandService.validateBrandName(
           updates.brand_name
@@ -138,7 +132,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Eliminar marca
   const deleteBrand = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -154,7 +147,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Obtener marca por ID
   const getBrandById = async (id: string): Promise<Brand | null> => {
     try {
       setLoading(true);
@@ -169,7 +161,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Activar/desactivar marca
   const toggleBrandStatus = async (
     id: string,
     isActive: boolean
@@ -186,17 +177,14 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Activar marca
   const activateBrand = async (id: string): Promise<Brand | null> => {
     return await toggleBrandStatus(id, true);
   };
 
-  // Desactivar marca
   const deactivateBrand = async (id: string): Promise<Brand | null> => {
     return await toggleBrandStatus(id, false);
   };
 
-  // Verificar si existe un nombre de marca
   const checkBrandNameExists = async (brandName: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -214,21 +202,18 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Validar nombre de marca
   const validateBrandName = (
     brandName: string
   ): { isValid: boolean; errors: string[] } => {
     return brandService.validateBrandName(brandName);
   };
 
-  // Validar descripción de marca
   const validateBrandDescription = (
     description: string
   ): { isValid: boolean; errors: string[] } => {
     return brandService.validateBrandDescription(description);
   };
 
-  // Crear múltiples marcas
   const createMultipleBrands = async (
     brandsData: CreateBrandData[]
   ): Promise<Brand[] | null> => {
@@ -236,7 +221,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar todas las marcas primero
       for (const brandData of brandsData) {
         const nameValidation = brandService.validateBrandName(
           brandData.brand_name
@@ -276,7 +260,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
     }
   };
 
-  // Cargar marcas al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadBrands();
   }, [
@@ -305,7 +288,6 @@ export const useBrands = (filters: UseBrandsFilters = {}) => {
   };
 };
 
-// Hook especializado para marcas activas
 export const useActiveBrands = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
@@ -339,7 +321,6 @@ export const useActiveBrands = () => {
   };
 };
 
-// Hook especializado para marcas inactivas
 export const useInactiveBrands = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
@@ -373,7 +354,6 @@ export const useInactiveBrands = () => {
   };
 };
 
-// Hook para select/dropdown de marcas
 export const useBrandsForSelect = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string }>
@@ -411,7 +391,6 @@ export const useBrandsForSelect = () => {
   };
 };
 
-// Hook para select/dropdown de marcas con descripción
 export const useBrandsForSelectWithDescription = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; description: string }>
@@ -450,7 +429,6 @@ export const useBrandsForSelectWithDescription = () => {
   };
 };
 
-// Hook para búsqueda de marcas
 export const useBrandSearch = () => {
   const [searchResults, setSearchResults] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
@@ -513,7 +491,6 @@ export const useBrandSearch = () => {
   };
 };
 
-// Hook para estadísticas de marcas
 export const useBrandsStatistics = () => {
   const [statistics, setStatistics] = useState<{
     total: number;
@@ -553,7 +530,6 @@ export const useBrandsStatistics = () => {
   };
 };
 
-// Hook para marcas populares
 export const usePopularBrands = (limit: number = 10) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
@@ -589,12 +565,10 @@ export const usePopularBrands = (limit: number = 10) => {
   };
 };
 
-// Hook para gestión de estado de marcas
 export const useBrandStatusManagement = () => {
   const { brands, loading, error, refetch, activateBrand, deactivateBrand } =
     useBrands();
 
-  // Activar múltiples marcas
   const activateMultipleBrands = async (
     brandIds: string[]
   ): Promise<boolean> => {
@@ -609,7 +583,6 @@ export const useBrandStatusManagement = () => {
     }
   };
 
-  // Desactivar múltiples marcas
   const deactivateMultipleBrands = async (
     brandIds: string[]
   ): Promise<boolean> => {
@@ -624,7 +597,6 @@ export const useBrandStatusManagement = () => {
     }
   };
 
-  // Toggle múltiples marcas
   const toggleMultipleBrandsStatus = async (
     brandIds: string[],
     isActive: boolean

@@ -8,7 +8,6 @@ import {
   GetPaymentsParams,
 } from "../../services/payments/payments.service";
 
-// Definir el tipo para los filtros del hook
 export interface UsePaymentsFilters {
   clientId?: number;
   supplierId?: number;
@@ -29,7 +28,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los pagos con filtros
   const loadPayments = async (customFilters?: Partial<UsePaymentsFilters>) => {
     try {
       setLoading(true);
@@ -58,7 +56,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
     }
   };
 
-  // Crear pago
   const createPayment = async (
     paymentData: CreatePaymentData
   ): Promise<Payment | null> => {
@@ -76,7 +73,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
     }
   };
 
-  // Actualizar pago
   const updatePayment = async (
     id: string,
     updates: UpdatePaymentData
@@ -99,7 +95,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
     }
   };
 
-  // Eliminar pago
   const deletePayment = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -117,7 +112,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
     }
   };
 
-  // Obtener pago por ID
   const getPaymentById = async (id: string): Promise<Payment | null> => {
     try {
       setLoading(true);
@@ -132,7 +126,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
     }
   };
 
-  // Cargar pagos al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadPayments();
   }, [
@@ -162,7 +155,6 @@ export const usePayments = (filters: UsePaymentsFilters = {}) => {
   };
 };
 
-// Hook especializado para pagos de clientes
 export const useClientPayments = (clientId?: number) => {
   const [clientPayments, setClientPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -204,7 +196,6 @@ export const useClientPayments = (clientId?: number) => {
   };
 };
 
-// Hook especializado para pagos a proveedores
 export const useSupplierPayments = (supplierId?: number) => {
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -250,7 +241,6 @@ export const useSupplierPayments = (supplierId?: number) => {
   };
 };
 
-// Hook especializado para pagos por rango de fechas
 export const usePaymentsByDateRange = (
   startDate?: string,
   endDate?: string,
@@ -309,7 +299,6 @@ export const usePaymentsByDateRange = (
   };
 };
 
-// Hook para pagos por factura
 export const usePaymentsByInvoice = (invoiceId?: number) => {
   const [invoicePayments, setInvoicePayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -353,7 +342,6 @@ export const usePaymentsByInvoice = (invoiceId?: number) => {
   };
 };
 
-// Hook para estadísticas de pagos
 export const usePaymentStats = (filters: UsePaymentsFilters = {}) => {
   const { payments, loading, error, refetch } = usePayments(filters);
 

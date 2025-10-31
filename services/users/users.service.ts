@@ -98,13 +98,11 @@ export interface SyncUsersResponse {
 }
 
 export class UsersService {
-  // Crear usuario
   static async createUser(data: CreateUserPayload): Promise<UserResponse> {
     const response = await api.post(UserRoutes.postUser, data);
     return response.data;
   }
 
-  // Listar usuarios
   static async getUsers(
     params: OrganizationQueryType
   ): Promise<UsersListResponse> {
@@ -113,13 +111,11 @@ export class UsersService {
     return response.data;
   }
 
-  // Obtener usuario por ID
   static async getUserById(id: number): Promise<UserResponse> {
     const response = await api.get(`${UserRoutes.getUser}/${id}`);
     return response.data;
   }
 
-  // ✅ CORREGIDO - usa PATCH
   static async updateUser(
     id: number,
     data: UpdateUserPayload
@@ -128,13 +124,11 @@ export class UsersService {
     return response.data;
   }
 
-  // Eliminar usuario
   static async deleteUser(id: number): Promise<UserDeleteResponse> {
     const response = await api.delete(`${UserRoutes.deleteUser}/${id}`);
     return response.data;
   }
 
-  // Obtener perfil del usuario logueado
   static async getProfile(): Promise<UserResponse> {
     try {
       const response = await api.get(UserRoutes.getProfile);
@@ -151,19 +145,16 @@ export class UsersService {
     return this.updateUser(id, data);
   }
 
-  // Cambiar contraseña
   static async changePassword(data: ChangePasswordData): Promise<UserResponse> {
     const response = await api.put(UserRoutes.changePassword, data);
     return response.data;
   }
 
-  // Obtener roles de usuario
   static async getUserRoles(): Promise<UserRolesResponse> {
     const response = await api.get(UserRoutes.getUserRoles);
     return response.data;
   }
 
-  // Sincronizar usuarios desde ERP
   static async syncUsers(data: SyncUsersPayload): Promise<SyncUsersResponse> {
     const response = await api.post(UserRoutes.syncUsers, data);
     return response.data;

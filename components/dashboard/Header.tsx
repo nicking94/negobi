@@ -1,4 +1,3 @@
-// components/dashboard/Header.tsx (actualizado)
 "use client";
 import {
   ChevronDown,
@@ -127,13 +126,13 @@ const DashboardHeader = ({
           <Button
             variant="ghost"
             size="sm"
-            className="bg-gray_xxl hover:bg-gray_xl p-2 md:p-2"
+            className="bg-gray_xxl hover:bg-gray_xl"
             onClick={onToggleSidebar}
           >
             {isSidebarOpen ? (
-              <X className="size-4 md:size-5 text-gray_b" />
+              <X className="size-6 text-gray_b" />
             ) : (
-              <Menu className="size-4 md:size-5 text-gray_b" />
+              <Menu className="size-6 text-gray_b" />
             )}
           </Button>
         </div>
@@ -141,7 +140,6 @@ const DashboardHeader = ({
         <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
           <CurrencySelector />
 
-          {/* Dropdown del Usuario */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -212,7 +210,6 @@ const DashboardHeader = ({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent className="shadow-xl border-0 bg-white/95 backdrop-blur-sm w-48">
-                    {/* Solo mostrar Organizaciones para superadmin */}
                     {canAccessOrganizations() && (
                       <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                         <Link
@@ -225,7 +222,6 @@ const DashboardHeader = ({
                       </DropdownMenuItem>
                     )}
 
-                    {/* Solo mostrar Empresas para superadmin */}
                     {canAccessCompanies() && (
                       <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                         <Link
@@ -238,7 +234,6 @@ const DashboardHeader = ({
                       </DropdownMenuItem>
                     )}
 
-                    {/* Estos enlaces son visibles para todos los usuarios con permisos */}
                     <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                       <Link
                         href="/dashboard/companyBranches"
@@ -258,7 +253,7 @@ const DashboardHeader = ({
                       </Link>
                     </DropdownMenuItem>
 
-                    {/* <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
+                    <DropdownMenuItem className="cursor-pointer bg-white hover:bg-gray_xxl rounded-md m-1 text-xs md:text-sm">
                       <Link
                         href="/dashboard/settings/general"
                         className="flex items-center w-full"
@@ -284,7 +279,7 @@ const DashboardHeader = ({
                         <Calendar className="w-4 h-4 mr-2" />
                         Planificación
                       </Link>
-                    </DropdownMenuItem> */}
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>

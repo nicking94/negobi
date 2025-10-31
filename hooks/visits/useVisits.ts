@@ -6,11 +6,9 @@ import {
   UpdateVisitData,
   GetVisitsParams,
   VisitStatus,
-  VisitLocation,
   VisitStatistics,
 } from "../../services/visits/visits.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseVisitsFilters {
   date_from?: string;
   date_to?: string;
@@ -25,7 +23,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las visitas con filtros
   const loadVisits = async (customFilters?: Partial<UseVisitsFilters>) => {
     try {
       setLoading(true);
@@ -54,7 +51,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Crear visita
   const createVisit = async (
     visitData: CreateVisitData
   ): Promise<Visit | null> => {
@@ -62,14 +58,12 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos
       const validation = visitService.validateVisitData(visitData);
       if (!validation.isValid) {
         setError(validation.errors.join(", "));
         return null;
       }
 
-      // Verificar conflicto de horario
       const hasConflict = await visitService.checkScheduleConflict(
         visitData.date
       );
@@ -89,7 +83,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Actualizar visita
   const updateVisit = async (
     id: string,
     updates: UpdateVisitData
@@ -98,7 +91,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Si se actualiza la fecha, verificar conflicto
       if (updates.date) {
         const hasConflict = await visitService.checkScheduleConflict(
           updates.date,
@@ -126,7 +118,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Eliminar visita
   const deleteVisit = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -142,7 +133,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Obtener visita por ID
   const getVisitById = async (id: string): Promise<Visit | null> => {
     try {
       setLoading(true);
@@ -157,7 +147,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Cambiar estado de visita
   const updateVisitStatus = async (
     id: string,
     status: VisitStatus
@@ -174,17 +163,14 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Marcar visita como completada
   const markVisitAsCompleted = async (id: string): Promise<Visit | null> => {
     return await updateVisitStatus(id, visitService.VISIT_STATUSES.COMPLETED);
   };
 
-  // Marcar visita como cancelada
   const markVisitAsCancelled = async (id: string): Promise<Visit | null> => {
     return await updateVisitStatus(id, visitService.VISIT_STATUSES.CANCELLED);
   };
 
-  // Reagendar visita
   const rescheduleVisit = async (
     id: string,
     newDate: string
@@ -199,14 +185,12 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Validar datos de visita
   const validateVisitData = (
     visitData: CreateVisitData
   ): { isValid: boolean; errors: string[] } => {
     return visitService.validateVisitData(visitData);
   };
 
-  // Verificar conflicto de horario
   const checkScheduleConflict = async (
     date: string,
     duration: number = 60,
@@ -232,7 +216,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Calcular distancia entre puntos
   const calculateDistance = (
     coord1: [number, number],
     coord2: [number, number]
@@ -240,12 +223,10 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     return visitService.calculateDistance(coord1, coord2);
   };
 
-  // Optimizar ruta de visitas
   const optimizeVisitRoute = (visitsToOptimize: Visit[]): Visit[] => {
     return visitService.optimizeVisitRoute(visitsToOptimize);
   };
 
-  // Crear múltiples visitas
   const createMultipleVisits = async (
     visitsData: CreateVisitData[]
   ): Promise<Visit[] | null> => {
@@ -253,7 +234,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar todas las visitas primero
       for (const visitData of visitsData) {
         const validation = visitService.validateVisitData(visitData);
         if (!validation.isValid) {
@@ -275,7 +255,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
     }
   };
 
-  // Cargar visitas al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadVisits();
   }, [
@@ -308,7 +287,6 @@ export const useVisits = (filters: UseVisitsFilters = {}) => {
   };
 };
 
-// Hook especializado para visitas por estado
 export const useVisitsByStatus = (status?: VisitStatus) => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -354,7 +332,6 @@ export const useVisitsByStatus = (status?: VisitStatus) => {
   };
 };
 
-// Hook especializado para visitas por cliente
 export const useVisitsByClient = (clientId?: number) => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -398,7 +375,6 @@ export const useVisitsByClient = (clientId?: number) => {
   };
 };
 
-// Hook para visitas de hoy
 export const useTodayVisits = () => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -432,7 +408,6 @@ export const useTodayVisits = () => {
   };
 };
 
-// Hook para visitas próximas
 export const useUpcomingVisits = (days: number = 7) => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -468,7 +443,6 @@ export const useUpcomingVisits = (days: number = 7) => {
   };
 };
 
-// Hook para estadísticas de visitas
 export const useVisitStatistics = () => {
   const [statistics, setStatistics] = useState<VisitStatistics>({
     total: 0,
@@ -520,7 +494,6 @@ export const useVisitStatistics = () => {
   };
 };
 
-// Hook para calendario de visitas
 export const useVisitCalendar = (startDate: string, endDate: string) => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -562,7 +535,6 @@ export const useVisitCalendar = (startDate: string, endDate: string) => {
   };
 };
 
-// Hook para optimización de rutas
 export const useVisitRouteOptimization = (visitsToOptimize: Visit[]) => {
   const [optimizedRoute, setOptimizedRoute] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -594,7 +566,6 @@ export const useVisitRouteOptimization = (visitsToOptimize: Visit[]) => {
   };
 };
 
-// Hook para gestión de estado de visitas
 export const useVisitStatusManagement = () => {
   const {
     visits,
@@ -605,7 +576,6 @@ export const useVisitStatusManagement = () => {
     markVisitAsCancelled,
   } = useVisits();
 
-  // Completar múltiples visitas
   const completeMultipleVisits = async (
     visitIds: string[]
   ): Promise<boolean> => {
@@ -620,7 +590,6 @@ export const useVisitStatusManagement = () => {
     }
   };
 
-  // Cancelar múltiples visitas
   const cancelMultipleVisits = async (visitIds: string[]): Promise<boolean> => {
     try {
       const results = await Promise.all(

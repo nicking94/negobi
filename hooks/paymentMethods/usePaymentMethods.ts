@@ -7,7 +7,6 @@ import {
   GetPaymentMethodsParams,
 } from "../../services/paymentMethods/paymentMethods.service";
 
-// Definir el tipo para los filtros del hook
 export interface UsePaymentMethodsFilters {
   search?: string;
   method_name?: string;
@@ -20,7 +19,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los métodos de pago con filtros
   const loadPaymentMethods = async (
     customFilters?: Partial<UsePaymentMethodsFilters>
   ) => {
@@ -55,7 +53,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Crear método de pago
   const createPaymentMethod = async (
     paymentMethodData: CreatePaymentMethodData
   ): Promise<PaymentMethod | null> => {
@@ -77,7 +74,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Actualizar método de pago
   const updatePaymentMethod = async (
     id: string,
     updates: UpdatePaymentMethodData
@@ -105,7 +101,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Eliminar método de pago
   const deletePaymentMethod = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -125,7 +120,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Obtener método de pago por ID
   const getPaymentMethodById = async (
     id: string
   ): Promise<PaymentMethod | null> => {
@@ -144,7 +138,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Obtener método de pago por nombre
   const getPaymentMethodByName = async (
     name: string
   ): Promise<PaymentMethod | null> => {
@@ -167,7 +160,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Inicializar métodos de pago comunes
   const initializeCommonPaymentMethods = async (): Promise<
     PaymentMethod[] | null
   > => {
@@ -176,7 +168,7 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
       setError(null);
       const commonMethods =
         await paymentMethodService.getCommonPaymentMethods();
-      // Actualizar la lista con los métodos comunes
+
       await loadPaymentMethods();
       return commonMethods;
     } catch (err) {
@@ -191,7 +183,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
     }
   };
 
-  // Cargar métodos de pago al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadPaymentMethods();
   }, [
@@ -215,7 +206,6 @@ export const usePaymentMethods = (filters: UsePaymentMethodsFilters = {}) => {
   };
 };
 
-// Hook especializado para métodos de pago activos
 export const useActivePaymentMethods = () => {
   const [activePaymentMethods, setActivePaymentMethods] = useState<
     PaymentMethod[]
@@ -254,7 +244,6 @@ export const useActivePaymentMethods = () => {
   };
 };
 
-// Hook para opciones de métodos de pago (para dropdowns)
 export const usePaymentMethodOptions = () => {
   const { activePaymentMethods, loading, error, refetch } =
     useActivePaymentMethods();
@@ -266,7 +255,6 @@ export const usePaymentMethodOptions = () => {
     is_active: method.is_active,
   }));
 
-  // Opciones predefinidas para casos comunes
   const commonPaymentMethodOptions = [
     { value: "cash", label: "Efectivo", description: "Pago en efectivo" },
     {
@@ -298,7 +286,6 @@ export const usePaymentMethodOptions = () => {
   };
 };
 
-// Hook para gestión rápida de métodos de pago
 export const usePaymentMethodManager = () => {
   const {
     paymentMethods,
@@ -310,7 +297,6 @@ export const usePaymentMethodManager = () => {
     deletePaymentMethod,
   } = usePaymentMethods();
 
-  // Crear método de pago rápido
   const createQuickPaymentMethod = async (
     methodName: string,
     description?: string
@@ -324,7 +310,6 @@ export const usePaymentMethodManager = () => {
     return await createPaymentMethod(paymentMethodData);
   };
 
-  // Activar/desactivar método de pago
   const togglePaymentMethodStatus = async (
     id: string,
     isActive: boolean
@@ -338,7 +323,6 @@ export const usePaymentMethodManager = () => {
     }
   };
 
-  // Buscar métodos de pago por término
   const searchPaymentMethods = (searchTerm: string): PaymentMethod[] => {
     if (!searchTerm) return paymentMethods;
 
@@ -350,7 +334,6 @@ export const usePaymentMethodManager = () => {
     );
   };
 
-  // Obtener método de pago por ID (sincrónico)
   const getPaymentMethodByIdSync = (id: number): PaymentMethod | undefined => {
     return paymentMethods.find((method) => method.id === id);
   };
@@ -370,7 +353,6 @@ export const usePaymentMethodManager = () => {
   };
 };
 
-// Hook para estadísticas de métodos de pago
 export const usePaymentMethodStats = () => {
   const { paymentMethods, loading, error, refetch } = usePaymentMethods();
 

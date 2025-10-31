@@ -2,24 +2,22 @@
 import { useDocuments, UseDocumentsFilters } from "./useDocuments";
 import { DocumentStatus } from "@/services/documents/documents.service";
 
-// Tipo extendido que incluye "all" para mostrar todas las facturas
 export type InvoiceStatus = DocumentStatus | "all";
 
 export interface UseInvoicesFilters
   extends Omit<UseDocumentsFilters, "document_type" | "status"> {
   clientId?: number;
-  status?: InvoiceStatus; // Usar el tipo extendido
+  status?: InvoiceStatus;
   startDate?: string;
   endDate?: string;
 }
 
 export const useInvoices = (filters: UseInvoicesFilters) => {
-  // Mapear "all" a undefined para no filtrar por estado
   const getMappedStatus = (
     status?: InvoiceStatus
   ): DocumentStatus | undefined => {
     if (!status || status === "all") {
-      return undefined; // No filtrar por estado
+      return undefined;
     }
     return status as DocumentStatus;
   };
@@ -27,10 +25,9 @@ export const useInvoices = (filters: UseInvoicesFilters) => {
   const documentsHook = useDocuments({
     ...filters,
     document_type: "invoice",
-    status: getMappedStatus(filters.status), // Mapear el estado
+    status: getMappedStatus(filters.status),
   });
 
-  // Métodos específicos para facturas
   const markAsPaid = async (invoiceId: string) => {
     return documentsHook.updateDocumentStatus(invoiceId, "completed");
   };

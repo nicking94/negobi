@@ -7,7 +7,6 @@ import {
   GetItemTaxesParams,
 } from "../../services/itemTaxes/itemTaxes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseItemTaxesFilters {
   itemId?: number;
   taxTypeId?: number;
@@ -21,7 +20,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los impuestos de items con filtros
   const loadItemTaxes = async (
     customFilters?: Partial<UseItemTaxesFilters>
   ) => {
@@ -56,7 +54,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Crear impuesto de item
   const createItemTax = async (
     itemTaxData: CreateItemTaxData
   ): Promise<ItemTax | null> => {
@@ -76,7 +73,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Actualizar impuesto de item
   const updateItemTax = async (
     id: string,
     updates: UpdateItemTaxData
@@ -103,7 +99,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Eliminar impuesto de item
   const deleteItemTax = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -125,7 +120,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Obtener impuesto de item por ID
   const getItemTaxById = async (id: string): Promise<ItemTax | null> => {
     try {
       setLoading(true);
@@ -142,7 +136,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Crear múltiples impuestos de items
   const createMultipleItemTaxes = async (
     itemTaxesData: CreateItemTaxData[]
   ): Promise<ItemTax[] | null> => {
@@ -166,7 +159,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Actualizar o crear impuestos en lote
   const upsertItemTaxes = async (
     itemId: number,
     taxes: { taxTypeId: number; tax_rate: number; tax_amount: number }[]
@@ -176,7 +168,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
       setError(null);
       const results = await itemTaxService.upsertItemTaxes(itemId, taxes);
 
-      // Actualizar el estado local
       const updatedItemTaxes = [...itemTaxes];
 
       results.forEach((result) => {
@@ -205,7 +196,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Calcular impuestos para un item
   const calculateItemTaxes = async (
     itemId: number,
     baseAmount: number,
@@ -234,7 +224,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
     }
   };
 
-  // Cargar impuestos de items al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadItemTaxes();
   }, [
@@ -260,7 +249,6 @@ export const useItemTaxes = (filters: UseItemTaxesFilters = {}) => {
   };
 };
 
-// Hook especializado para impuestos de un item específico
 export const useItemTaxesByItem = (itemId?: number) => {
   const [itemTaxes, setItemTaxes] = useState<ItemTax[]>([]);
   const [loading, setLoading] = useState(false);
@@ -304,7 +292,6 @@ export const useItemTaxesByItem = (itemId?: number) => {
   };
 };
 
-// Hook especializado para items de un tipo de impuesto específico
 export const useItemTaxesByTaxType = (taxTypeId?: number) => {
   const [itemTaxes, setItemTaxes] = useState<ItemTax[]>([]);
   const [loading, setLoading] = useState(false);
@@ -348,7 +335,6 @@ export const useItemTaxesByTaxType = (taxTypeId?: number) => {
   };
 };
 
-// Hook para gestión de impuestos de item (para formularios)
 export const useItemTaxManager = (itemId?: number) => {
   const {
     itemTaxes,
@@ -361,7 +347,6 @@ export const useItemTaxManager = (itemId?: number) => {
     upsertItemTaxes,
   } = useItemTaxes(itemId ? { itemId } : {});
 
-  // Agregar impuesto al item
   const addTax = async (
     taxTypeId: number,
     tax_rate: number,
@@ -381,17 +366,14 @@ export const useItemTaxManager = (itemId?: number) => {
     return await createItemTax(itemTaxData);
   };
 
-  // Actualizar impuesto del item
   const updateTax = async (itemTaxId: string, updates: UpdateItemTaxData) => {
     return await updateItemTax(itemTaxId, updates);
   };
 
-  // Remover impuesto del item
   const removeTax = async (itemTaxId: string) => {
     return await deleteItemTax(itemTaxId);
   };
 
-  // Reemplazar todos los impuestos del item
   const replaceAllTaxes = async (
     taxes: { taxTypeId: number; tax_rate: number; tax_amount: number }[]
   ) => {
@@ -402,22 +384,18 @@ export const useItemTaxManager = (itemId?: number) => {
     return await upsertItemTaxes(itemId, taxes);
   };
 
-  // Obtener impuesto por tipo de impuesto
   const getTaxByType = (taxTypeId: number): ItemTax | undefined => {
     return itemTaxes.find((tax) => tax.taxTypeId === taxTypeId);
   };
 
-  // Verificar si el item tiene un tipo de impuesto específico
   const hasTaxType = (taxTypeId: number): boolean => {
     return itemTaxes.some((tax) => tax.taxTypeId === taxTypeId);
   };
 
-  // Calcular total de impuestos
   const getTotalTaxAmount = (): number => {
     return itemTaxes.reduce((total, tax) => total + tax.tax_amount, 0);
   };
 
-  // Calcular tasa total de impuestos
   const getTotalTaxRate = (): number => {
     return itemTaxes.reduce((total, tax) => total + tax.tax_rate, 0);
   };
@@ -438,7 +416,6 @@ export const useItemTaxManager = (itemId?: number) => {
   };
 };
 
-// Hook para cálculo de impuestos en tiempo real
 export const useItemTaxCalculator = (itemId?: number) => {
   const { itemTaxes, loading, error } = useItemTaxesByItem(itemId);
 
@@ -453,8 +430,6 @@ export const useItemTaxCalculator = (itemId?: number) => {
     if (!itemTaxes.length) return [];
 
     return itemTaxes.map((tax) => {
-      // Si ya tiene un tax_amount definido, usarlo
-      // De lo contrario, calcular basado en la tasa
       const calculated_amount =
         tax.tax_amount > 0 ? tax.tax_amount : baseAmount * (tax.tax_rate / 100);
 

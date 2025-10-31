@@ -90,7 +90,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
     return statusMap[status] || status;
   };
 
-  // Función para calcular el subtotal antes de impuestos
   const calculateSubtotal = (doc: Document) => {
     const taxableBase = parseFloat(doc.taxable_base?.toString() || "0");
     const exemptAmount = parseFloat(doc.exempt_amount?.toString() || "0");
@@ -136,7 +135,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
     </Card>
   );
 
-  // Componente para mostrar la tabla de items
   const DocumentItemsTable = () => (
     <InfoCard title={itemsTitle}>
       <div className="overflow-x-auto">
@@ -241,7 +239,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
           </div>
         </DialogHeader>
 
-        {/* Error State */}
         {error && !loading && (
           <div className="m-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-3">
@@ -266,17 +263,14 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className="m-6 text-center py-8">
             <p className="text-gray-600">Cargando detalles del documento...</p>
           </div>
         )}
 
-        {/* Document Content */}
         {document && !loading && (
           <div className="p-6 space-y-6">
-            {/* Información Básica */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-white border border-gray-200">
                 <CardContent className="p-4 flex items-center gap-3">
@@ -315,7 +309,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               </Card>
             </div>
 
-            {/* Cliente y Empresa */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <InfoCard title="Información del Cliente">
                 {document.client ? (
@@ -362,7 +355,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               </InfoCard>
             </div>
 
-            {/* Notas */}
             {document.notes && (
               <InfoCard title="Notas">
                 <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-md border border-yellow-200">
@@ -371,12 +363,10 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               </InfoCard>
             )}
 
-            {/* Tabla de Items */}
             <DocumentItemsTable />
 
             <InfoCard title="Resumen Financiero">
               <div className="space-y-3">
-                {/* Subtotal y Descuentos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <InfoRow
@@ -450,7 +440,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Información adicional relevante */}
                 <div className="grid grid-cols-1 gap-4 pt-3 border-t border-gray-200">
                   <InfoRow
                     label="Moneda"
@@ -475,7 +464,6 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               </div>
             </InfoCard>
 
-            {/* Métodos de Pago - Solo si hay valores */}
             {(parseFloat(document.credit_amount?.toString() || "0") > 0 ||
               parseFloat(document.cash_amount?.toString() || "0") > 0) && (
               <InfoCard title="Métodos de Pago">
@@ -515,22 +503,10 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
           </div>
         )}
 
-        {/* Footer Actions */}
         <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
           <Button type="button" variant="outline" onClick={onClose}>
             Cerrar
           </Button>
-          {document && showResendButton && (
-            <Button
-              type="button"
-              onClick={() => {
-                console.log("Reenviar documento:", document.id);
-              }}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {resendButtonText}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>

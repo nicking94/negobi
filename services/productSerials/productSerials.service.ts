@@ -17,7 +17,6 @@ export interface GetProductSerialsParams {
   status?: ProductSerialStatus;
 }
 
-// Tipos para los valores enumerados
 export type ProductSerialStatus =
   | "Available"
   | "Sold"
@@ -26,7 +25,6 @@ export type ProductSerialStatus =
   | "Defective";
 
 export interface ProductSerial {
-  // Campos del response (GET)
   id: number;
   product_id: number;
   serial_number: string;
@@ -34,11 +32,7 @@ export interface ProductSerial {
   purchase_date: string;
   purchase_price: number;
   notes: string;
-
-  // Campos de relación
   currentWarehouseId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -47,11 +41,8 @@ export interface ProductSerial {
 }
 
 export interface CreateProductSerialData {
-  // Campos requeridos para crear un serial de producto
   product_id: number;
   serial_number: string;
-
-  // Campos opcionales para creación
   currentWarehouseId?: number;
   status?: ProductSerialStatus;
   purchase_date?: string;
@@ -60,7 +51,6 @@ export interface CreateProductSerialData {
 }
 
 export interface UpdateProductSerialData {
-  // Todos los campos son opcionales para actualización
   product_id?: number;
   serial_number?: string;
   currentWarehouseId?: number;
@@ -70,7 +60,6 @@ export interface UpdateProductSerialData {
   notes?: string;
 }
 
-// Response interfaces
 export interface ProductSerialResponse {
   success: boolean;
   data: ProductSerial;
@@ -91,7 +80,6 @@ export interface PaginatedProductSerialsResponse {
 }
 
 export const productSerialService = {
-  // Crear un nuevo serial de producto
   createProductSerial: async (
     productSerialData: CreateProductSerialData
   ): Promise<ProductSerial> => {
@@ -99,20 +87,17 @@ export const productSerialService = {
     return response.data.data;
   },
 
-  // Obtener todos los seriales de productos
   getProductSerials: async (
     params?: GetProductSerialsParams
   ): Promise<ProductSerial[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -139,7 +124,6 @@ export const productSerialService = {
     return response.data.data;
   },
 
-  // Actualizar un serial de producto
   updateProductSerial: async (
     id: string,
     updates: UpdateProductSerialData
@@ -148,18 +132,15 @@ export const productSerialService = {
     return response.data.data;
   },
 
-  // Eliminar un serial de producto
   deleteProductSerial: async (id: string): Promise<void> => {
     await api.delete(`${DeleteProductSerial}/${id}`);
   },
 
-  // Obtener un serial de producto por ID
   getProductSerialById: async (id: string): Promise<ProductSerial> => {
     const response = await api.get(`${GetProductSerials}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getProductSerialsByProduct: async (
     productId: number
   ): Promise<ProductSerial[]> => {
@@ -215,7 +196,6 @@ export const productSerialService = {
     return productSerialService.getProductSerials(params);
   },
 
-  // Cambiar estado de serial
   changeSerialStatus: async (
     id: string,
     newStatus: ProductSerialStatus
@@ -223,7 +203,6 @@ export const productSerialService = {
     return productSerialService.updateProductSerial(id, { status: newStatus });
   },
 
-  // Transferir serial a otro warehouse
   transferSerialToWarehouse: async (
     id: string,
     warehouseId: number
@@ -234,17 +213,14 @@ export const productSerialService = {
     });
   },
 
-  // Marcar serial como vendido
   markAsSold: async (id: string): Promise<ProductSerial> => {
     return productSerialService.changeSerialStatus(id, "Sold");
   },
 
-  // Marcar serial como defectuoso
   markAsDefective: async (id: string): Promise<ProductSerial> => {
     return productSerialService.changeSerialStatus(id, "Defective");
   },
 
-  // Crear múltiples seriales
   createMultipleProductSerials: async (
     productSerialsData: CreateProductSerialData[]
   ): Promise<ProductSerial[]> => {
@@ -265,7 +241,6 @@ export const productSerialService = {
     return createdSerials;
   },
 
-  // Verificar disponibilidad de serial
   isSerialAvailable: async (serialNumber: string): Promise<boolean> => {
     try {
       const serial = await productSerialService.getProductSerialBySerialNumber(
@@ -278,7 +253,6 @@ export const productSerialService = {
     }
   },
 
-  // Obtener estadísticas de seriales por producto
   getProductSerialStats: async (
     productId: number
   ): Promise<{

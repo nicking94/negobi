@@ -8,7 +8,6 @@ import {
   GetProductSerialsParams,
 } from "../../services/productSerials/productSerials.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseProductSerialsFilters {
   productId?: number;
   serialNumber?: string;
@@ -22,7 +21,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los seriales de productos con filtros
   const loadProductSerials = async (
     customFilters?: Partial<UseProductSerialsFilters>
   ) => {
@@ -30,7 +28,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetProductSerialsParams = {
         ...filters,
         ...customFilters,
@@ -60,7 +57,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Crear serial de producto
   const createProductSerial = async (
     productSerialData: CreateProductSerialData
   ): Promise<ProductSerial | null> => {
@@ -82,7 +78,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Actualizar serial de producto
   const updateProductSerial = async (
     id: string,
     updates: UpdateProductSerialData
@@ -110,7 +105,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Eliminar serial de producto
   const deleteProductSerial = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -132,7 +126,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Obtener serial de producto por ID
   const getProductSerialById = async (
     id: string
   ): Promise<ProductSerial | null> => {
@@ -153,7 +146,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Crear múltiples seriales
   const createMultipleProductSerials = async (
     productSerialsData: CreateProductSerialData[]
   ): Promise<ProductSerial[] | null> => {
@@ -178,7 +170,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Cambiar estado de serial
   const changeSerialStatus = async (
     id: string,
     newStatus: ProductSerialStatus
@@ -208,7 +199,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Transferir serial a otro warehouse
   const transferSerialToWarehouse = async (
     id: string,
     warehouseId: number
@@ -234,7 +224,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Verificar disponibilidad de serial
   const isSerialAvailable = async (serialNumber: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -255,7 +244,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
     }
   };
 
-  // Cargar seriales de productos al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadProductSerials();
   }, [
@@ -282,7 +270,6 @@ export const useProductSerials = (filters: UseProductSerialsFilters = {}) => {
   };
 };
 
-// Hook especializado para seriales de un producto específico
 export const useProductSerialsByProduct = (productId?: number) => {
   const [productSerials, setProductSerials] = useState<ProductSerial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -328,7 +315,6 @@ export const useProductSerialsByProduct = (productId?: number) => {
   };
 };
 
-// Hook especializado para seriales disponibles
 export const useAvailableProductSerials = (productId?: number) => {
   const [availableSerials, setAvailableSerials] = useState<ProductSerial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -368,7 +354,6 @@ export const useAvailableProductSerials = (productId?: number) => {
   };
 };
 
-// Hook especializado para seriales por warehouse
 export const useProductSerialsByWarehouse = (warehouseId?: number) => {
   const [warehouseSerials, setWarehouseSerials] = useState<ProductSerial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -414,7 +399,6 @@ export const useProductSerialsByWarehouse = (warehouseId?: number) => {
   };
 };
 
-// Hook especializado para seriales por estado
 export const useProductSerialsByStatus = (status?: ProductSerialStatus) => {
   const [statusSerials, setStatusSerials] = useState<ProductSerial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -460,7 +444,6 @@ export const useProductSerialsByStatus = (status?: ProductSerialStatus) => {
   };
 };
 
-// Hook para gestión de inventario serializado
 export const useSerializedInventory = (productId?: number) => {
   const {
     productSerials,
@@ -472,7 +455,6 @@ export const useSerializedInventory = (productId?: number) => {
     changeSerialStatus,
   } = useProductSerials({ productId });
 
-  // Estadísticas del inventario
   const inventoryStats = {
     total: productSerials.length,
     available: productSerials.filter((s) => s.status === "Available").length,
@@ -482,7 +464,6 @@ export const useSerializedInventory = (productId?: number) => {
     defective: productSerials.filter((s) => s.status === "Defective").length,
   };
 
-  // Agregar nuevo serial
   const addSerial = async (
     serialNumber: string,
     warehouseId?: number,
@@ -503,27 +484,22 @@ export const useSerializedInventory = (productId?: number) => {
     return await createProductSerial(serialData);
   };
 
-  // Vender serial
   const sellSerial = async (serialId: string) => {
     return await changeSerialStatus(serialId, "Sold");
   };
 
-  // Reservar serial
   const reserveSerial = async (serialId: string) => {
     return await changeSerialStatus(serialId, "Reserved");
   };
 
-  // Marcar como defectuoso
   const markAsDefective = async (serialId: string) => {
     return await changeSerialStatus(serialId, "Defective");
   };
 
-  // Liberar serial (volver a disponible)
   const releaseSerial = async (serialId: string) => {
     return await changeSerialStatus(serialId, "Available");
   };
 
-  // Obtener serial por número
   const getSerialByNumber = (
     serialNumber: string
   ): ProductSerial | undefined => {
@@ -532,14 +508,12 @@ export const useSerializedInventory = (productId?: number) => {
     );
   };
 
-  // Verificar si un serial existe
   const serialExists = (serialNumber: string): boolean => {
     return productSerials.some(
       (serial) => serial.serial_number === serialNumber
     );
   };
 
-  // Obtener seriales disponibles
   const getAvailableSerials = (): ProductSerial[] => {
     return productSerials.filter((serial) => serial.status === "Available");
   };
@@ -561,7 +535,6 @@ export const useSerializedInventory = (productId?: number) => {
   };
 };
 
-// Hook para búsqueda y validación de seriales
 export const useSerialSearch = () => {
   const [searchResults, setSearchResults] = useState<ProductSerial[]>([]);
   const [loading, setLoading] = useState(false);

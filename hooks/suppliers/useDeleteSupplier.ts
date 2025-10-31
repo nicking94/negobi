@@ -1,4 +1,4 @@
-// hooks/suppliers/useDeleteSupplier.ts - VERSIÓN MEJORADA
+// hooks/suppliers/useDeleteSupplier.ts
 import { supplierService } from "@/services/suppliers/suppliers.service";
 import { useState } from "react";
 

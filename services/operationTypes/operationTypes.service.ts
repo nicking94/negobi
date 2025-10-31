@@ -7,7 +7,6 @@ import {
   DeleteOperationType,
 } from "../operationTypes/operationTypes.route";
 
-// Parámetros para obtener tipos de operación
 export interface GetOperationTypesParams {
   page?: number;
   itemsPerPage?: number;
@@ -20,17 +19,13 @@ export interface GetOperationTypesParams {
   is_active?: boolean;
 }
 
-// Interfaz principal del tipo de operación
 export interface OperationType {
-  // Campos principales
   id: number;
   type_name: string;
   description: string;
   applies_to_module: string;
   transaction_direction: string;
   is_active: boolean;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -38,7 +33,6 @@ export interface OperationType {
   deleted_at?: string | null;
 }
 
-// Datos para crear un tipo de operación
 export interface CreateOperationTypeData {
   type_name: string;
   description: string;
@@ -48,7 +42,6 @@ export interface CreateOperationTypeData {
   external_code?: string;
 }
 
-// Datos para actualizar un tipo de operación
 export interface UpdateOperationTypeData {
   type_name?: string;
   description?: string;
@@ -58,7 +51,6 @@ export interface UpdateOperationTypeData {
   external_code?: string;
 }
 
-// Interfaces de respuesta
 export interface OperationTypeResponse {
   success: boolean;
   data: OperationType;
@@ -78,7 +70,6 @@ export interface PaginatedOperationTypesResponse {
   };
 }
 
-// Constantes para valores predefinidos
 export const OPERATION_MODULES = {
   SALES: "sales",
   INVENTORY: "inventory",
@@ -99,7 +90,6 @@ export type TransactionDirection =
   (typeof TRANSACTION_DIRECTIONS)[keyof typeof TRANSACTION_DIRECTIONS];
 
 export const operationTypeService = {
-  // Crear un nuevo tipo de operación
   createOperationType: async (
     operationTypeData: CreateOperationTypeData
   ): Promise<OperationType> => {
@@ -107,20 +97,17 @@ export const operationTypeService = {
     return response.data.data;
   },
 
-  // Obtener todos los tipos de operación
   getOperationTypes: async (
     params?: GetOperationTypesParams
   ): Promise<OperationType[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -147,13 +134,11 @@ export const operationTypeService = {
     return response.data.data;
   },
 
-  // Obtener un tipo de operación por ID
   getOperationTypeById: async (id: string): Promise<OperationType> => {
     const response = await api.get(`${GetOperationTypeById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar un tipo de operación
   updateOperationType: async (
     id: string,
     updates: UpdateOperationTypeData
@@ -162,12 +147,10 @@ export const operationTypeService = {
     return response.data.data;
   },
 
-  // Eliminar un tipo de operación
   deleteOperationType: async (id: string): Promise<void> => {
     await api.delete(`${DeleteOperationType}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getActiveOperationTypes: async (): Promise<OperationType[]> => {
     return operationTypeService.getOperationTypes({
       is_active: true,
@@ -193,7 +176,6 @@ export const operationTypeService = {
     });
   },
 
-  // Buscar tipos de operación por nombre
   searchOperationTypesByName: async (
     searchTerm: string
   ): Promise<OperationType[]> => {
@@ -203,7 +185,6 @@ export const operationTypeService = {
     });
   },
 
-  // Activar/desactivar tipo de operación
   toggleOperationTypeStatus: async (
     id: string,
     isActive: boolean
@@ -213,7 +194,6 @@ export const operationTypeService = {
     });
   },
 
-  // Verificar si existe un tipo de operación con el mismo nombre
   checkTypeNameExists: async (typeName: string): Promise<boolean> => {
     try {
       const operationTypes = await operationTypeService.getOperationTypes({
@@ -227,7 +207,6 @@ export const operationTypeService = {
     }
   },
 
-  // Obtener tipos de operación para select/dropdown
   getOperationTypesForSelect: async (): Promise<
     Array<{ value: number; label: string }>
   > => {
@@ -244,7 +223,6 @@ export const operationTypeService = {
     }
   },
 
-  // Obtener tipos de operación agrupados por módulo
   getOperationTypesGroupedByModule: async (): Promise<
     Record<string, OperationType[]>
   > => {

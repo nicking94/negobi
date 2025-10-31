@@ -7,7 +7,6 @@ import {
   DeleteZone,
 } from "../zones/zones.route";
 
-// Parámetros para obtener zonas
 export interface GetZonesParams {
   page?: number;
   itemsPerPage?: number;
@@ -17,16 +16,12 @@ export interface GetZonesParams {
   zip_code?: string;
 }
 
-// Interfaz principal de la zona
 export interface Zone {
-  // Campos principales
   id: number;
   zone_name: string;
   zip_code: string;
   is_active: boolean;
   representative?: string;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -34,14 +29,12 @@ export interface Zone {
   deleted_at?: string | null;
 }
 
-// Datos para crear una zona
 export interface CreateZoneData {
   zone_name: string;
   zip_code: string;
   representative?: string;
 }
 
-// Datos para actualizar una zona
 export interface UpdateZoneData {
   zone_name?: string;
   zip_code?: string;
@@ -49,7 +42,6 @@ export interface UpdateZoneData {
   representative?: string;
 }
 
-// Interfaces de respuesta
 export interface ZoneResponse {
   success: boolean;
   data: Zone;
@@ -70,24 +62,20 @@ export interface PaginatedZonesResponse {
 }
 
 export const zoneService = {
-  // Crear una nueva zona
   createZone: async (zoneData: CreateZoneData): Promise<Zone> => {
     const response = await api.post(PostZone, zoneData);
     return response.data.data;
   },
 
-  // Obtener todas las zonas
   getZones: async (params?: GetZonesParams): Promise<Zone[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -105,31 +93,26 @@ export const zoneService = {
     return response.data.data;
   },
 
-  // Obtener una zona por ID
   getZoneById: async (id: string): Promise<Zone> => {
     const response = await api.get(`${GetZoneById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar una zona
   updateZone: async (id: string, updates: UpdateZoneData): Promise<Zone> => {
     const response = await api.patch(`${PatchZone}/${id}`, updates);
     return response.data.data;
   },
 
-  // Eliminar una zona
   deleteZone: async (id: string): Promise<void> => {
     await api.delete(`${DeleteZone}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getActiveZones: async (): Promise<Zone[]> => {
     return zoneService.getZones({
       itemsPerPage: 10,
     });
   },
 
-  // Buscar zonas por nombre
   searchZonesByName: async (searchTerm: string): Promise<Zone[]> => {
     return zoneService.getZones({
       search: searchTerm,
@@ -137,7 +120,6 @@ export const zoneService = {
     });
   },
 
-  // Buscar zonas por código postal
   searchZonesByZipCode: async (zipCode: string): Promise<Zone[]> => {
     return zoneService.getZones({
       zip_code: zipCode,
@@ -145,12 +127,10 @@ export const zoneService = {
     });
   },
 
-  // Activar/desactivar zona
   toggleZoneStatus: async (id: string, isActive: boolean): Promise<Zone> => {
     return zoneService.updateZone(id, { is_active: isActive });
   },
 
-  // Verificar si existe una zona con el mismo nombre
   checkZoneNameExists: async (zoneName: string): Promise<boolean> => {
     try {
       const zones = await zoneService.getZones({
@@ -164,7 +144,6 @@ export const zoneService = {
     }
   },
 
-  // Verificar si existe una zona con el mismo código postal
   checkZipCodeExists: async (zipCode: string): Promise<boolean> => {
     try {
       const zones = await zoneService.getZones({
@@ -178,7 +157,6 @@ export const zoneService = {
     }
   },
 
-  // Obtener zonas para select/dropdown
   getZonesForSelect: async (): Promise<
     Array<{ value: number; label: string; zip_code: string }>
   > => {
@@ -195,7 +173,6 @@ export const zoneService = {
     }
   },
 
-  // Obtener zonas agrupadas por código postal (primeros 2 dígitos)
   getZonesGroupedByZipCodeArea: async (): Promise<Record<string, Zone[]>> => {
     try {
       const zones = await zoneService.getActiveZones();
@@ -213,7 +190,6 @@ export const zoneService = {
     }
   },
 
-  // Obtener representantes únicos
   getUniqueRepresentatives: async (): Promise<string[]> => {
     try {
       const zones = await zoneService.getActiveZones();
@@ -228,7 +204,6 @@ export const zoneService = {
     }
   },
 
-  // Obtener zonas por representante
   getZonesByRepresentative: async (representative: string): Promise<Zone[]> => {
     try {
       const zones = await zoneService.getActiveZones();
@@ -239,13 +214,11 @@ export const zoneService = {
     }
   },
 
-  // Validar formato de código postal
   validateZipCode: (zipCode: string): boolean => {
     const zipCodeRegex = /^\d{4,10}$/;
     return zipCodeRegex.test(zipCode);
   },
 
-  // Formatear código postal
   formatZipCode: (zipCode: string): string => {
     return zipCode.replace(/\D/g, "").substring(0, 10);
   },

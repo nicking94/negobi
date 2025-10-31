@@ -17,7 +17,6 @@ import useValidateOtp from "@/hooks/auth/useValidateOtp";
 import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 
-// Validaciones con Zod
 const formSchema = z.object({
   otp: z.string().length(6, "El código OTP debe tener 6 dígitos"),
 });
@@ -35,11 +34,9 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
     },
   });
 
-  // Referencias para los inputs
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    // Inicializar el array de referencias
     inputRefs.current = inputRefs.current.slice(0, 6);
   }, []);
 
@@ -56,16 +53,14 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
       toast.success("Código OTP validado con éxito.");
       setTimeout(() => {
         route.push(`/new-password?email=${email}&taxId=${legal_tax_id}`);
-      }, 3000); // 3 segundos
+      }, 3000);
     } else {
       console.error("Error al validar OTP:", result?.data);
     }
   };
 
-  // Manejar el cambio en los inputs individuales
   const handleChange = (index: number, value: string) => {
     if (value.length <= 1) {
-      // Actualizar el valor en el form
       const currentOtp = form.getValues("otp") || "";
       const newOtpArray = currentOtp.split("");
       newOtpArray[index] = value;
@@ -73,34 +68,27 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
 
       form.setValue("otp", newOtp, { shouldValidate: true });
 
-      // Avanzar al siguiente input si se ingresó un valor
       if (value && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
     }
   };
 
-  // Manejar la tecla retroceso
   const handleKeyDown = (
     index: number,
     e: React.KeyboardEvent<HTMLInputElement>
   ) => {
     if (e.key === "Backspace" && !e.currentTarget.value && index > 0) {
-      // Retroceder al input anterior si está vacío y se presiona backspace
       inputRefs.current[index - 1]?.focus();
     }
   };
 
-  // Manejar el pegado de contenido
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").slice(0, 6);
 
     if (/^\d+$/.test(pastedData)) {
-      // Actualizar el valor del formulario
       form.setValue("otp", pastedData, { shouldValidate: true });
-
-      // Llenar los inputs individuales
       const digits = pastedData.split("");
       digits.forEach((digit, index) => {
         if (inputRefs.current[index]) {
@@ -108,7 +96,6 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
         }
       });
 
-      // Enfocar el siguiente input disponible
       if (pastedData.length < 6) {
         inputRefs.current[pastedData.length]?.focus();
       } else {
@@ -121,7 +108,6 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
     <Form {...form}>
       <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Campo OTP */}
         <FormField
           control={form.control}
           name="otp"
@@ -156,7 +142,6 @@ export function OTPValidationForm({ email, legal_tax_id }: otpParams) {
           )}
         />
 
-        {/* Botón */}
         <div className="flex justify-center pt-2">
           <Button
             type="submit"

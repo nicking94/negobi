@@ -10,19 +10,15 @@ const useRefreshToken = () => {
   const onRefreshToken = async () => {
     try {
       setLoading(true);
-
-      // Usar el refresh token como authorization header
       const refreshToken = localStorage.getItem("NEGOBI_JWT_REFRESH_TOKEN");
 
       if (!refreshToken) {
         throw new Error("No refresh token available");
       }
 
-      // Configurar el interceptor para esta petición específica
       const { data, status } = await AuthService.refreshTokenAction();
 
       if (status === 200) {
-        // Actualizar tokens en el contexto y localStorage
         updateToken(data.data.access_token, data.data.refresh_token);
 
         return {
@@ -39,7 +35,6 @@ const useRefreshToken = () => {
     } catch (error: unknown) {
       console.error("Error refreshing token:", error);
 
-      // Forzar logout si el refresh token es inválido
       if ((error as any)?.response?.status === 401) {
         localStorage.removeItem("NEGOBI_JWT_TOKEN");
         localStorage.removeItem("NEGOBI_JWT_REFRESH_TOKEN");

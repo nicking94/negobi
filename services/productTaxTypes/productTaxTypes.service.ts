@@ -18,17 +18,12 @@ export interface GetProductTaxTypesParams {
 }
 
 export interface ProductTaxType {
-  // Campos del response (GET)
   id: number;
   tax_rate: number;
   erp_code_product: string;
   erp_code_tax: string;
-
-  // Campos de relación
   productId?: number;
   taxTypeId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -37,18 +32,14 @@ export interface ProductTaxType {
 }
 
 export interface CreateProductTaxTypeData {
-  // Campos requeridos para crear una relación producto-impuesto
   productId: number;
   taxTypeId: number;
-
-  // Campos opcionales para creación
   tax_rate_override?: number;
   erp_code_product?: string;
   erp_code_tax?: string;
 }
 
 export interface UpdateProductTaxTypeData {
-  // Todos los campos son opcionales para actualización
   productId?: number;
   taxTypeId?: number;
   tax_rate_override?: number;
@@ -56,7 +47,6 @@ export interface UpdateProductTaxTypeData {
   erp_code_tax?: string;
 }
 
-// Interfaces para sincronización
 export interface SyncProductTaxTypeData {
   productId: number;
   taxTypeId: number;
@@ -77,7 +67,6 @@ export interface SyncResponse {
   };
 }
 
-// Response interfaces
 export interface ProductTaxTypeResponse {
   success: boolean;
   data: ProductTaxType;
@@ -98,7 +87,6 @@ export interface PaginatedProductTaxTypesResponse {
 }
 
 export const productTaxTypeService = {
-  // Crear una nueva relación producto-impuesto
   createProductTaxType: async (
     productTaxTypeData: CreateProductTaxTypeData
   ): Promise<ProductTaxType> => {
@@ -106,20 +94,17 @@ export const productTaxTypeService = {
     return response.data.data;
   },
 
-  // Obtener todas las relaciones producto-impuesto
   getProductTaxTypes: async (
     params?: GetProductTaxTypesParams
   ): Promise<ProductTaxType[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -140,7 +125,6 @@ export const productTaxTypeService = {
     return response.data.data;
   },
 
-  // Actualizar una relación producto-impuesto
   updateProductTaxType: async (
     id: string,
     updates: UpdateProductTaxTypeData
@@ -149,18 +133,15 @@ export const productTaxTypeService = {
     return response.data.data;
   },
 
-  // Eliminar una relación producto-impuesto
   deleteProductTaxType: async (id: string): Promise<void> => {
     await api.delete(`${DeleteProductTaxType}/${id}`);
   },
 
-  // Obtener una relación por ID
   getProductTaxTypeById: async (id: string): Promise<ProductTaxType> => {
     const response = await api.get(`${GetProductTaxTypes}/${id}`);
     return response.data.data;
   },
 
-  // Sincronizar relaciones producto-impuesto desde ERP
   syncProductTaxTypes: async (
     syncData: SyncProductTaxTypesPayload
   ): Promise<SyncResponse> => {
@@ -168,7 +149,6 @@ export const productTaxTypeService = {
     return response.data;
   },
 
-  // Métodos adicionales útiles
   getProductTaxTypesByProduct: async (
     productId: number
   ): Promise<ProductTaxType[]> => {
@@ -208,7 +188,6 @@ export const productTaxTypeService = {
     }
   },
 
-  // Asignar múltiples impuestos a un producto
   assignTaxTypesToProduct: async (
     productId: number,
     taxTypeIds: number[],
@@ -240,7 +219,6 @@ export const productTaxTypeService = {
     return createdRelations;
   },
 
-  // Remover todos los impuestos de un producto
   removeAllTaxTypesFromProduct: async (productId: number): Promise<void> => {
     try {
       const productTaxTypes =

@@ -14,7 +14,7 @@ const useGetCompaniesForSelect = () => {
   useEffect(() => {
     if (companies && companies.length > 0) {
       const options = companies
-        .filter((company) => company.id && company.name) // Solo compañías válidas
+        .filter((company) => company.id && company.name)
         .map((company) => ({
           value: company.id.toString(),
           label: company.name || `Compañía ${company.id}`,

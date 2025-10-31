@@ -1,4 +1,4 @@
-// hooks/clients/useGetClient.ts - Versión mejorada
+// hooks/clients/useGetClient.ts
 import { useState, useEffect } from "react";
 import { Client } from "@/app/dashboard/masters/clients/page";
 import { ClientsService } from "@/services/clients/clients.service";

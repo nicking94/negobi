@@ -225,13 +225,11 @@ function DataTablePagination({
   itemsPerPage,
   setItemsPerPage,
 }: DataTablePaginationProps) {
-  // 🔹 Cálculo de rangos visibles
   const firstItem = (page - 1) * itemsPerPage + 1;
   const lastItem = Math.min(page * itemsPerPage, total);
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 mt-4">
-      {/* ---- Sección izquierda ---- */}
       <div className="flex items-center gap-4">
         <div className="flex items-center space-x-2">
           <p className="text-sm text-muted-foreground">Filas por página</p>
@@ -260,9 +258,7 @@ function DataTablePagination({
         </div>
       </div>
 
-      {/* ---- Sección derecha (navegación) ---- */}
       <div className="flex items-center space-x-1">
-        {/* Primera página */}
         <Button
           variant="ghost"
           size="sm"
@@ -275,7 +271,6 @@ function DataTablePagination({
           <ChevronsLeft className="h-3 w-3" />
         </Button>
 
-        {/* Página anterior */}
         <Button
           variant="ghost"
           size="sm"
@@ -288,7 +283,6 @@ function DataTablePagination({
           <ChevronLeft className="h-3 w-3" />
         </Button>
 
-        {/* Página siguiente */}
         <Button
           variant="ghost"
           size="sm"
@@ -301,7 +295,6 @@ function DataTablePagination({
           <ChevronRight className="h-3 w-3" />
         </Button>
 
-        {/* Última página */}
         <Button
           variant="ghost"
           size="sm"

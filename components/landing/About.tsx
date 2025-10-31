@@ -2,21 +2,21 @@ import React from "react";
 
 const About = () => {
   return (
-    <section className="py-20 px-4 bg-green_xxl">
+    <section className="py-20 px-4 bg-gradient-to-br from-green_m to-green_b">
       <div className="max-w-6xl mx-auto">
         <div className="lg:flex items-center gap-16">
           <div className="lg:w-1/2 mb-10 lg:mb-0">
-            <h2 className="text-3xl font-bold mb-6 text-black">
+            <h2 className="text-3xl font-bold mb-6 text-white">
               Quiénes Somos
             </h2>
-            <p className="text-gray_b font-medium mb-6">
+            <p className="text-gray_xl font-medium mb-6">
               Negobi nació para resolver los desafíos de la fuerza de ventas en
               campo y ha evolucionado para ofrecer una solución completa y
               robusta. Nuestro compromiso es brindarte una plataforma que no
               solo mejore la productividad, sino que también te dé el control
               total de tu operación.
             </p>
-            <p className="text-gray_b font-medium">
+            <p className="text-gray_xl font-medium">
               Integramos desde la planificación de rutas y la toma de pedidos
               hasta la gestión estratégica de metas y el seguimiento del
               despacho y la entrega, para que tengas una visión 360 de tu
@@ -24,7 +24,7 @@ const About = () => {
             </p>
           </div>
           <div className="lg:w-1/2 bg-white p-8 rounded-lg shadow-sm">
-            <h3 className="text-2xl font-bold mb-6 text-black">
+            <h3 className="text-2xl text-center font-bold mb-6 text-black">
               Para quién va dirigido
             </h3>
 

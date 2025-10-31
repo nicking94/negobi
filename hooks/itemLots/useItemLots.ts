@@ -7,7 +7,6 @@ import {
   GetItemLotsParams,
 } from "../../services/itemLots/itemLots.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseItemLotsFilters {
   itemId?: number;
   productLotId?: number;
@@ -20,7 +19,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los lotes de items con filtros
   const loadItemLots = async (customFilters?: Partial<UseItemLotsFilters>) => {
     try {
       setLoading(true);
@@ -51,7 +49,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Crear lote de item
   const createItemLot = async (
     itemLotData: CreateItemLotData
   ): Promise<ItemLot | null> => {
@@ -71,7 +68,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Actualizar lote de item
   const updateItemLot = async (
     id: string,
     updates: UpdateItemLotData
@@ -96,7 +92,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Eliminar lote de item
   const deleteItemLot = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -116,7 +111,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Obtener lote de item por ID
   const getItemLotById = async (id: string): Promise<ItemLot | null> => {
     try {
       setLoading(true);
@@ -133,7 +127,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Crear múltiples lotes de items
   const createMultipleItemLots = async (
     itemLotsData: CreateItemLotData[]
   ): Promise<ItemLot[] | null> => {
@@ -157,7 +150,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Actualizar cantidad de lote
   const updateItemLotQuantity = async (
     id: string,
     newQuantity: number
@@ -187,7 +179,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Ajustar cantidad de lote
   const adjustItemLotQuantity = async (
     id: string,
     adjustment: number
@@ -217,7 +208,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
     }
   };
 
-  // Cargar lotes de items al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadItemLots();
   }, [filters.itemId, filters.productLotId, filters.quantity, filters.search]);
@@ -237,7 +227,6 @@ export const useItemLots = (filters: UseItemLotsFilters = {}) => {
   };
 };
 
-// Hook especializado para lotes de un item específico
 export const useItemLotsByItem = (itemId?: number) => {
   const [itemLots, setItemLots] = useState<ItemLot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -279,7 +268,6 @@ export const useItemLotsByItem = (itemId?: number) => {
   };
 };
 
-// Hook especializado para items de un lote de producto específico
 export const useItemLotsByProductLot = (productLotId?: number) => {
   const [itemLots, setItemLots] = useState<ItemLot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -325,7 +313,6 @@ export const useItemLotsByProductLot = (productLotId?: number) => {
   };
 };
 
-// Hook para gestión de inventario por lotes
 export const useItemLotInventory = (itemId?: number) => {
   const {
     itemLots,
@@ -338,13 +325,11 @@ export const useItemLotInventory = (itemId?: number) => {
     adjustItemLotQuantity,
   } = useItemLots({ itemId });
 
-  // Calcular inventario total
   const totalInventory = itemLots.reduce(
     (total, itemLot) => total + itemLot.quantity,
     0
   );
 
-  // Agregar lote al item
   const addLot = async (productLotId: number, quantity: number) => {
     if (!itemId) {
       throw new Error("itemId es requerido");
@@ -359,32 +344,26 @@ export const useItemLotInventory = (itemId?: number) => {
     return await createItemLot(itemLotData);
   };
 
-  // Actualizar cantidad de lote específico
   const updateLotQuantity = async (itemLotId: string, newQuantity: number) => {
     return await updateItemLot(itemLotId, { quantity: newQuantity });
   };
 
-  // Ajustar cantidad de lote específico
   const adjustLotQuantity = async (itemLotId: string, adjustment: number) => {
     return await adjustItemLotQuantity(itemLotId, adjustment);
   };
 
-  // Remover lote
   const removeLot = async (itemLotId: string) => {
     return await deleteItemLot(itemLotId);
   };
 
-  // Obtener lote por producto lot
   const getLotByProductLot = (productLotId: number): ItemLot | undefined => {
     return itemLots.find((lot) => lot.productLotId === productLotId);
   };
 
-  // Verificar si existe lote para un producto lot
   const hasLotForProductLot = (productLotId: number): boolean => {
     return itemLots.some((lot) => lot.productLotId === productLotId);
   };
 
-  // Obtener cantidad por producto lot
   const getQuantityByProductLot = (productLotId: number): number => {
     const lot = getLotByProductLot(productLotId);
     return lot ? lot.quantity : 0;
@@ -406,40 +385,30 @@ export const useItemLotInventory = (itemId?: number) => {
   };
 };
 
-// Hook para cálculos de inventario
 export const useInventoryCalculations = (itemId?: number) => {
   const { itemLots, loading, error } = useItemLotsByItem(itemId);
 
   const calculations = {
-    // Inventario total
     totalQuantity: itemLots.reduce((total, lot) => total + lot.quantity, 0),
-
-    // Número de lotes diferentes
     totalLots: itemLots.length,
-
-    // Lote con mayor cantidad
     maxQuantityLot: itemLots.reduce(
       (max, lot) => (lot.quantity > (max?.quantity || 0) ? lot : max),
       null as ItemLot | null
     ),
 
-    // Lote con menor cantidad
     minQuantityLot: itemLots.reduce(
       (min, lot) => (!min || lot.quantity < min.quantity ? lot : min),
       null as ItemLot | null
     ),
 
-    // Cantidad promedio por lote
     averageQuantity:
       itemLots.length > 0
         ? itemLots.reduce((total, lot) => total + lot.quantity, 0) /
           itemLots.length
         : 0,
 
-    // Lotes con cantidad baja (menos de 10)
     lowQuantityLots: itemLots.filter((lot) => lot.quantity < 10),
 
-    // Lotes con cantidad cero
     zeroQuantityLots: itemLots.filter((lot) => lot.quantity === 0),
   };
 
@@ -451,11 +420,9 @@ export const useInventoryCalculations = (itemId?: number) => {
   };
 };
 
-// Hook para transferencias entre lotes
 export const useLotTransfers = (itemId?: number) => {
-  // Cambiar useItemLotsByItem por useItemLots
   const { itemLots, loading, error, refetch, adjustItemLotQuantity } =
-    useItemLots({ itemId }); // ✅ useItemLots sí tiene adjustItemLotQuantity
+    useItemLots({ itemId });
 
   const transferBetweenLots = async (
     fromItemLotId: string,
@@ -467,16 +434,13 @@ export const useLotTransfers = (itemId?: number) => {
     }
 
     try {
-      // Restar del lote origen
       const fromResult = await adjustItemLotQuantity(fromItemLotId, -quantity);
       if (!fromResult) {
         throw new Error("Error al restar del lote origen");
       }
 
-      // Sumar al lote destino
       const toResult = await adjustItemLotQuantity(toItemLotId, quantity);
       if (!toResult) {
-        // Revertir la operación si falla
         await adjustItemLotQuantity(fromItemLotId, quantity);
         throw new Error("Error al sumar al lote destino");
       }
@@ -499,7 +463,6 @@ export const useLotTransfers = (itemId?: number) => {
     try {
       let totalTransfer = 0;
 
-      // Calcular total a transferir
       for (const sourceId of sourceItemLotIds) {
         const sourceLot = itemLots.find(
           (lot) => lot.id.toString() === sourceId
@@ -509,7 +472,6 @@ export const useLotTransfers = (itemId?: number) => {
         }
       }
 
-      // Transferir cantidades
       for (const sourceId of sourceItemLotIds) {
         if (sourceId !== targetItemLotId) {
           const sourceLot = itemLots.find(
@@ -521,7 +483,6 @@ export const useLotTransfers = (itemId?: number) => {
         }
       }
 
-      // Sumar al lote destino
       await adjustItemLotQuantity(targetItemLotId, totalTransfer);
 
       return true;

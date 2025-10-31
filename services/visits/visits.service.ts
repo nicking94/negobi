@@ -7,7 +7,6 @@ import {
   DeleteVisit,
 } from "../visits/visits.route";
 
-// Parámetros para obtener visitas
 export interface GetVisitsParams {
   page?: number;
   itemsPerPage?: number;
@@ -20,7 +19,6 @@ export interface GetVisitsParams {
   clientId?: number;
 }
 
-// Tipos y constantes
 export const VISIT_STATUSES = {
   PENDING: "pending",
   COMPLETED: "completed",
@@ -29,25 +27,18 @@ export const VISIT_STATUSES = {
 
 export type VisitStatus = (typeof VISIT_STATUSES)[keyof typeof VISIT_STATUSES];
 
-// Interfaz para ubicación geográfica
 export interface VisitLocation {
   type: "Point";
-  coordinates: [number, number]; // [longitude, latitude]
+  coordinates: [number, number];
 }
 
-// Interfaz principal de la visita
 export interface Visit {
-  // Campos principales
   id: number;
   date: string;
   location: VisitLocation;
   status: VisitStatus;
   description: string;
-
-  // Campos de relación (opcionales en response)
   clientId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -55,7 +46,6 @@ export interface Visit {
   deleted_at?: string | null;
 }
 
-// Datos para crear una visita
 export interface CreateVisitData {
   date: string;
   location: VisitLocation;
@@ -64,7 +54,6 @@ export interface CreateVisitData {
   clientId?: number;
 }
 
-// Datos para actualizar una visita
 export interface UpdateVisitData {
   date?: string;
   location?: VisitLocation;
@@ -73,7 +62,6 @@ export interface UpdateVisitData {
   clientId?: number;
 }
 
-// Interfaces de respuesta
 export interface VisitResponse {
   success: boolean;
   data: Visit;
@@ -93,7 +81,6 @@ export interface PaginatedVisitsResponse {
   };
 }
 
-// Interfaz para estadísticas de visitas
 export interface VisitStatistics {
   total: number;
   pending: number;
@@ -104,34 +91,30 @@ export interface VisitStatistics {
   thisMonth: number;
 }
 
-// Interfaz para visita con información extendida
 export interface VisitWithDetails extends Visit {
   clientName?: string;
   clientAddress?: string;
-  duration?: number; // en minutos
-  distance?: number; // en kilómetros
+  duration?: number;
+  distance?: number;
 }
 
 export const visitService = {
   VISIT_STATUSES,
-  // Crear una nueva visita
+
   createVisit: async (visitData: CreateVisitData): Promise<Visit> => {
     const response = await api.post(PostVisit, visitData);
     return response.data.data;
   },
 
-  // Obtener todas las visitas
   getVisits: async (params?: GetVisitsParams): Promise<Visit[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -158,24 +141,20 @@ export const visitService = {
     return response.data.data;
   },
 
-  // Obtener una visita por ID
   getVisitById: async (id: string): Promise<Visit> => {
     const response = await api.get(`${GetVisitById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar una visita
   updateVisit: async (id: string, updates: UpdateVisitData): Promise<Visit> => {
     const response = await api.patch(`${PatchVisit}/${id}`, updates);
     return response.data.data;
   },
 
-  // Eliminar una visita
   deleteVisit: async (id: string): Promise<void> => {
     await api.delete(`${DeleteVisit}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getVisitsByStatus: async (status: VisitStatus): Promise<Visit[]> => {
     return visitService.getVisits({
       status,
@@ -224,7 +203,6 @@ export const visitService = {
     });
   },
 
-  // Cambiar estado de visita
   updateVisitStatus: async (
     id: string,
     status: VisitStatus
@@ -232,22 +210,18 @@ export const visitService = {
     return visitService.updateVisit(id, { status });
   },
 
-  // Marcar visita como completada
   markVisitAsCompleted: async (id: string): Promise<Visit> => {
     return visitService.updateVisitStatus(id, VISIT_STATUSES.COMPLETED);
   },
 
-  // Marcar visita como cancelada
   markVisitAsCancelled: async (id: string): Promise<Visit> => {
     return visitService.updateVisitStatus(id, VISIT_STATUSES.CANCELLED);
   },
 
-  // Reagendar visita
   rescheduleVisit: async (id: string, newDate: string): Promise<Visit> => {
     return visitService.updateVisit(id, { date: newDate });
   },
 
-  // Obtener estadísticas de visitas
   getVisitStatistics: async (): Promise<VisitStatistics> => {
     try {
       const [
@@ -264,7 +238,6 @@ export const visitService = {
         visitService.getTodayVisits(),
       ]);
 
-      // Calcular visitas de esta semana
       const now = new Date();
       const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
       const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
@@ -273,7 +246,6 @@ export const visitService = {
         return visitDate >= startOfWeek && visitDate <= endOfWeek;
       });
 
-      // Calcular visitas de este mes
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const thisMonthVisits = allVisits.filter((visit) => {
@@ -304,7 +276,6 @@ export const visitService = {
     }
   },
 
-  // Validar datos de visita
   validateVisitData: (
     visitData: CreateVisitData
   ): { isValid: boolean; errors: string[] } => {
@@ -347,7 +318,6 @@ export const visitService = {
     };
   },
 
-  // Calcular distancia entre dos puntos (Haversine formula)
   calculateDistance: (
     coord1: [number, number],
     coord2: [number, number]
@@ -355,7 +325,7 @@ export const visitService = {
     const [lon1, lat1] = coord1;
     const [lon2, lat2] = coord2;
 
-    const R = 6371; // Radio de la Tierra en km
+    const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -370,16 +340,13 @@ export const visitService = {
     return parseFloat(distance.toFixed(2));
   },
 
-  // Optimizar ruta de visitas (algoritmo simple)
   optimizeVisitRoute: (visits: Visit[]): Visit[] => {
     if (visits.length <= 1) return visits;
 
-    // Ordenar por fecha y luego por proximidad geográfica
     const sortedVisits = [...visits].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Simple optimización: ordenar visitas consecutivas por proximidad
     const optimized: Visit[] = [sortedVisits[0]];
     const remaining = sortedVisits.slice(1);
 
@@ -406,7 +373,6 @@ export const visitService = {
     return optimized;
   },
 
-  // Obtener visitas para calendario
   getVisitsForCalendar: async (
     startDate: string,
     endDate: string
@@ -414,10 +380,9 @@ export const visitService = {
     return visitService.getVisitsByDateRange(startDate, endDate);
   },
 
-  // Verificar conflictos de horario
   checkScheduleConflict: async (
     date: string,
-    duration: number = 60, // duración en minutos
+    duration: number = 60,
     excludeVisitId?: string
   ): Promise<boolean> => {
     try {
@@ -425,8 +390,8 @@ export const visitService = {
       const visitEnd = new Date(visitDate.getTime() + duration * 60 * 1000);
 
       const visits = await visitService.getVisitsByDateRange(
-        new Date(visitDate.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2 horas antes
-        new Date(visitEnd.getTime() + 2 * 60 * 60 * 1000).toISOString() // 2 horas después
+        new Date(visitDate.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+        new Date(visitEnd.getTime() + 2 * 60 * 60 * 1000).toISOString()
       );
 
       return visits.some((visit) => {
@@ -437,7 +402,7 @@ export const visitService = {
         const existingVisitDate = new Date(visit.date);
         const existingVisitEnd = new Date(
           existingVisitDate.getTime() + 60 * 60 * 1000
-        ); // Asumir 1 hora
+        );
 
         return (
           (visitDate >= existingVisitDate && visitDate < existingVisitEnd) ||
@@ -451,7 +416,6 @@ export const visitService = {
     }
   },
 
-  // Crear múltiples visitas
   createMultipleVisits: async (
     visitsData: CreateVisitData[]
   ): Promise<Visit[]> => {

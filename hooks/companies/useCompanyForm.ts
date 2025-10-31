@@ -28,7 +28,6 @@ export const editCompanySchema = companySchema;
 export type CreateCompanyFormValues = z.infer<typeof createCompanySchema>;
 export type EditCompanyFormValues = z.infer<typeof editCompanySchema>;
 
-// Tipo para los errores del formulario
 type FormErrors = Record<string, { message?: string }>;
 
 export const useCompanyForm = (isEdit: boolean) => {
@@ -63,7 +62,6 @@ export const useCompanyForm = (isEdit: boolean) => {
         },
   });
 
-  // Función auxiliar para verificar si hay errores en campos de admin
   const hasAdminError = (field: keyof CreateCompanyFormValues): boolean => {
     if (isEdit) return false;
 
@@ -71,7 +69,6 @@ export const useCompanyForm = (isEdit: boolean) => {
     return !!errors[field];
   };
 
-  // Función auxiliar para obtener errores de admin
   const getAdminError = (field: keyof CreateCompanyFormValues) => {
     if (isEdit) return undefined;
 

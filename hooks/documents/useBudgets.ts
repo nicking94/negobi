@@ -8,7 +8,6 @@ import {
 import { useDocuments, UseDocumentsFilters } from "./useDocuments";
 import useUserCompany from "../auth/useUserCompany";
 
-// Hook especializado para presupuestos (quotes)
 export const useBudgets = (
   filters: Omit<UseDocumentsFilters, "document_type">
 ) => {
@@ -31,41 +30,33 @@ export const useCreateBudget = () => {
   const { companyId, selectedCompanyId } = useUserCompany();
 
   const createBudget = async (
-    budgetData: Omit<CreateDocumentData, "document_type">
+    budgetData: CreateDocumentData
   ): Promise<Document | null> => {
     try {
       setLoading(true);
       setError(null);
 
-      // ✅ Usar la empresa seleccionada o la del usuario por defecto
       const targetCompanyId = selectedCompanyId || companyId;
 
       if (!targetCompanyId) {
         const errorMsg =
-          "No se puede crear el presupuesto: Empresa no configurada. Por favor, seleccione una empresa.";
-        console.error("❌", errorMsg);
+          "No se puede crear el presupuesto: Empresa no configurada";
         throw new Error(errorMsg);
       }
 
       const documentData: CreateDocumentData = {
         ...budgetData,
-        document_type: "quote",
-        status: "draft",
-        companyId: targetCompanyId, // ✅ Siempre usar la empresa correcta
+        companyId: targetCompanyId,
       };
 
       const validation = documentService.validateDocumentData(documentData);
       if (!validation.isValid) {
-        const errorMsg = validation.errors.join(", ");
-        console.error("❌ Validación falló:", errorMsg);
-        throw new Error(errorMsg);
+        throw new Error(validation.errors.join(", "));
       }
 
       const newBudget = await documentService.createDocument(documentData);
-
       return newBudget;
     } catch (err) {
-      console.error("🚨 useCreateBudget: Error:", err);
       setError(
         err instanceof Error ? err.message : "Error al crear presupuesto"
       );
@@ -75,9 +66,5 @@ export const useCreateBudget = () => {
     }
   };
 
-  return {
-    loading,
-    error,
-    createBudget,
-  };
+  return { loading, error, createBudget };
 };

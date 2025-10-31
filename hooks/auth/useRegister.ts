@@ -40,7 +40,6 @@ const useRegister = () => {
           "Registro exitoso. Empresa y administrador creados correctamente."
         );
 
-        // ✅ Redirigir automáticamente al login después del registro
         setTimeout(() => {
           router.push("/login");
         }, 2000);
@@ -72,7 +71,6 @@ const useRegister = () => {
   return { onRegister, loading };
 };
 
-// Type guard para verificar si es un ApiError
 const isApiError = (error: unknown): error is ApiError => {
   return (
     typeof error === "object" &&

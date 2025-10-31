@@ -5,11 +5,9 @@ import {
   CreateBusinessTypeData,
   UpdateBusinessTypeData,
   GetBusinessTypesParams,
-  CommonBusinessType,
   COMMON_BUSINESS_TYPES,
 } from "../../services/businessTypes/businessTypes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseBusinessTypesFilters {
   name?: string;
   search?: string;
@@ -20,7 +18,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los tipos de negocio con filtros
   const loadBusinessTypes = async (
     customFilters?: Partial<UseBusinessTypesFilters>
   ) => {
@@ -55,7 +52,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Crear tipo de negocio
   const createBusinessType = async (
     businessTypeData: CreateBusinessTypeData
   ): Promise<BusinessType | null> => {
@@ -63,7 +59,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos
       const validation =
         businessTypeService.validateBusinessTypeData(businessTypeData);
       if (!validation.isValid) {
@@ -71,7 +66,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
         return null;
       }
 
-      // Verificar si ya existe un tipo de negocio con el mismo nombre
       const exists = await businessTypeService.checkBusinessTypeNameExists(
         businessTypeData.name
       );
@@ -95,7 +89,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Actualizar tipo de negocio
   const updateBusinessType = async (
     id: string,
     updates: UpdateBusinessTypeData
@@ -104,7 +97,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Si se actualiza el nombre, verificar que no exista
       if (updates.name) {
         const existingBusinessTypes =
           await businessTypeService.getBusinessTypes({ itemsPerPage: 10 });
@@ -141,7 +133,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Eliminar tipo de negocio
   const deleteBusinessType = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -161,7 +152,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Obtener tipo de negocio por ID
   const getBusinessTypeById = async (
     id: string
   ): Promise<BusinessType | null> => {
@@ -180,7 +170,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un nombre de tipo de negocio
   const checkBusinessTypeNameExists = async (
     name: string
   ): Promise<boolean> => {
@@ -200,14 +189,12 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Validar datos del tipo de negocio
   const validateBusinessTypeData = (
     businessTypeData: CreateBusinessTypeData
   ): { isValid: boolean; errors: string[] } => {
     return businessTypeService.validateBusinessTypeData(businessTypeData);
   };
 
-  // Buscar tipos de negocio similares
   const findSimilarBusinessTypes = async (
     name: string,
     threshold: number = 0.7
@@ -231,14 +218,13 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Crear tipos de negocio comunes predefinidos
   const createCommonBusinessTypes = async (): Promise<BusinessType[]> => {
     try {
       setLoading(true);
       setError(null);
       const createdTypes =
         await businessTypeService.createCommonBusinessTypes();
-      // Recargar la lista después de crear los tipos comunes
+
       await loadBusinessTypes();
       return createdTypes;
     } catch (err) {
@@ -253,7 +239,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Crear múltiples tipos de negocio
   const createMultipleBusinessTypes = async (
     businessTypesData: CreateBusinessTypeData[]
   ): Promise<BusinessType[] | null> => {
@@ -261,7 +246,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar todos los tipos primero
       for (const businessTypeData of businessTypesData) {
         const validation =
           businessTypeService.validateBusinessTypeData(businessTypeData);
@@ -293,7 +277,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
     }
   };
 
-  // Cargar tipos de negocio al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadBusinessTypes();
   }, [filters.name, filters.search]);
@@ -315,7 +298,6 @@ export const useBusinessTypes = (filters: UseBusinessTypesFilters = {}) => {
   };
 };
 
-// Hook especializado para tipos de negocio por nombre
 export const useBusinessTypesByName = (name?: string) => {
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -361,7 +343,6 @@ export const useBusinessTypesByName = (name?: string) => {
   };
 };
 
-// Hook para select/dropdown de tipos de negocio
 export const useBusinessTypesForSelect = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string }>
@@ -400,7 +381,6 @@ export const useBusinessTypesForSelect = () => {
   };
 };
 
-// Hook para select/dropdown de tipos de negocio con descripción
 export const useBusinessTypesForSelectWithDescription = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; description: string }>
@@ -439,7 +419,6 @@ export const useBusinessTypesForSelectWithDescription = () => {
   };
 };
 
-// Hook para búsqueda de tipos de negocio
 export const useBusinessTypeSearch = () => {
   const [searchResults, setSearchResults] = useState<BusinessType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -480,7 +459,6 @@ export const useBusinessTypeSearch = () => {
   };
 };
 
-// Hook para estadísticas de tipos de negocio
 export const useBusinessTypesStatistics = () => {
   const [statistics, setStatistics] = useState<{
     total: number;
@@ -528,7 +506,6 @@ export const useBusinessTypesStatistics = () => {
   };
 };
 
-// Hook para tipos de negocio populares
 export const usePopularBusinessTypes = (limit: number = 10) => {
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -566,7 +543,6 @@ export const usePopularBusinessTypes = (limit: number = 10) => {
   };
 };
 
-// Hook para tipos de negocio agrupados por categoría
 export const useBusinessTypesGroupedByCategory = () => {
   const [groupedBusinessTypes, setGroupedBusinessTypes] = useState<
     Record<string, BusinessType[]>
@@ -605,17 +581,14 @@ export const useBusinessTypesGroupedByCategory = () => {
   };
 };
 
-// Hook para gestión de tipos de negocio comunes
 export const useCommonBusinessTypes = () => {
   const { businessTypes, loading, error, refetch, createCommonBusinessTypes } =
     useBusinessTypes();
 
-  // Verificar si los tipos comunes ya existen
   const commonTypesExist = Object.values(COMMON_BUSINESS_TYPES).every(
     (commonType) => businessTypes.some((type) => type.name === commonType)
   );
 
-  // Obtener tipos comunes que faltan
   const missingCommonTypes = Object.values(COMMON_BUSINESS_TYPES).filter(
     (commonType) => !businessTypes.some((type) => type.name === commonType)
   );

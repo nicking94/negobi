@@ -8,9 +8,8 @@ import {
   BarCodeType,
 } from "../../services/barCodes/barCodes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseBarCodesFilters {
-  companyId: string; // Requerido
+  companyId: string;
   productId?: string;
   search?: string;
 }
@@ -20,7 +19,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los códigos de barras con filtros
   const loadBarCodes = async (customFilters?: Partial<UseBarCodesFilters>) => {
     try {
       setLoading(true);
@@ -31,7 +29,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
         return;
       }
 
-      // Combinar filtros
       const combinedFilters: GetBarCodesParams = {
         ...filters,
         ...customFilters,
@@ -58,7 +55,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Crear código de barras
   const createBarCode = async (
     barCodeData: CreateBarCodeData
   ): Promise<BarCode | null> => {
@@ -66,14 +62,12 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Validar formato del código de barras
       const validation = barCodeService.validateBarCodeFormat(barCodeData.code);
       if (!validation.isValid) {
         setError(validation.errors.join(", "));
         return null;
       }
 
-      // Verificar si ya existe el código de barras
       const exists = await barCodeService.checkBarCodeExists(
         filters.companyId,
         barCodeData.code
@@ -96,7 +90,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Actualizar código de barras
   const updateBarCode = async (
     id: string,
     updates: UpdateBarCodeData
@@ -105,7 +98,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Si se actualiza el código, validar formato
       if (updates.code) {
         const validation = barCodeService.validateBarCodeFormat(updates.code);
         if (!validation.isValid) {
@@ -113,7 +105,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
           return null;
         }
 
-        // Verificar si ya existe otro código con el mismo valor
         const existingBarCode = await barCodeService.getBarCodeByCode(
           filters.companyId,
           updates.code
@@ -143,7 +134,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Eliminar código de barras
   const deleteBarCode = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -165,7 +155,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Obtener código de barras por ID
   const getBarCodeById = async (id: string): Promise<BarCode | null> => {
     try {
       setLoading(true);
@@ -182,7 +171,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Obtener código de barras por código exacto
   const getBarCodeByCode = async (code: string): Promise<BarCode | null> => {
     try {
       setLoading(true);
@@ -198,7 +186,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Verificar si existe un código de barras
   const checkBarCodeExists = async (code: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -216,7 +203,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Asignar código de barras a producto
   const assignBarCodeToProduct = async (
     barCodeId: string,
     productId: number
@@ -233,7 +219,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Desasignar código de barras de producto
   const unassignBarCodeFromProduct = async (
     barCodeId: string
   ): Promise<BarCode | null> => {
@@ -249,19 +234,16 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Validar formato de código de barras
   const validateBarCodeFormat = (
     code: string
   ): { isValid: boolean; type?: BarCodeType; errors: string[] } => {
     return barCodeService.validateBarCodeFormat(code);
   };
 
-  // Formatear código de barras para visualización
   const formatBarCode = (code: string, type?: BarCodeType): string => {
     return barCodeService.formatBarCode(code, type);
   };
 
-  // Generar dígito de control EAN-13
   const generateEAN13CheckDigit = (code: string): string => {
     try {
       return barCodeService.generateEAN13CheckDigit(code);
@@ -275,7 +257,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Crear múltiples códigos de barras
   const createMultipleBarCodes = async (
     barCodesData: CreateBarCodeData[]
   ): Promise<BarCode[] | null> => {
@@ -283,7 +264,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Validar todos los códigos primero
       for (const barCodeData of barCodesData) {
         const validation = barCodeService.validateBarCodeFormat(
           barCodeData.code
@@ -316,7 +296,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     }
   };
 
-  // Generar códigos de barras secuenciales
   const generateSequentialBarCodes = (
     startCode: string,
     count: number,
@@ -329,7 +308,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
     );
   };
 
-  // Cargar códigos de barras al montar el hook o cuando cambien los filtros
   useEffect(() => {
     if (filters.companyId) {
       loadBarCodes();
@@ -357,7 +335,6 @@ export const useBarCodes = (filters: UseBarCodesFilters) => {
   };
 };
 
-// Hook especializado para códigos de barras por compañía
 export const useBarCodesByCompany = (companyId: string) => {
   const [barCodes, setBarCodes] = useState<BarCode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -403,7 +380,6 @@ export const useBarCodesByCompany = (companyId: string) => {
   };
 };
 
-// Hook especializado para códigos de barras por producto
 export const useBarCodesByProduct = (companyId: string, productId?: string) => {
   const [barCodes, setBarCodes] = useState<BarCode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -450,7 +426,6 @@ export const useBarCodesByProduct = (companyId: string, productId?: string) => {
   };
 };
 
-// Hook para búsqueda de códigos de barras
 export const useBarCodeSearch = (companyId: string) => {
   const [searchResults, setSearchResults] = useState<BarCode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -518,7 +493,6 @@ export const useBarCodeSearch = (companyId: string) => {
   };
 };
 
-// Hook para estadísticas de códigos de barras
 export const useBarCodesStatistics = (companyId: string) => {
   const [statistics, setStatistics] = useState<{
     total: number;
@@ -577,10 +551,7 @@ export const useBarCodesStatistics = (companyId: string) => {
   };
 };
 
-// Hook para gestión de asignación de códigos de barras
-// Hook para gestión de asignación de códigos de barras
 export const useBarCodeAssignment = (companyId: string) => {
-  // Usar el hook principal que sí tiene las funciones de asignación
   const {
     barCodes,
     loading,
@@ -590,7 +561,6 @@ export const useBarCodeAssignment = (companyId: string) => {
     unassignBarCodeFromProduct,
   } = useBarCodes({ companyId });
 
-  // Asignar múltiples códigos de barras a un producto
   const assignMultipleBarCodesToProduct = async (
     barCodeIds: string[],
     productId: number
@@ -606,7 +576,6 @@ export const useBarCodeAssignment = (companyId: string) => {
     }
   };
 
-  // Desasignar múltiples códigos de barras
   const unassignMultipleBarCodes = async (
     barCodeIds: string[]
   ): Promise<boolean> => {
@@ -621,12 +590,10 @@ export const useBarCodeAssignment = (companyId: string) => {
     }
   };
 
-  // Obtener códigos de barras asignados a un producto
   const getAssignedBarCodes = (productId: number): BarCode[] => {
     return barCodes.filter((barCode) => barCode.product_id === productId);
   };
 
-  // Obtener códigos de barras no asignados
   const getUnassignedBarCodes = (): BarCode[] => {
     return barCodes.filter((barCode) => !barCode.product_id);
   };
@@ -645,7 +612,6 @@ export const useBarCodeAssignment = (companyId: string) => {
   };
 };
 
-// Hook para validación y formateo de códigos de barras
 export const useBarCodeValidation = () => {
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;

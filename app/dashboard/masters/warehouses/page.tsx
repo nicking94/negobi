@@ -43,7 +43,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -62,6 +61,12 @@ import { useWarehouses } from "@/hooks/warehouse/useWarehouses";
 import { Warehouse as WarehouseType } from "@/services/warehouse/warehouse.service";
 import { useCompanyBranches } from "@/hooks/companyBranches/useCompanyBranches";
 import useGetAllCompanies from "@/hooks/companies/useGetAllCompanies";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type Warehouse = WarehouseType;
 
@@ -89,14 +94,12 @@ const WarehousesPage = () => {
     null
   );
 
-  // Obtener empresas
   const {
     companies,
-    loading: companiesLoading,
+
     error: companiesError,
   } = useGetAllCompanies();
 
-  // Obtener sucursales basadas en la empresa seleccionada
   const {
     companyBranches: branches,
     loading: branchesLoading,
@@ -105,7 +108,6 @@ const WarehousesPage = () => {
     companyId: selectedCompanyId,
   });
 
-  // Usa el nuevo hook con filtros
   const {
     warehouses,
     loading,
@@ -150,12 +152,25 @@ const WarehousesPage = () => {
     }
   }, [branches, selectedCompanyId, form]);
 
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
+
+  const handleBranchChange = (value: string) => {
+    setBranchFilter(value);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setBranchFilter("all");
+  };
+
   const onSubmit = async (values: WarehouseForm) => {
     try {
       let result;
 
       if (editingWarehouse && editingWarehouse.id) {
-        // Actualizar almacén
         const updateData = {
           ...values,
           is_active: editingWarehouse.is_active,
@@ -165,7 +180,6 @@ const WarehousesPage = () => {
           updateData
         );
       } else {
-        // Crear nuevo almacén
         const createData = {
           ...values,
           is_active: true,
@@ -180,7 +194,6 @@ const WarehousesPage = () => {
             : "Almacén creado exitosamente"
         );
 
-        // ✅ CORRECCIÓN: Recargar la lista de almacenes
         await refetchWarehouses();
 
         resetForm();
@@ -242,7 +255,7 @@ const WarehousesPage = () => {
           const success = await deleteWarehouse(warehouse.id.toString());
           if (success) {
             toast.success("Almacén eliminado exitosamente");
-            // ✅ CORRECCIÓN: Recargar la lista
+
             await refetchWarehouses();
           } else {
             toast.error("Error al eliminar el almacén");
@@ -315,13 +328,10 @@ const WarehousesPage = () => {
     return filteredBranches;
   };
 
-  // Aplica filtros adicionales
   const filteredWarehouses = warehouses.filter((warehouse) => {
-    // Filtro por estado
     if (statusFilter === "active" && !warehouse.is_active) return false;
     if (statusFilter === "inactive" && warehouse.is_active) return false;
 
-    // Filtro por sucursal
     if (branchFilter !== "all") {
       const branchId = parseInt(branchFilter);
       if (warehouse.companyBranchId !== branchId) return false;
@@ -492,7 +502,6 @@ const WarehousesPage = () => {
     },
   ];
 
-  // Muestra errores del hook
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -510,7 +519,6 @@ const WarehousesPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -525,7 +533,7 @@ const WarehousesPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex gap-2 w-full max-w-[30rem] ">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
@@ -537,22 +545,22 @@ const WarehousesPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
                         value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        onValueChange={handleStatusChange}
                       >
-                        <SelectTrigger id="status-filter" className="mt-1">
+                        <SelectTrigger id="status-filter">
                           <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
@@ -563,16 +571,14 @@ const WarehousesPage = () => {
                       </Select>
                     </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="branch-filter">Sucursal</Label>
                       <Select
                         value={branchFilter}
-                        onValueChange={setBranchFilter}
+                        onValueChange={handleBranchChange}
                         disabled={branches.length === 0}
                       >
-                        <SelectTrigger id="branch-filter" className="mt-1">
+                        <SelectTrigger id="branch-filter">
                           <SelectValue placeholder="Todas las sucursales" />
                         </SelectTrigger>
                         <SelectContent>
@@ -590,10 +596,32 @@ const WarehousesPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
               <div className="flex items-center gap-2">
                 <Label
@@ -654,7 +682,6 @@ const WarehousesPage = () => {
             </div>
           )}
 
-          {/* DataTable actualizado */}
           {selectedCompanyId && branches.length > 0 && (
             <DataTable<Warehouse, Warehouse>
               columns={columns}
@@ -818,9 +845,6 @@ const WarehousesPage = () => {
                     </FormItem>
                   )}
                 />
-
-                {/* NOTA: Se elimina el checkbox de is_active del formulario */}
-                {/* El estado ahora se maneja desde las acciones con los botones Activar/Desactivar */}
               </div>
 
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 ">

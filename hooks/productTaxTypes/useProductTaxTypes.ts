@@ -9,7 +9,6 @@ import {
   SyncResponse,
 } from "../../services/productTaxTypes/productTaxTypes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseProductTaxTypesFilters {
   productId?: number;
   taxTypeId?: number;
@@ -22,7 +21,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las relaciones producto-impuesto con filtros
   const loadProductTaxTypes = async (
     customFilters?: Partial<UseProductTaxTypesFilters>
   ) => {
@@ -58,7 +56,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Crear relación producto-impuesto
   const createProductTaxType = async (
     productTaxTypeData: CreateProductTaxTypeData
   ): Promise<ProductTaxType | null> => {
@@ -81,7 +78,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Actualizar relación producto-impuesto
   const updateProductTaxType = async (
     id: string,
     updates: UpdateProductTaxTypeData
@@ -109,7 +105,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Eliminar relación producto-impuesto
   const deleteProductTaxType = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -131,7 +126,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Obtener relación por ID
   const getProductTaxTypeById = async (
     id: string
   ): Promise<ProductTaxType | null> => {
@@ -154,7 +148,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Sincronizar relaciones desde ERP
   const syncProductTaxTypes = async (
     syncData: SyncProductTaxTypesPayload
   ): Promise<SyncResponse | null> => {
@@ -164,7 +157,7 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
       const response = await productTaxTypeService.syncProductTaxTypes(
         syncData
       );
-      // Recargar relaciones después de sincronizar
+
       await loadProductTaxTypes();
       return response;
     } catch (err) {
@@ -179,7 +172,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Obtener tasa de impuesto para un producto específico
   const getTaxRateForProduct = async (
     productId: number,
     taxTypeId: number
@@ -202,7 +194,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Asignar múltiples impuestos a un producto
   const assignTaxTypesToProduct = async (
     productId: number,
     taxTypeIds: number[],
@@ -231,7 +222,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Remover todos los impuestos de un producto
   const removeAllTaxTypesFromProduct = async (
     productId: number
   ): Promise<boolean> => {
@@ -239,7 +229,7 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
       setLoading(true);
       setError(null);
       await productTaxTypeService.removeAllTaxTypesFromProduct(productId);
-      // Actualizar estado local
+
       setProductTaxTypes((prev) =>
         prev.filter((relation) => relation.productId !== productId)
       );
@@ -256,7 +246,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
     }
   };
 
-  // Cargar relaciones al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadProductTaxTypes();
   }, [filters.productId, filters.taxTypeId, filters.is_active, filters.search]);
@@ -277,7 +266,6 @@ export const useProductTaxTypes = (filters: UseProductTaxTypesFilters = {}) => {
   };
 };
 
-// Hook especializado para impuestos de un producto específico
 export const useProductTaxTypesByProduct = (productId?: number) => {
   const [productTaxTypes, setProductTaxTypes] = useState<ProductTaxType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -323,7 +311,6 @@ export const useProductTaxTypesByProduct = (productId?: number) => {
   };
 };
 
-// Hook especializado para productos de un tipo de impuesto específico
 export const useProductTaxTypesByTaxType = (taxTypeId?: number) => {
   const [productTaxTypes, setProductTaxTypes] = useState<ProductTaxType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -369,7 +356,6 @@ export const useProductTaxTypesByTaxType = (taxTypeId?: number) => {
   };
 };
 
-// Hook para gestión de impuestos de producto (para formularios)
 export const useProductTaxManager = (productId?: number) => {
   const {
     productTaxTypes,
@@ -382,7 +368,6 @@ export const useProductTaxManager = (productId?: number) => {
     removeAllTaxTypesFromProduct,
   } = useProductTaxTypes({ productId });
 
-  // Agregar impuesto al producto
   const addTaxType = async (taxTypeId: number, taxRate?: number) => {
     if (!productId) {
       throw new Error("productId es requerido");
@@ -397,12 +382,10 @@ export const useProductTaxManager = (productId?: number) => {
     return await createProductTaxType(relationData);
   };
 
-  // Remover impuesto del producto
   const removeTaxType = async (relationId: string) => {
     return await deleteProductTaxType(relationId);
   };
 
-  // Reemplazar todos los impuestos del producto
   const replaceAllTaxTypes = async (
     taxTypeIds: number[],
     taxRates?: { [taxTypeId: number]: number }
@@ -411,19 +394,15 @@ export const useProductTaxManager = (productId?: number) => {
       throw new Error("productId es requerido");
     }
 
-    // Primero remover todos los impuestos existentes
     await removeAllTaxTypesFromProduct(productId);
 
-    // Luego asignar los nuevos impuestos
     return await assignTaxTypesToProduct(productId, taxTypeIds, taxRates);
   };
 
-  // Verificar si un producto tiene un tipo de impuesto específico
   const hasTaxType = (taxTypeId: number): boolean => {
     return productTaxTypes.some((relation) => relation.taxTypeId === taxTypeId);
   };
 
-  // Obtener la tasa de impuesto para un tipo específico
   const getTaxRate = (taxTypeId: number): number | null => {
     const relation = productTaxTypes.find((rel) => rel.taxTypeId === taxTypeId);
     return relation ? relation.tax_rate : null;
@@ -442,7 +421,6 @@ export const useProductTaxManager = (productId?: number) => {
   };
 };
 
-// Hook para cálculo de impuestos de producto
 export const useProductTaxCalculator = (productId?: number) => {
   const { productTaxTypes, loading, error } =
     useProductTaxTypesByProduct(productId);

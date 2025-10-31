@@ -7,7 +7,6 @@ import {
   DeleteBusinessType,
 } from "../businessTypes/businessTypes.route";
 
-// Parámetros para obtener tipos de negocio
 export interface GetBusinessTypesParams {
   page?: number;
   itemsPerPage?: number;
@@ -16,14 +15,10 @@ export interface GetBusinessTypesParams {
   name?: string;
 }
 
-// Interfaz principal del tipo de negocio
 export interface BusinessType {
-  // Campos principales
   id: number;
   name: string;
   description: string;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -31,19 +26,16 @@ export interface BusinessType {
   deleted_at?: string | null;
 }
 
-// Datos para crear un tipo de negocio
 export interface CreateBusinessTypeData {
   name: string;
   description: string;
 }
 
-// Datos para actualizar un tipo de negocio
 export interface UpdateBusinessTypeData {
   name?: string;
   description?: string;
 }
 
-// Interfaces de respuesta
 export interface BusinessTypeResponse {
   success: boolean;
   data: BusinessType;
@@ -63,7 +55,6 @@ export interface PaginatedBusinessTypesResponse {
   };
 }
 
-// Tipos de negocio comunes predefinidos
 export const COMMON_BUSINESS_TYPES = {
   RETAIL: "Retail",
   WHOLESALE: "Wholesale",
@@ -86,7 +77,6 @@ export type CommonBusinessType =
   (typeof COMMON_BUSINESS_TYPES)[keyof typeof COMMON_BUSINESS_TYPES];
 
 export const businessTypeService = {
-  // Crear un nuevo tipo de negocio
   createBusinessType: async (
     businessTypeData: CreateBusinessTypeData
   ): Promise<BusinessType> => {
@@ -94,20 +84,17 @@ export const businessTypeService = {
     return response.data.data;
   },
 
-  // Obtener todos los tipos de negocio
   getBusinessTypes: async (
     params?: GetBusinessTypesParams
   ): Promise<BusinessType[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -122,13 +109,11 @@ export const businessTypeService = {
     return response.data.data;
   },
 
-  // Obtener un tipo de negocio por ID
   getBusinessTypeById: async (id: string): Promise<BusinessType> => {
     const response = await api.get(`${GetBusinessTypeById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar un tipo de negocio
   updateBusinessType: async (
     id: string,
     updates: UpdateBusinessTypeData
@@ -137,12 +122,10 @@ export const businessTypeService = {
     return response.data.data;
   },
 
-  // Eliminar un tipo de negocio
   deleteBusinessType: async (id: string): Promise<void> => {
     await api.delete(`${DeleteBusinessType}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getBusinessTypesByName: async (name: string): Promise<BusinessType[]> => {
     return businessTypeService.getBusinessTypes({
       name,
@@ -157,7 +140,6 @@ export const businessTypeService = {
     });
   },
 
-  // Verificar si existe un tipo de negocio con el mismo nombre
   checkBusinessTypeNameExists: async (name: string): Promise<boolean> => {
     try {
       const businessTypes = await businessTypeService.getBusinessTypes({
@@ -171,7 +153,6 @@ export const businessTypeService = {
     }
   },
 
-  // Obtener tipos de negocio para select/dropdown
   getBusinessTypesForSelect: async (): Promise<
     Array<{ value: number; label: string }>
   > => {
@@ -189,7 +170,6 @@ export const businessTypeService = {
     }
   },
 
-  // Obtener tipos de negocio con descripción para select
   getBusinessTypesForSelectWithDescription: async (): Promise<
     Array<{ value: number; label: string; description: string }>
   > => {
@@ -211,7 +191,6 @@ export const businessTypeService = {
     }
   },
 
-  // Obtener tipos de negocio populares (más comunes)
   getPopularBusinessTypes: async (
     limit: number = 10
   ): Promise<BusinessType[]> => {
@@ -220,8 +199,6 @@ export const businessTypeService = {
         itemsPerPage: 10,
       });
 
-      // Ordenar por nombre alfabéticamente como placeholder
-      // En una implementación real, esto podría basarse en estadísticas de uso
       return businessTypes
         .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, limit);
@@ -231,7 +208,6 @@ export const businessTypeService = {
     }
   },
 
-  // Validar datos del tipo de negocio
   validateBusinessTypeData: (
     businessTypeData: CreateBusinessTypeData
   ): { isValid: boolean; errors: string[] } => {
@@ -264,7 +240,6 @@ export const businessTypeService = {
     };
   },
 
-  // Obtener estadísticas de tipos de negocio
   getBusinessTypesStatistics: async (): Promise<{
     total: number;
     average_name_length: number;
@@ -303,7 +278,6 @@ export const businessTypeService = {
     }
   },
 
-  // Crear tipos de negocio predefinidos comunes
   createCommonBusinessTypes: async (): Promise<BusinessType[]> => {
     const commonTypes: CreateBusinessTypeData[] = [
       {
@@ -353,7 +327,6 @@ export const businessTypeService = {
 
     for (const typeData of commonTypes) {
       try {
-        // Verificar si ya existe antes de crear
         const exists = await businessTypeService.checkBusinessTypeNameExists(
           typeData.name
         );
@@ -371,7 +344,6 @@ export const businessTypeService = {
     return createdTypes;
   },
 
-  // Buscar tipos de negocio por similitud de nombre
   findSimilarBusinessTypes: async (
     name: string,
     threshold: number = 0.7
@@ -381,7 +353,6 @@ export const businessTypeService = {
         itemsPerPage: 10,
       });
 
-      // Simple algoritmo de similitud (en una implementación real podrías usar librerías como string-similarity)
       return allTypes.filter((type) => {
         const similarity = businessTypeService.calculateStringSimilarity(
           name.toLowerCase(),
@@ -395,7 +366,6 @@ export const businessTypeService = {
     }
   },
 
-  // Calcular similitud entre strings (método simple)
   calculateStringSimilarity: (str1: string, str2: string): number => {
     const longer = str1.length > str2.length ? str1 : str2;
     const shorter = str1.length > str2.length ? str2 : str1;
@@ -404,12 +374,10 @@ export const businessTypeService = {
       return 1.0;
     }
 
-    // Coincidencia exacta
     if (longer === shorter) {
       return 1.0;
     }
 
-    // Coincidencia parcial (simple)
     const words1 = str1.split(/\s+/);
     const words2 = str2.split(/\s+/);
 
@@ -420,7 +388,6 @@ export const businessTypeService = {
     return similarity;
   },
 
-  // Obtener tipos de negocio agrupados por categoría (simulado)
   getBusinessTypesGroupedByCategory: async (): Promise<
     Record<string, BusinessType[]>
   > => {
@@ -429,7 +396,6 @@ export const businessTypeService = {
         itemsPerPage: 10,
       });
 
-      // Categorías simuladas basadas en palabras clave en la descripción
       const categories: Record<string, BusinessType[]> = {
         "Retail & Sales": [],
         "Manufacturing & Production": [],
@@ -503,7 +469,6 @@ export const businessTypeService = {
         }
       });
 
-      // Eliminar categorías vacías
       Object.keys(categories).forEach((category) => {
         if (categories[category].length === 0) {
           delete categories[category];
@@ -517,7 +482,6 @@ export const businessTypeService = {
     }
   },
 
-  // Crear múltiples tipos de negocio
   createMultipleBusinessTypes: async (
     businessTypesData: CreateBusinessTypeData[]
   ): Promise<BusinessType[]> => {

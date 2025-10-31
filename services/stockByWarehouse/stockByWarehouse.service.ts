@@ -8,7 +8,6 @@ import {
   SyncStockByWarehouse,
 } from "../stockByWarehouse/stockByWarehouse.route";
 
-// Parámetros para obtener stock por almacén
 export interface GetStockByWarehouseParams {
   page?: number;
   itemsPerPage?: number;
@@ -18,9 +17,7 @@ export interface GetStockByWarehouseParams {
   productId?: number;
 }
 
-// Interfaz principal del stock por almacén
 export interface StockByWarehouse {
-  // Campos principales
   id: number;
   stock: number;
   min_stock: number;
@@ -32,12 +29,8 @@ export interface StockByWarehouse {
   show_in_sales_app: boolean;
   erp_code_product: string;
   erp_code_warehouse: string;
-
-  // Campos de relación (opcionales en response)
   warehouseId?: number;
   productId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -45,7 +38,6 @@ export interface StockByWarehouse {
   deleted_at?: string | null;
 }
 
-// Datos para crear stock por almacén
 export interface CreateStockByWarehouseData {
   warehouseId: number;
   productId: number;
@@ -61,7 +53,6 @@ export interface CreateStockByWarehouseData {
   erp_code_warehouse?: string;
 }
 
-// Datos para actualizar stock por almacén
 export interface UpdateStockByWarehouseData {
   warehouseId?: number;
   productId?: number;
@@ -77,7 +68,6 @@ export interface UpdateStockByWarehouseData {
   erp_code_warehouse?: string;
 }
 
-// Datos para sincronización desde ERP
 export interface SyncStockByWarehouseData {
   companyId: number;
   data: Array<{
@@ -96,7 +86,6 @@ export interface SyncStockByWarehouseData {
   }>;
 }
 
-// Interfaces de respuesta
 export interface StockByWarehouseResponse {
   success: boolean;
   data: StockByWarehouse;
@@ -123,7 +112,6 @@ export interface SyncStockByWarehouseResponse {
   };
 }
 
-// Interfaz para análisis de stock
 export interface StockAnalysis {
   available_stock: number;
   reserved_stock: number;
@@ -135,7 +123,6 @@ export interface StockAnalysis {
 }
 
 export const stockByWarehouseService = {
-  // Crear un nuevo stock por almacén
   createStockByWarehouse: async (
     stockData: CreateStockByWarehouseData
   ): Promise<StockByWarehouse> => {
@@ -143,20 +130,17 @@ export const stockByWarehouseService = {
     return response.data.data;
   },
 
-  // Obtener todos los stocks por almacén
   getStockByWarehouse: async (
     params?: GetStockByWarehouseParams
   ): Promise<StockByWarehouse[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -174,13 +158,11 @@ export const stockByWarehouseService = {
     return response.data.data;
   },
 
-  // Obtener un stock por almacén por ID
   getStockByWarehouseById: async (id: string): Promise<StockByWarehouse> => {
     const response = await api.get(`${GetStockByWarehouseById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar un stock por almacén
   updateStockByWarehouse: async (
     id: string,
     updates: UpdateStockByWarehouseData
@@ -189,12 +171,10 @@ export const stockByWarehouseService = {
     return response.data.data;
   },
 
-  // Eliminar un stock por almacén
   deleteStockByWarehouse: async (id: string): Promise<void> => {
     await api.delete(`${DeleteStockByWarehouse}/${id}`);
   },
 
-  // Sincronizar stocks desde ERP
   syncStockByWarehouse: async (
     syncData: SyncStockByWarehouseData
   ): Promise<SyncStockByWarehouseResponse> => {
@@ -202,7 +182,6 @@ export const stockByWarehouseService = {
     return response.data;
   },
 
-  // Métodos adicionales útiles
   getStockByWarehouseAndProduct: async (
     warehouseId: number,
     productId: number
@@ -236,7 +215,6 @@ export const stockByWarehouseService = {
     });
   },
 
-  // Actualizar cantidad de stock
   updateStockQuantity: async (
     id: string,
     newStock: number
@@ -246,7 +224,6 @@ export const stockByWarehouseService = {
     });
   },
 
-  // Ajustar cantidad de stock (sumar o restar)
   adjustStockQuantity: async (
     id: string,
     adjustment: number
@@ -262,7 +239,6 @@ export const stockByWarehouseService = {
     }
   },
 
-  // Actualizar stock de reserva
   updateReserveStock: async (
     id: string,
     newReserveStock: number
@@ -272,7 +248,6 @@ export const stockByWarehouseService = {
     });
   },
 
-  // Actualizar stock entrante
   updateIncomingStock: async (
     id: string,
     newIncomingStock: number
@@ -282,12 +257,10 @@ export const stockByWarehouseService = {
     });
   },
 
-  // Calcular stock disponible (stock físico - reservas)
   calculateAvailableStock: (stockRecord: StockByWarehouse): number => {
     return Math.max(0, stockRecord.stock - stockRecord.reserve_stock);
   },
 
-  // Analizar nivel de stock
   analyzeStockLevel: (stockRecord: StockByWarehouse): StockAnalysis => {
     const availableStock =
       stockByWarehouseService.calculateAvailableStock(stockRecord);
@@ -334,7 +307,6 @@ export const stockByWarehouseService = {
     };
   },
 
-  // Verificar si hay stock suficiente
   hasSufficientStock: (
     stockRecord: StockByWarehouse,
     requiredQuantity: number
@@ -344,14 +316,13 @@ export const stockByWarehouseService = {
     return availableStock >= requiredQuantity;
   },
 
-  // Obtener productos con stock bajo
   getLowStockItems: async (
     warehouseId?: number
   ): Promise<StockByWarehouse[]> => {
     try {
       const stocks = warehouseId
         ? await stockByWarehouseService.getStockByWarehouse({
-            warehouseId, // ✅ Pass as object property
+            warehouseId,
             itemsPerPage: 10,
           })
         : await stockByWarehouseService.getStockByWarehouse({
@@ -368,14 +339,13 @@ export const stockByWarehouseService = {
     }
   },
 
-  // Obtener productos sin stock
   getOutOfStockItems: async (
     warehouseId?: number
   ): Promise<StockByWarehouse[]> => {
     try {
       const stocks = warehouseId
         ? await stockByWarehouseService.getStockByWarehouse({
-            warehouseId, // ✅ Now correctly passed as object property
+            warehouseId,
             itemsPerPage: 10,
           })
         : await stockByWarehouseService.getStockByWarehouse({
@@ -391,14 +361,13 @@ export const stockByWarehouseService = {
       return [];
     }
   },
-  // Transferir stock entre almacenes
+
   transferStock: async (
     fromStockId: string,
     toStockId: string,
     quantity: number
   ): Promise<boolean> => {
     try {
-      // Restar del stock origen
       const fromResult = await stockByWarehouseService.adjustStockQuantity(
         fromStockId,
         -quantity
@@ -407,13 +376,11 @@ export const stockByWarehouseService = {
         throw new Error("Error al restar del stock origen");
       }
 
-      // Sumar al stock destino
       const toResult = await stockByWarehouseService.adjustStockQuantity(
         toStockId,
         quantity
       );
       if (!toResult) {
-        // Revertir la operación si falla
         await stockByWarehouseService.adjustStockQuantity(
           fromStockId,
           quantity
@@ -428,7 +395,6 @@ export const stockByWarehouseService = {
     }
   },
 
-  // Obtener stock total por producto (suma de todos los almacenes)
   getTotalStockByProduct: async (productId: number): Promise<number> => {
     try {
       const stocks = await stockByWarehouseService.getStockByProduct(productId);
@@ -439,7 +405,6 @@ export const stockByWarehouseService = {
     }
   },
 
-  // Obtener stock disponible total por producto
   getTotalAvailableStockByProduct: async (
     productId: number
   ): Promise<number> => {

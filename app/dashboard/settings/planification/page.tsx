@@ -58,7 +58,7 @@ export type Seller = {
     sunday: boolean;
   };
   routes: {
-    [day: string]: string[]; // Array de client IDs para cada día
+    [day: string]: string[];
   };
 };
 
@@ -76,7 +76,6 @@ const PlanningPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [availableClients, setAvailableClients] = useState<Client[]>([]);
 
-  // Datos de ejemplo para vendedores
   const [sellers, setSellers] = useState<Seller[]>([
     {
       id: "1",
@@ -149,9 +148,7 @@ const PlanningPage = () => {
     },
   ]);
 
-  // Datos de ejemplo para clientes
   useEffect(() => {
-    // Simular carga de clientes
     const mockClients: Client[] = [
       {
         id: "1",
@@ -200,7 +197,6 @@ const PlanningPage = () => {
     setAvailableClients(mockClients);
   }, []);
 
-  // Filtrar vendedores según el término de búsqueda
   const filteredSellers = useMemo(() => {
     return sellers.filter(
       (seller) =>
@@ -224,7 +220,6 @@ const PlanningPage = () => {
           updatedRoutes[day] = [];
         }
 
-        // Evitar duplicados
         if (!updatedRoutes[day].includes(clientId)) {
           updatedRoutes[day] = [...updatedRoutes[day], clientId];
         }
@@ -272,7 +267,6 @@ const PlanningPage = () => {
   };
 
   const handleSavePlanning = () => {
-    // Aquí implementarías la llamada a la API según el swagger proporcionado
     toast.success("Planificación guardada exitosamente");
     setIsPlanningDialogOpen(false);
   };
@@ -391,7 +385,6 @@ const PlanningPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -463,7 +456,6 @@ const PlanningPage = () => {
         </main>
       </div>
 
-      {/* Modal para planificar rutas */}
       <Dialog
         open={isPlanningDialogOpen}
         onOpenChange={setIsPlanningDialogOpen}

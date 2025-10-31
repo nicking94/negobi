@@ -1,4 +1,4 @@
-// components/dashboard/BranchesPage.tsx - CORREGIDO
+// components/dashboard/BranchesPage.tsx
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -50,6 +50,11 @@ import { DataTable } from "@/components/ui/dataTable";
 import { toast, Toaster } from "sonner";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import {
   CompanyBranch,
@@ -76,7 +81,6 @@ const BranchesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Obtener empresa del usuario logeado
   const {
     userCompany,
     companyId,
@@ -84,7 +88,6 @@ const BranchesPage = () => {
     hasCompany,
   } = useUserCompany();
 
-  // Hook de permisos
   const {
     canCreateBranch,
     canEditBranch,
@@ -93,7 +96,6 @@ const BranchesPage = () => {
     userRole,
   } = usePermissions();
 
-  // Estado para el formulario de creación/edición
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -104,7 +106,6 @@ const BranchesPage = () => {
     is_central: false,
   });
 
-  // Configurar filtros SIN companyId (se obtiene automáticamente del usuario)
   const [filters, setFilters] = useState({
     search: "",
   });
@@ -137,7 +138,10 @@ const BranchesPage = () => {
     }));
   }, [searchTerm]);
 
-  // CORRECCIÓN: Información de la empresa del usuario - usar hasCompany para consistencia
+  const handleClearFilters = () => {
+    setStatusFilter("all");
+  };
+
   const companyName = userCompany?.name || "Empresa no asignada";
 
   const handleEditBranch = (branch: Branch) => {
@@ -165,7 +169,6 @@ const BranchesPage = () => {
       return;
     }
 
-    // Verificar que el usuario tenga empresa asignada
     if (!hasCompany) {
       toast.error("No tienes una empresa asignada para crear sucursales");
       return;
@@ -202,7 +205,6 @@ const BranchesPage = () => {
   };
 
   const handleSaveBranch = async () => {
-    // Verificar que el usuario tenga empresa asignada
     if (!hasCompany) {
       toast.error("No tienes una empresa asignada para gestionar sucursales");
       return;
@@ -210,7 +212,6 @@ const BranchesPage = () => {
 
     try {
       if (selectedBranch) {
-        // Verificar permisos para editar
         if (!canEditBranch()) {
           toast.error("No tienes permisos para editar sucursales");
           return;
@@ -236,14 +237,13 @@ const BranchesPage = () => {
           refetch();
         }
       } else {
-        // Verificar permisos para crear
         if (!canCreateBranch()) {
           toast.error("No tienes permisos para crear sucursales");
           return;
         }
 
         const createData: CreateCompanyBranchData = {
-          companyId: companyId!, // Usar la empresa del usuario (ya verificada con hasCompany)
+          companyId: companyId!,
           name: formData.name,
           code: formData.code,
           contact_email: formData.contact_email,
@@ -393,7 +393,6 @@ const BranchesPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Editar - solo si tiene permisos */}
                 {canEditBranch() && (
                   <DropdownMenuItem
                     onClick={() => handleEditBranch(branch)}
@@ -404,7 +403,6 @@ const BranchesPage = () => {
                   </DropdownMenuItem>
                 )}
 
-                {/* Cambiar estado - solo si tiene permisos */}
                 {canToggleBranchStatus() && (
                   <DropdownMenuItem
                     onClick={() => handleToggleStatus(branch)}
@@ -424,7 +422,6 @@ const BranchesPage = () => {
                   </DropdownMenuItem>
                 )}
 
-                {/* Eliminar - solo si tiene permisos */}
                 {canDeleteBranch() && (
                   <>
                     {(canEditBranch() || canToggleBranchStatus()) && (
@@ -439,8 +436,6 @@ const BranchesPage = () => {
                     </DropdownMenuItem>
                   </>
                 )}
-
-                {/* Mensaje si no tiene ningún permiso */}
                 {!canEditBranch() &&
                   !canToggleBranchStatus() &&
                   !canDeleteBranch() && (
@@ -458,7 +453,6 @@ const BranchesPage = () => {
 
   const filteredBranches = useMemo(() => {
     return companyBranches.filter((branch) => {
-      // Filtro por búsqueda
       const matchesSearch =
         !searchTerm ||
         (branch.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
@@ -470,7 +464,6 @@ const BranchesPage = () => {
           searchTerm.toLowerCase()
         );
 
-      // Filtro por status
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "active" && branch.is_active) ||
@@ -502,7 +495,6 @@ const BranchesPage = () => {
             </div>
           </div>
 
-          {/* Sección de filtros SIN selector de empresas */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -517,39 +509,63 @@ const BranchesPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estados</SelectItem>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status.id} value={status.name}>
-                              {status.label}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="status-filter">Estado</Label>
+                        <Select
+                          value={statusFilter}
+                          onValueChange={setStatusFilter}
+                        >
+                          <SelectTrigger id="status-filter">
+                            <SelectValue placeholder="Todos los estados" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los estados
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            {statusOptions.map((status) => (
+                              <SelectItem key={status.id} value={status.name}>
+                                {status.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearFilters}
+                        >
+                          Limpiar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            document.dispatchEvent(
+                              new KeyboardEvent("keydown", { key: "Escape" })
+                            );
+                          }}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
-            {/* Botón crear con verificación de permisos */}
             <Button
               onClick={handleCreateBranch}
               className="flex items-center gap-2 whitespace-nowrap"
@@ -565,7 +581,6 @@ const BranchesPage = () => {
             </Button>
           </div>
 
-          {/* Mensaje informativo sobre permisos */}
           {!canCreateBranch() && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">
@@ -576,7 +591,6 @@ const BranchesPage = () => {
             </div>
           )}
 
-          {/* CORRECCIÓN: Mensaje si el usuario no tiene empresa asignada */}
           {!hasCompany && !userCompanyLoading && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-800">
@@ -586,7 +600,6 @@ const BranchesPage = () => {
             </div>
           )}
 
-          {/* CORRECCIÓN: Mostrar tabla solo si hay una empresa asignada */}
           {hasCompany ? (
             <DataTable<Branch, Branch>
               columns={columns}
@@ -609,7 +622,6 @@ const BranchesPage = () => {
         </main>
       </div>
 
-      {/* Los modales permanecen igual */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -642,7 +654,6 @@ const BranchesPage = () => {
                 </div>
               </div>
 
-              {/* CORRECCIÓN: Mostrar empresa del usuario solo si tiene empresa */}
               {hasCompany && (
                 <div className="w-full">
                   <Label htmlFor="view-company" className="text-sm font-medium">
@@ -744,7 +755,6 @@ const BranchesPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de edición/creación */}
       <Dialog
         open={isEditDialogOpen || isCreateDialogOpen}
         onOpenChange={(open) => {
@@ -767,7 +777,6 @@ const BranchesPage = () => {
           </DialogHeader>
 
           <div className="grid grid-cols-1 gap-4 py-4">
-            {/* Fila 1: Nombre y Código en grid de 2 columnas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium">
@@ -798,7 +807,6 @@ const BranchesPage = () => {
               </div>
             </div>
 
-            {/* Fila 2: Email y Teléfono en grid de 2 columnas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contact_email" className="text-sm font-medium">
@@ -830,7 +838,6 @@ const BranchesPage = () => {
               </div>
             </div>
 
-            {/* Fila 3: Dirección - Ocupa toda la fila */}
             <div className="space-y-2">
               <Label htmlFor="physical_address" className="text-sm font-medium">
                 Dirección Física *
@@ -845,9 +852,7 @@ const BranchesPage = () => {
               />
             </div>
 
-            {/* Fila 4: Tipo de Sucursal y Sucursal Activa en grid de 2 columnas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Tipo de Sucursal */}
               <div className="space-y-2">
                 <Label htmlFor="is_central" className="text-sm font-medium">
                   Tipo de Sucursal
@@ -866,7 +871,6 @@ const BranchesPage = () => {
                 </div>
               </div>
 
-              {/* Sucursal Activa */}
               <div className="space-y-2">
                 <Label htmlFor="is_active" className="text-sm font-medium">
                   Estado

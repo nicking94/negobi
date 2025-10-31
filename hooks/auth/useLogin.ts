@@ -1,4 +1,4 @@
-// hooks/auth/useLogin.ts (corregido)
+// hooks/auth/useLogin.ts
 import { useState } from "react";
 import { AuthService } from "@/services/auth/auth.service";
 import { toast } from "sonner";
@@ -6,7 +6,6 @@ import { ApiError, LoginType } from "@/types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-// hooks/auth/useLogin.ts - CORREGIDO
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,7 +19,6 @@ const useLogin = () => {
       const { data, status } = await AuthService.loginAction(loginData);
 
       if (status === 200 || status === 201) {
-        // ✅ CORREGIDO: Obtener datos completos del usuario
         const userData = {
           id:
             data.data.user?.id?.toString() ||
@@ -34,7 +32,6 @@ const useLogin = () => {
           role: data.data.user?.role || data.data.role || "user",
         };
 
-        // ✅ Usar el contexto para login
         login(
           data.data.access_token,
           userData,
@@ -42,7 +39,6 @@ const useLogin = () => {
           rememberMe
         );
 
-        // Almacenar API Key si viene en la respuesta
         if (data.data.api_key) {
           localStorage.setItem("NEGOBI_USER_API_KEY", data.data.api_key);
         }

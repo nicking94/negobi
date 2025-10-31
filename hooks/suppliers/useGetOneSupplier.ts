@@ -1,4 +1,4 @@
-// hooks/suppliers/useGetOneSupplier.ts - VERSIÓN MEJORADA
+// hooks/suppliers/useGetOneSupplier.ts
 import { useEffect, useState, useCallback } from "react";
 import { SupplierType } from "@/types";
 import { supplierService } from "@/services/suppliers/suppliers.service";

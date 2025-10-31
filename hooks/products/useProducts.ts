@@ -9,14 +9,13 @@ import {
 } from "../../services/products/products.service";
 import { toast } from "sonner";
 
-// Definir el tipo para los filtros del hook
 export interface UseProductsFilters {
   page?: number;
   itemsPerPage?: number;
   companyId?: number;
   product_name?: string;
   sku?: string;
-  categoryId?: number; // ← Mantener para uso interno
+  categoryId?: number;
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -39,7 +38,6 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
   const [totalPage, setTotalPage] = useState(0);
   const [modified, setModified] = useState(false);
 
-  // Función helper para convertir valores a número de forma segura
   const safeNumber = (value: any): number | undefined => {
     if (value === undefined || value === null || value === "") return undefined;
     const num = Number(value);
@@ -51,19 +49,17 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros y transformar categoryId → category_id
       const combinedFilters: GetProductsParams = {
         ...filters,
         ...customFilters,
         page: customFilters?.page || page,
         itemsPerPage: customFilters?.itemsPerPage || itemsPerPage,
-        // Transformar categoryId a category_id para la API
+
         category_id:
           safeNumber(customFilters?.categoryId) ||
           safeNumber(filters.categoryId),
       };
 
-      // Limpiar parámetros undefined
       Object.keys(combinedFilters).forEach((key) => {
         if (combinedFilters[key as keyof GetProductsParams] === undefined) {
           delete combinedFilters[key as keyof GetProductsParams];
@@ -107,7 +103,7 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       setError(null);
       const newProduct = await productService.createProduct(productData);
       toast.success("Producto creado exitosamente");
-      setModified((prev) => !prev); // Trigger refetch
+      setModified((prev) => !prev);
       return newProduct;
     } catch (err) {
       const errorMessage =
@@ -120,7 +116,6 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Actualizar producto
   const updateProduct = async (
     id: string,
     updates: UpdateProductData
@@ -130,7 +125,7 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
       setError(null);
       const updatedProduct = await productService.updateProduct(id, updates);
       toast.success("Producto actualizado exitosamente");
-      setModified((prev) => !prev); // Trigger refetch
+      setModified((prev) => !prev);
       return updatedProduct;
     } catch (err) {
       const errorMessage =
@@ -143,14 +138,13 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
     }
   };
 
-  // Eliminar producto
   const deleteProduct = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       await productService.deleteProduct(id);
       toast.success("Producto eliminado exitosamente");
-      setModified((prev) => !prev); // Trigger refetch
+      setModified((prev) => !prev);
       return true;
     } catch (err) {
       const errorMessage =
@@ -196,7 +190,6 @@ export const useProducts = (filters: UseProductsFilters = {}) => {
   };
 };
 
-// Hook para unidades de productos
 export const useProductUnits = () => {
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -232,7 +225,6 @@ export const useProductUnits = () => {
   };
 };
 
-// Hook especializado para productos de una compañía
 export const useProductsByCompany = (companyId?: number) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -278,7 +270,6 @@ export const useProductsByCompany = (companyId?: number) => {
   };
 };
 
-// Hook para productos activos
 export const useActiveProducts = (companyId?: number) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -322,7 +313,6 @@ export const useActiveProducts = (companyId?: number) => {
   };
 };
 
-// Hook para búsqueda de productos
 export const useProductSearch = (companyId?: number) => {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -360,7 +350,6 @@ export const useProductSearch = (companyId?: number) => {
   };
 };
 
-// Hook para gestión de productos por categoría - ACTUALIZADO
 export const useProductsByCategory = (
   companyId?: number,
   categoryId?: number
@@ -412,7 +401,6 @@ export const useProductsByCategory = (
   };
 };
 
-// Hook para gestión completa de productos (CRUD completo)
 export const useProductManager = (companyId?: number) => {
   const {
     products,
@@ -424,27 +412,22 @@ export const useProductManager = (companyId?: number) => {
     refetch,
   } = useProducts({ companyId });
 
-  // Buscar producto por SKU
   const getProductBySku = (sku: string): Product | undefined => {
     return products.find((product) => product.sku === sku);
   };
 
-  // Buscar producto por código
   const getProductByCode = (code: string): Product | undefined => {
     return products.find((product) => product.code === code);
   };
 
-  // Verificar si un SKU existe
   const skuExists = (sku: string): boolean => {
     return products.some((product) => product.sku === sku);
   };
 
-  // Verificar si un código existe
   const codeExists = (code: string): boolean => {
     return products.some((product) => product.code === code);
   };
 
-  // Obtener productos con stock bajo (ejemplo: menos de 10 unidades)
   const getLowStockProducts = (threshold: number = 10): Product[] => {
     return products.filter((product) => product.stock_quantity <= threshold);
   };

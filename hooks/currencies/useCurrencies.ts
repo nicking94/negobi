@@ -7,7 +7,6 @@ import {
   GetCurrenciesParams,
 } from "../../services/currencies/currencies.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseCurrenciesFilters {
   search?: string;
   currency_name?: string;
@@ -22,7 +21,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las monedas con filtros
   const loadCurrencies = async (
     customFilters?: Partial<UseCurrenciesFilters>
   ) => {
@@ -55,7 +53,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Crear moneda
   const createCurrency = async (
     currencyData: CreateCurrencyData
   ): Promise<Currency | null> => {
@@ -73,7 +70,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Actualizar moneda
   const updateCurrency = async (
     id: string,
     updates: UpdateCurrencyData
@@ -98,7 +94,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Eliminar moneda
   const deleteCurrency = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -116,7 +111,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Obtener moneda por ID
   const getCurrencyById = async (id: string): Promise<Currency | null> => {
     try {
       setLoading(true);
@@ -131,7 +125,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Obtener moneda por código
   const getCurrencyByCode = async (code: string): Promise<Currency | null> => {
     try {
       setLoading(true);
@@ -150,7 +143,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
     }
   };
 
-  // Cargar monedas al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadCurrencies();
   }, [
@@ -175,7 +167,6 @@ export const useCurrencies = (filters: UseCurrenciesFilters = {}) => {
   };
 };
 
-// Hook especializado para monedas activas
 export const useActiveCurrencies = () => {
   const [activeCurrencies, setActiveCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(false);
@@ -209,7 +200,6 @@ export const useActiveCurrencies = () => {
   };
 };
 
-// Hook especializado para moneda principal
 export const useMainCurrency = () => {
   const [mainCurrency, setMainCurrency] = useState<Currency | null>(null);
   const [loading, setLoading] = useState(false);
@@ -243,7 +233,6 @@ export const useMainCurrency = () => {
   };
 };
 
-// Hook para selección de monedas (para dropdowns)
 export const useCurrencyOptions = () => {
   const { activeCurrencies, loading, error, refetch } = useActiveCurrencies();
 

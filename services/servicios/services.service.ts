@@ -6,19 +6,16 @@ import {
   DeleteService,
 } from "../servicios/services.route";
 
-// Parámetros para obtener servicios
 export interface GetServicesParams {
   page?: number;
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId: string; // Requerido según el swagger
+  companyId: string;
   categoryId?: string;
 }
 
-// Interfaz principal del servicio
 export interface Service {
-  // Campos principales
   id: number;
   price_level_1: number;
   price_level_2: number;
@@ -27,12 +24,8 @@ export interface Service {
   name: string;
   code: string;
   erp_code_inst?: string;
-
-  // Campos de relación (opcionales en response)
   category_id?: number;
   company_id?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -52,7 +45,6 @@ export interface Service {
   };
 }
 
-// Datos para crear un servicio
 export interface CreateServiceData {
   price_level_1: number;
   price_level_2: number;
@@ -66,7 +58,6 @@ export interface CreateServiceData {
   external_code?: string;
 }
 
-// Datos para actualizar un servicio
 export interface UpdateServiceData {
   price_level_1?: number;
   price_level_2?: number;
@@ -80,7 +71,6 @@ export interface UpdateServiceData {
   external_code?: string;
 }
 
-// Interfaces de respuesta
 export interface ServiceResponse {
   success: boolean;
   data: Service;
@@ -103,13 +93,11 @@ export interface PaginatedServicesResponse {
   data: ServicesListResponse["data"];
 }
 
-// Interfaz para servicio con información extendida
 export interface ServiceWithDetails extends Service {
   category_name?: string;
   company_name?: string;
 }
 
-// Interfaz para análisis de precios
 export interface ServicePriceAnalysis {
   service: Service;
   average_price: number;
@@ -123,7 +111,6 @@ export const serviceService = {
     const response = await api.post(PostService, serviceData);
     const service = response.data.data;
 
-    // Normalizar la respuesta
     return {
       ...service,
       category_id:
@@ -137,11 +124,9 @@ export const serviceService = {
     };
   },
 
-  // En services.service.ts - método getServices
   getServices: async (params: GetServicesParams): Promise<Service[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
@@ -149,7 +134,6 @@ export const serviceService = {
     );
     queryParams.append("companyId", params.companyId);
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -186,7 +170,6 @@ export const serviceService = {
     const response = await api.patch(`${PatchService}/${id}`, updates);
     const service = response.data.data;
 
-    // Normalizar la respuesta
     return {
       ...service,
       category_id:
@@ -200,12 +183,10 @@ export const serviceService = {
     };
   },
 
-  // Eliminar un servicio
   deleteService: async (id: string): Promise<void> => {
     await api.delete(`${DeleteService}/${id}`);
   },
 
-  // Métodos adicionales útiles
   getServicesByCompany: async (companyId: string): Promise<Service[]> => {
     return serviceService.getServices({
       companyId,
@@ -235,7 +216,6 @@ export const serviceService = {
     });
   },
 
-  // Buscar servicios por nombre
   searchServicesByName: async (
     companyId: string,
     name: string
@@ -247,7 +227,6 @@ export const serviceService = {
     });
   },
 
-  // Buscar servicios por código
   searchServicesByCode: async (
     companyId: string,
     code: string
@@ -259,7 +238,6 @@ export const serviceService = {
     });
   },
 
-  // Actualizar precios de un servicio
   updateServicePrices: async (
     id: string,
     prices: {
@@ -271,7 +249,6 @@ export const serviceService = {
     return serviceService.updateService(id, prices);
   },
 
-  // Verificar si existe un servicio con el mismo código
   checkServiceCodeExists: async (
     companyId: string,
     code: string
@@ -289,7 +266,6 @@ export const serviceService = {
     }
   },
 
-  // Verificar si existe un servicio con el mismo nombre
   checkServiceNameExists: async (
     companyId: string,
     name: string
@@ -307,7 +283,6 @@ export const serviceService = {
     }
   },
 
-  // Obtener servicios para select/dropdown
   getServicesForSelect: async (
     companyId: string
   ): Promise<Array<{ value: number; label: string; code: string }>> => {
@@ -324,7 +299,6 @@ export const serviceService = {
     }
   },
 
-  // Obtener servicios agrupados por categoría
   getServicesGroupedByCategory: async (
     companyId: string
   ): Promise<Record<string, Service[]>> => {
@@ -344,7 +318,6 @@ export const serviceService = {
     }
   },
 
-  // Calcular precio promedio de un servicio
   calculateAveragePrice: (service: Service): number => {
     const prices = [
       service.price_level_1,
@@ -359,7 +332,6 @@ export const serviceService = {
     );
   },
 
-  // Analizar precios de servicios
   analyzeServicePrices: (service: Service): ServicePriceAnalysis => {
     const prices = [
       service.price_level_1,
@@ -370,10 +342,7 @@ export const serviceService = {
       prices.reduce((sum, price) => sum + price, 0) / prices.length;
     const priceRange = Math.max(...prices) - Math.min(...prices);
 
-    // Considerar competitivo si el rango de precios no es muy amplio
     const isCompetitive = priceRange <= averagePrice * 0.5;
-
-    // Precio sugerido basado en el promedio
     const suggestedPrice = Math.round(averagePrice);
 
     return {
@@ -385,7 +354,6 @@ export const serviceService = {
     };
   },
 
-  // Obtener servicios con mejor relación precio/valor
   getBestValueServices: async (
     companyId: string,
     limit: number = 10
@@ -393,7 +361,6 @@ export const serviceService = {
     try {
       const services = await serviceService.getServicesByCompany(companyId);
 
-      // Ordenar por relación precio promedio vs descripción (simulado)
       return services
         .filter(
           (service) => service.description && service.description.length > 0
@@ -413,13 +380,7 @@ export const serviceService = {
     }
   },
 
-  // Calcular valor del servicio (método simulado)
   calculateServiceValue: (service: Service): number => {
-    // En una implementación real, esto podría basarse en:
-    // - Longitud de la descripción
-    // - Complejidad del servicio
-    // - Historial de ventas
-    // - Reseñas de clientes
     const baseValue = service.description?.length || 0;
     const priceComplexity =
       (service.price_level_1 + service.price_level_2 + service.price_level_3) /
@@ -427,7 +388,6 @@ export const serviceService = {
     return baseValue + priceComplexity * 0.1;
   },
 
-  // Validar datos del servicio
   validateServiceData: (
     serviceData: CreateServiceData
   ): { isValid: boolean; errors: string[] } => {
@@ -466,7 +426,6 @@ export const serviceService = {
       errors.push("El precio nivel 3 no puede ser negativo");
     }
 
-    // Validar que los precios sean lógicos
     if (
       serviceData.price_level_1 > 0 &&
       serviceData.price_level_2 > 0 &&
@@ -489,7 +448,6 @@ export const serviceService = {
     };
   },
 
-  // Obtener estadísticas de servicios
   getServicesStatistics: async (
     companyId: string
   ): Promise<{
@@ -536,7 +494,6 @@ export const serviceService = {
     }
   },
 
-  // Crear múltiples servicios
   createMultipleServices: async (
     companyId: string,
     servicesData: CreateServiceData[]
@@ -545,7 +502,6 @@ export const serviceService = {
 
     for (const serviceData of servicesData) {
       try {
-        // Asegurar que el servicio tenga la companyId
         const serviceWithCompany = {
           ...serviceData,
           company_id: serviceData.company_id || parseInt(companyId),

@@ -41,7 +41,6 @@ const useGetPaymentTerms = () => {
       let totalCount = 0;
       let totalPages = 0;
 
-      // Verificar si es una respuesta paginada
       if (
         response.data &&
         typeof response.data === "object" &&
@@ -49,7 +48,6 @@ const useGetPaymentTerms = () => {
         "totalPages" in response.data &&
         "total" in response.data
       ) {
-        // Usar type assertion a través de unknown para evitar el error
         const paginatedData = response.data as {
           data: PaymentTermType[];
           totalPages: number;
@@ -60,9 +58,7 @@ const useGetPaymentTerms = () => {
           : [];
         totalPages = Number(paginatedData.totalPages) || 0;
         totalCount = Number(paginatedData.total) || 0;
-      }
-      // Verificar si es una respuesta de array directo
-      else if (Array.isArray(response.data)) {
+      } else if (Array.isArray(response.data)) {
         paymentTermsData = response.data;
         totalCount = paymentTermsData.length;
         totalPages = Math.ceil(totalCount / itemsPerPage);

@@ -8,8 +8,6 @@ import {
   Send,
   Search,
   Filter,
-  FileText,
-  Building,
   XCircle,
   CheckCircle,
 } from "lucide-react";
@@ -47,14 +45,19 @@ import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { Document } from "@/services/documents/documents.service";
 import { documentTypeTranslations } from "@/utils/documentTypeTranslations";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
 import { PriceDisplay } from "@/components/PriceDisplay";
-import useUserCompany from "@/hooks/auth/useUserCompany"; // Importar el hook
+import useUserCompany from "@/hooks/auth/useUserCompany";
 import { useInvoices } from "@/hooks/documents/useInvoices";
 
-// Tipo Bill basado en Document
 export type Bill = {
   id: string;
   client: string;
@@ -73,9 +76,8 @@ const translateDocumentType = (documentType: string): string => {
 
 const BillsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isClientBillsDialogOpen, setIsClientBillsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sellerFilter, setSellerFilter] = useState<string>("all");
@@ -89,7 +91,6 @@ const BillsPage = () => {
   );
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Obtener la empresa del usuario logueado
   const {
     companyId,
     isLoading: companyLoading,
@@ -113,6 +114,19 @@ const BillsPage = () => {
         }
   );
 
+  const handleClientChange = (value: string) => {
+    setClientFilter(value);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setClientFilter("all");
+    setDateRange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date(),
+    });
+  };
+
   const mapDocumentStatusToBillStatus = (
     docStatus: string
   ): "pending" | "paid" | "cancelled" => {
@@ -130,20 +144,6 @@ const BillsPage = () => {
       default:
         return "pending";
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      paid: { label: "Pagada", className: "bg-green_xxl text-green_b" },
-      pending: {
-        label: "Pendiente",
-        className: "bg-yellow-100 text-yellow-800",
-      },
-      cancelled: { label: "Cancelada", className: "bg-red_xxl text-red_b" },
-    };
-
-    const billStatus = mapDocumentStatusToBillStatus(status);
-    return statusMap[billStatus];
   };
 
   const bills: Bill[] = useMemo(() => {
@@ -171,12 +171,10 @@ const BillsPage = () => {
     }));
   }, [bills]);
 
-  // Obtener facturas de un cliente específico
   const getClientBills = (clientName: string) => {
     return bills.filter((bill) => bill.client === clientName);
   };
 
-  // Filtrar facturas según los criterios
   const filteredBills = useMemo(() => {
     return bills.filter((bill) => {
       const matchesSearch =
@@ -184,15 +182,12 @@ const BillsPage = () => {
         bill.correlative.toLowerCase().includes(searchTerm.toLowerCase()) ||
         bill.operation_type.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtrar por vendedor (si no es "todos")
       const matchesSeller =
         sellerFilter === "all" || bill.seller === sellerFilter;
 
-      // Filtrar por cliente (si no es "todos")
       const matchesClient =
         clientFilter === "all" || bill.client === clientFilter;
 
-      // Filtrar por rango de fechas
       const matchesDateRange =
         !dateRange?.from ||
         !dateRange?.to ||
@@ -210,21 +205,8 @@ const BillsPage = () => {
     setIsDetailsModalOpen(true);
   };
 
-  const handleViewClientBills = (client: string) => {
-    setSelectedClient(client);
-    setIsClientBillsDialogOpen(true);
-  };
-
   const handleResendOrder = (bill: Bill) => {
-    // Aquí implementarías la lógica para reenviar el pedido
     toast.success(`Pedido de la factura ${bill.correlative} reenviado`);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-VE", {
-      style: "currency",
-      currency: "VES",
-    }).format(value);
   };
 
   const formatDate = (date: Date | null) => {
@@ -360,7 +342,6 @@ const BillsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -374,7 +355,7 @@ const BillsPage = () => {
             </h1>
           </div>
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
@@ -386,22 +367,22 @@ const BillsPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="client-filter">Cliente</Label>
                       <Select
                         value={clientFilter}
-                        onValueChange={setClientFilter}
+                        onValueChange={handleClientChange}
                       >
-                        <SelectTrigger id="client-filter" className="mt-1">
+                        <SelectTrigger id="client-filter">
                           <SelectValue placeholder="Todos los clientes" />
                         </SelectTrigger>
                         <SelectContent>
@@ -417,9 +398,7 @@ const BillsPage = () => {
                       </Select>
                     </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="date-range">Período</Label>
                       <div className="mt-1">
                         <DatePicker
@@ -441,9 +420,30 @@ const BillsPage = () => {
                         />
                       </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -480,7 +480,6 @@ const BillsPage = () => {
         }}
       />
 
-      {/* Modal para ver facturas del cliente */}
       <Dialog
         open={isClientBillsDialogOpen}
         onOpenChange={setIsClientBillsDialogOpen}

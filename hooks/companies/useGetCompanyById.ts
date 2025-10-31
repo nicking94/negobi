@@ -16,7 +16,7 @@ const useGetCompanyById = () => {
 
       if (data.success) {
         const company = data.data;
-        // Transformar los datos para que coincidan con tu tipo Company
+
         const transformedCompany: CompanyType = {
           ...company,
           id: company.id || 0,

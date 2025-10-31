@@ -52,7 +52,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
 
-// Importar tus servicios y hooks reales
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { useServices } from "@/hooks/services/useServices";
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
 import {
@@ -89,10 +94,8 @@ const ServicesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Company ID activo (debería venir del contexto de autenticación)
   const activeCompanyId = "4";
 
-  // Usar hooks reales
   const {
     services,
     loading: servicesLoading,
@@ -132,6 +135,15 @@ const ServicesPage = () => {
     },
   });
 
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+  };
+
   const onSubmit = async (data: ServiceFormInputs) => {
     try {
       if (editingService && editingService.id) {
@@ -157,7 +169,6 @@ const ServicesPage = () => {
           return;
         }
       } else {
-        // Crear nuevo servicio
         const createData: CreateServiceData = {
           name: data.name,
           code: data.code,
@@ -165,7 +176,7 @@ const ServicesPage = () => {
           price_level_1: data.price_level_1,
           price_level_2: data.price_level_2,
           price_level_3: data.price_level_3,
-          category_id: data.category_id, // ← YA ES number | null
+          category_id: data.category_id,
           company_id: data.company_id,
           erp_code_inst: "",
           external_code: "",
@@ -187,10 +198,6 @@ const ServicesPage = () => {
       console.error("❌ Error al guardar el servicio:", error);
       toast.error("Error al guardar el servicio");
     }
-  };
-
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
   };
 
   const handleDelete = async (service: Service) => {
@@ -399,7 +406,6 @@ const ServicesPage = () => {
     },
   ];
 
-  // Mostrar estado de carga
   if ((servicesLoading && services.length === 0) || categoriesLoading) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -420,7 +426,6 @@ const ServicesPage = () => {
     );
   }
 
-  // Mostrar estado de error
   if (servicesError || categoriesError) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -454,7 +459,6 @@ const ServicesPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -481,41 +485,65 @@ const ServicesPage = () => {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button variant="outline" className="gap-2">
                     <Filter className="h-4 w-4" />
                     <span>Filtrar</span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[18rem]">
-                  <div className="px-2 py-1.5">
-                    <Label htmlFor="category-filter">Categoría</Label>
-                    <Select
-                      value={selectedCategory}
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger id="category-filter" className="mt-1">
-                        <SelectValue placeholder="Todas las categorías" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          Todas las categorías
-                        </SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category.id}
-                            value={category.id.toString()}
-                          >
-                            {category.category_name}
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category-filter">Categoría</Label>
+                      <Select
+                        value={selectedCategory}
+                        onValueChange={handleCategoryChange}
+                      >
+                        <SelectTrigger id="category-filter">
+                          <SelectValue placeholder="Todas las categorías" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            Todas las categorías
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          {categories.map((category) => (
+                            <SelectItem
+                              key={category.id}
+                              value={category.id.toString()}
+                            >
+                              {category.category_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
                   </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverContent>
+              </Popover>
             </div>
+
             <div>
               <Button
                 onClick={() => {
@@ -531,7 +559,6 @@ const ServicesPage = () => {
             </div>
           </div>
 
-          {/* Tabla de servicios */}
           <div className="bg-white rounded-lg shadow-sm border">
             <DataTable<Service, ColumnDef<Service>[]>
               columns={columns}
@@ -548,7 +575,6 @@ const ServicesPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar servicio */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -637,9 +663,8 @@ const ServicesPage = () => {
                       </FormLabel>
                       <div className="w-full col-span-1 sm:col-span-3">
                         <Select
-                          value={field.value ? field.value.toString() : "none"} // ← CAMBIA "" por "none"
+                          value={field.value ? field.value.toString() : "none"}
                           onValueChange={(value) => {
-                            // Manejar correctamente valores
                             if (value === "none") {
                               field.onChange(null);
                             } else {
@@ -653,7 +678,6 @@ const ServicesPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {/* Usar "none" en lugar de string vacío */}
                             <SelectItem value="none">Sin categoría</SelectItem>
                             {categories.map((category) => (
                               <SelectItem

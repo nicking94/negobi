@@ -15,15 +15,14 @@ const useGetPaymentTermsForSelect = () => {
 
       const response = await paymentTermsService.getPaymentTerms({
         page: 1,
-        itemsPerPage: 100, // Obtener todos los términos de pago
+        itemsPerPage: 100,
         order: "ASC",
-        is_active: true, // Solo términos activos
+        is_active: true,
       });
 
       if (response.success && response.data) {
         let termsData: PaymentTermType[] = [];
 
-        // Manejar diferentes estructuras de respuesta
         if (Array.isArray(response.data)) {
           termsData = response.data;
         } else if (

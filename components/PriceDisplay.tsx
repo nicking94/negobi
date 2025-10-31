@@ -5,8 +5,8 @@ interface PriceDisplayProps {
   value: number;
   variant?: "default" | "table" | "summary" | "compact";
   className?: string;
-  originalCurrency?: string; // Si el precio viene en otra moneda
-  showCurrencyCode?: boolean; // Nueva prop para mostrar código de moneda
+  originalCurrency?: string;
+  showCurrencyCode?: boolean;
 }
 
 export const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -25,7 +25,6 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
     currentCurrency,
   } = useCurrencyFormatter();
 
-  // Si se especifica una moneda original, convertir primero
   const displayValue = originalCurrency
     ? convertPrice(value, originalCurrency)
     : value;
@@ -43,7 +42,6 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
     }
   };
 
-  // Agregar código de moneda si se solicita (útil para VES)
   const getDisplayContent = () => {
     const formattedValue = getFormattedValue();
 

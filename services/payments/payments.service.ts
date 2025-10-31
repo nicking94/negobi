@@ -24,11 +24,9 @@ export interface GetPaymentsParams {
   supplierId?: number;
 }
 
-// Tipos para los valores enumerados
 export type PaymentType = "supplier_payment" | "client_payment";
 
 export interface Payment {
-  // Campos del response (GET)
   id: number;
   payment_type: PaymentType;
   invoice_id: number;
@@ -38,15 +36,11 @@ export interface Payment {
   exchange_rate_used: number;
   reference_number: string;
   notes: string;
-
-  // Campos de relación (IDs)
   clientId?: number;
   paymentCurrencyId?: number;
   paymentMethodId?: number;
   bankAccountId?: number;
   supplierId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -55,12 +49,9 @@ export interface Payment {
 }
 
 export interface CreatePaymentData {
-  // Campos requeridos para crear un pago
   payment_type: PaymentType;
   payment_date: string;
   payment_amount: number;
-
-  // Campos opcionales para creación
   clientId?: number;
   invoice_id?: number;
   operation_type_id?: number;
@@ -74,7 +65,6 @@ export interface CreatePaymentData {
 }
 
 export interface UpdatePaymentData {
-  // Todos los campos son opcionales para actualización
   clientId?: number;
   payment_type?: PaymentType;
   invoice_id?: number;
@@ -90,7 +80,6 @@ export interface UpdatePaymentData {
   supplierId?: number;
 }
 
-// Response interfaces
 export interface PaymentResponse {
   success: boolean;
   data: Payment;
@@ -111,24 +100,20 @@ export interface PaginatedPaymentsResponse {
 }
 
 export const paymentService = {
-  // Crear un nuevo pago
   createPayment: async (paymentData: CreatePaymentData): Promise<Payment> => {
     const response = await api.post(PostPayment, paymentData);
     return response.data.data;
   },
 
-  // Obtener todos los pagos
   getPayments: async (params?: GetPaymentsParams): Promise<Payment[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -179,7 +164,6 @@ export const paymentService = {
     return response.data.data;
   },
 
-  // Actualizar un pago
   updatePayment: async (
     id: string,
     updates: UpdatePaymentData
@@ -188,18 +172,15 @@ export const paymentService = {
     return response.data.data;
   },
 
-  // Eliminar un pago
   deletePayment: async (id: string): Promise<void> => {
     await api.delete(`${DeletePayment}/${id}`);
   },
 
-  // Obtener un pago por ID
   getPaymentById: async (id: string): Promise<Payment> => {
     const response = await api.get(`${GetPayments}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getClientPayments: async (clientId: number): Promise<Payment[]> => {
     return paymentService.getPayments({
       clientId,

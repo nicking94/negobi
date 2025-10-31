@@ -8,7 +8,6 @@ import {
   SyncProducts,
 } from "./products.routes";
 
-// Interfaces para parámetros de búsqueda - ACTUALIZADO
 export interface GetProductsParams {
   page?: number;
   itemsPerPage?: number;
@@ -17,7 +16,7 @@ export interface GetProductsParams {
   companyId?: number;
   product_name?: string;
   sku?: string;
-  category_id?: number; // ← USAR category_id para queries (Swagger)
+  category_id?: number;
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -29,14 +28,13 @@ export interface GetProductsParams {
   is_active?: boolean;
 }
 
-// Interface para uso interno (mantener categoryId para responses)
 export interface UseProductsFilters {
   page?: number;
   itemsPerPage?: number;
   companyId?: number;
   product_name?: string;
   sku?: string;
-  categoryId?: number; // ← Mantener para uso interno
+  categoryId?: number;
   brand_id?: number;
   unit_id?: number;
   default_warehouse_id?: number;
@@ -50,43 +48,30 @@ export interface UseProductsFilters {
 }
 
 export interface Product {
-  // Campos del sistema
   id: number;
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
-
-  // Información básica
   product_name: string;
   code: string;
   sku: string;
   description: string;
-
-  // Precios y costos
   base_price: number;
   current_cost: number;
   previous_cost: number;
   average_cost: number;
-
-  // Niveles de precio
   price_level_1: number;
   price_level_2: number;
   price_level_3: number;
   price_level_4: number;
   price_level_5: number;
-
-  // Gestión de inventario
   manages_serials: boolean;
   manages_lots: boolean;
   uses_decimals_in_quantity: boolean;
   uses_scale_for_weight: boolean;
-
-  // Impuestos
   is_tax_exempt: boolean;
-
-  // Dimensiones y peso
   weight_value: number;
   weight_unit: string;
   volume_value: number;
@@ -95,23 +80,13 @@ export interface Product {
   width_value: number;
   height_value: number;
   dimension_unit: string;
-
-  // Visibilidad
   show_in_ecommerce: boolean;
   show_in_sales_app: boolean;
-
-  // Stock
   stock_quantity: number;
   total_quantity_reserved: number;
   total_quantity_on_order: number;
-
-  // Estado
   is_active: boolean;
-
-  // Códigos ERP
   erp_code_inst: string;
-
-  // Relaciones - OBLIGATORIAS según Swagger
   companyId: number;
   categoryId: number;
   category?: {
@@ -121,11 +96,10 @@ export interface Product {
   brand_id?: number;
 }
 
-// Interface para crear producto
 export interface CreateProductData {
   product_name: string;
   companyId: number;
-  categoryId?: number; // ← Mantener categoryId para POST
+  categoryId?: number;
   code: string;
   sku: string;
   description?: string;
@@ -162,10 +136,9 @@ export interface CreateProductData {
   external_code?: string;
 }
 
-// Interface para actualizar producto
 export interface UpdateProductData {
   product_name?: string;
-  categoryId?: number; // ← Mantener categoryId para PATCH
+  categoryId?: number;
   code?: string;
   sku?: string;
   description?: string;
@@ -204,7 +177,6 @@ export interface UpdateProductData {
   location?: Record<string, any>;
 }
 
-// Interface para sincronización
 export interface SyncProductData {
   product_name: string;
   companyId: number;
@@ -262,7 +234,6 @@ export interface SyncProductsResponse {
   data: SyncProductResponse[];
 }
 
-// Interface para unidades
 export interface ProductUnit {
   id: number;
   name: string;
@@ -271,12 +242,11 @@ export interface ProductUnit {
   is_active: boolean;
 }
 
-// Interface CORREGIDA - SIN DUPLICACIÓN
 export interface ProductUnitsResponse {
   success: boolean;
   data: {
     message: string;
-    units?: ProductUnit[]; // ← AGREGAR units aquí para evitar el error
+    units?: ProductUnit[];
   };
   message?: string;
   statusCode?: number;
@@ -317,7 +287,6 @@ export interface DeleteProductResponse {
 }
 
 export const productService = {
-  // Crear un nuevo producto
   createProduct: async (productData: CreateProductData): Promise<Product> => {
     try {
       const response = await api.post<ProductResponse>(
@@ -340,28 +309,23 @@ export const productService = {
     }
   },
 
-  // Obtener productos - ACTUALIZADO para usar category_id
   getProducts: async (
     params?: GetProductsParams
   ): Promise<PaginatedProductsResponse["data"]> => {
     try {
-      // Crear objeto de parámetros limpio
       const cleanParams: Record<string, any> = {};
 
       if (params) {
-        // Procesar cada parámetro individualmente
         Object.keys(params).forEach((key) => {
           const value = params[key as keyof GetProductsParams];
 
-          // Solo incluir valores definidos y no vacíos
           if (value !== undefined && value !== null && value !== "") {
-            // Para parámetros numéricos, asegurarse de que sean números válidos
             if (
               [
                 "page",
                 "itemsPerPage",
                 "companyId",
-                "category_id", // ← ACTUALIZADO: usar category_id
+                "category_id",
                 "brand_id",
                 "unit_id",
                 "default_warehouse_id",
@@ -371,9 +335,7 @@ export const productService = {
               if (!isNaN(numValue)) {
                 cleanParams[key] = numValue;
               }
-            }
-            // Para parámetros booleanos
-            else if (
+            } else if (
               [
                 "manages_serials",
                 "manages_lots",
@@ -384,9 +346,7 @@ export const productService = {
               ].includes(key)
             ) {
               cleanParams[key] = Boolean(value);
-            }
-            // Para strings y otros
-            else {
+            } else {
               cleanParams[key] = value;
             }
           }
@@ -401,7 +361,6 @@ export const productService = {
         throw new Error(response.data.message || "Error al obtener productos");
       }
 
-      // MAPEAR LOS PRODUCTOS PARA GARANTIZAR categoryId ESTÉ DISPONIBLE
       const mappedData = {
         ...response.data.data,
         data: response.data.data.data.map((product) => ({
@@ -414,7 +373,6 @@ export const productService = {
     } catch (error: any) {
       console.error("❌ Error fetching products:", error);
 
-      // Log detallado del error
       if (error.response) {
         console.error("❌ Error response:", error.response.data);
         console.error("❌ Error status:", error.response.status);
@@ -426,7 +384,6 @@ export const productService = {
     }
   },
 
-  // Obtener producto por ID
   getProductById: async (id: string): Promise<Product> => {
     try {
       const response = await api.get<ProductResponse>(`${GetProducts}/${id}`);
@@ -446,7 +403,6 @@ export const productService = {
     }
   },
 
-  // Actualizar producto
   updateProduct: async (
     id: string,
     updates: UpdateProductData
@@ -474,7 +430,6 @@ export const productService = {
     }
   },
 
-  // Eliminar producto
   deleteProduct: async (id: string): Promise<void> => {
     try {
       const response = await api.delete<DeleteProductResponse>(
@@ -490,7 +445,6 @@ export const productService = {
     }
   },
 
-  // Obtener unidades de productos - CORREGIDO
   getProductUnits: async (): Promise<ProductUnit[]> => {
     try {
       const response = await api.get<ProductUnitsResponse>(GetProductUnits);
@@ -506,7 +460,6 @@ export const productService = {
     }
   },
 
-  // Sincronizar productos desde ERP
   syncProducts: async (
     syncData: SyncProductsPayload
   ): Promise<SyncProductResponse[]> => {
@@ -517,7 +470,6 @@ export const productService = {
     return response.data.data;
   },
 
-  // Métodos auxiliares - ACTUALIZADOS para usar category_id
   getProductsByCompany: async (
     companyId: number,
     params?: Partial<GetProductsParams>
@@ -561,7 +513,7 @@ export const productService = {
   ): Promise<Product[]> => {
     const response = await productService.getProducts({
       companyId,
-      category_id: categoryId, // ← ACTUALIZADO: usar category_id
+      category_id: categoryId,
       ...params,
     });
     return response.data;

@@ -13,7 +13,6 @@ import {
 } from "../../services/goals/goals.service";
 import { toast } from "sonner";
 
-// Definir el tipo para los filtros del hook
 export interface UseGoalsFilters {
   goal_type?: GoalType;
   period_type?: PeriodType;
@@ -82,12 +81,10 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Cambiar página
   const setPage = (page: number) => {
     loadGoals(undefined, page);
   };
 
-  // Cambiar items por página
   const setItemsPerPage = (itemsPerPage: number) => {
     setPagination((prev) => ({ ...prev, itemsPerPage, page: 1 }));
   };
@@ -97,7 +94,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos antes de enviar
       const validation = goalService.validateCreateGoalData(goalData);
       if (!validation.isValid) {
         const errorMsg = `Datos inválidos: ${validation.errors.join(", ")}`;
@@ -126,7 +122,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Actualizar objetivo
   const updateGoal = async (
     id: string,
     updates: UpdateGoalData
@@ -135,7 +130,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Validar fechas si se están actualizando
       if (
         updates.start_date &&
         updates.end_date &&
@@ -160,7 +154,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Eliminar objetivo
   const deleteGoal = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -178,7 +171,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Obtener objetivo por ID
   const getGoalById = async (id: string): Promise<Goal | null> => {
     try {
       setLoading(true);
@@ -195,7 +187,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Cambiar estado de objetivo
   const updateGoalStatus = async (
     id: string,
     status: GoalStatus
@@ -212,7 +203,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     }
   };
 
-  // Marcar objetivo como alcanzado
   const markGoalAsReached = async (id: string): Promise<Goal | null> => {
     return await updateGoalStatus(id, GOAL_STATUSES.REACHED);
   };
@@ -221,7 +211,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     return await updateGoalStatus(id, GOAL_STATUSES.NOT_REACHED);
   };
 
-  // Calcular progreso de objetivo
   const calculateGoalProgress = (
     goal: Goal,
     currentAmount: number,
@@ -234,12 +223,10 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
     );
   };
 
-  // Validar fechas
   const validateGoalDates = (startDate: string, endDate: string): boolean => {
     return goalService.validateGoalDates(startDate, endDate);
   };
 
-  // Cargar objetivos al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadGoals();
   }, [
@@ -280,7 +267,6 @@ export const useGoals = (filters: UseGoalsFilters = {}) => {
   };
 };
 
-// Hook especializado para objetivos activos
 export const useActiveGoals = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -314,7 +300,6 @@ export const useActiveGoals = () => {
   };
 };
 
-// Hook especializado para objetivos por tipo
 export const useGoalsByType = (goalType?: GoalType) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -358,7 +343,6 @@ export const useGoalsByType = (goalType?: GoalType) => {
   };
 };
 
-// Hook especializado para objetivos por estado
 export const useGoalsByStatus = (status?: GoalStatus) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -404,7 +388,6 @@ export const useGoalsByStatus = (status?: GoalStatus) => {
   };
 };
 
-// Hook para objetivos del período actual
 export const useCurrentPeriodGoals = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -440,7 +423,6 @@ export const useCurrentPeriodGoals = () => {
   };
 };
 
-// Hook para select/dropdown de objetivos
 export const useGoalsForSelect = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; type: GoalType }>
@@ -478,12 +460,10 @@ export const useGoalsForSelect = () => {
   };
 };
 
-// Hook para análisis de objetivos
 export const useGoalsAnalysis = () => {
   const { goals, loading, error } = useActiveGoals();
 
   const analysis = {
-    // Totales
     totalGoals: goals.length,
     reachedGoals: goals.filter((goal) => goal.status === GOAL_STATUSES.REACHED)
       .length,
@@ -491,19 +471,16 @@ export const useGoalsAnalysis = () => {
       (goal) => goal.status === GOAL_STATUSES.NOT_REACHED
     ).length,
 
-    // Por tipo
     goalsByType: goals.reduce((summary, goal) => {
       summary[goal.goal_type] = (summary[goal.goal_type] || 0) + 1;
       return summary;
     }, {} as Record<GoalType, number>),
 
-    // Por período
     goalsByPeriod: goals.reduce((summary, goal) => {
       summary[goal.period_type] = (summary[goal.period_type] || 0) + 1;
       return summary;
     }, {} as Record<PeriodType, number>),
 
-    // Montos totales
     totalTargetAmount: goals.reduce(
       (total, goal) => total + goal.target_amount,
       0
@@ -513,7 +490,6 @@ export const useGoalsAnalysis = () => {
       0
     ),
 
-    // Promedios
     averageTargetAmount:
       goals.length > 0
         ? goals.reduce((total, goal) => total + goal.target_amount, 0) /
@@ -525,7 +501,6 @@ export const useGoalsAnalysis = () => {
           goals.length
         : 0,
 
-    // Objetivos próximos a vencer
     upcomingGoals: goals.filter((goal) => {
       const endDate = new Date(goal.end_date);
       const now = new Date();
@@ -535,7 +510,6 @@ export const useGoalsAnalysis = () => {
       return daysRemaining <= 7 && daysRemaining > 0;
     }).length,
 
-    // Objetivos vencidos
     expiredGoals: goals.filter((goal) => {
       const endDate = new Date(goal.end_date);
       const now = new Date();
@@ -551,7 +525,6 @@ export const useGoalsAnalysis = () => {
   };
 };
 
-// Hook para objetivos próximos a vencer
 export const useUpcomingGoals = (daysThreshold: number = 7) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);

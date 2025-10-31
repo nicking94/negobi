@@ -1,5 +1,5 @@
+//app/validateOTP/page.tsx
 "use client";
-
 import { Suspense } from "react";
 import { OTPValidationForm } from "@/components/auth/OtpForm";
 import { useRouter, useSearchParams } from "next/navigation";

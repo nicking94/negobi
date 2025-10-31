@@ -7,7 +7,6 @@ import {
   GetCompanyConfigsParams,
 } from "../../services/companyConfig/companyConfig.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseCompanyConfigFilters {
   companyId?: number;
   search?: string;
@@ -24,7 +23,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las configuraciones con filtros
   const loadCompanyConfigs = async (
     customFilters?: Partial<UseCompanyConfigFilters>
   ) => {
@@ -59,7 +57,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Crear configuración
   const createCompanyConfig = async (
     configData: CreateCompanyConfigData
   ): Promise<CompanyConfig | null> => {
@@ -81,7 +78,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Actualizar configuración
   const updateCompanyConfig = async (
     id: string,
     updates: UpdateCompanyConfigData
@@ -109,7 +105,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Eliminar configuración
   const deleteCompanyConfig = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -129,7 +124,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Obtener configuración por ID
   const getCompanyConfigById = async (
     id: string
   ): Promise<CompanyConfig | null> => {
@@ -148,7 +142,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Obtener configuración por companyId (método útil)
   const getCompanyConfigByCompanyId = async (
     companyId: number
   ): Promise<CompanyConfig | null> => {
@@ -171,7 +164,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
     }
   };
 
-  // Cargar configuraciones al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadCompanyConfigs();
   }, [
@@ -198,7 +190,6 @@ export const useCompanyConfig = (filters: UseCompanyConfigFilters = {}) => {
   };
 };
 
-// Hook especializado para una sola configuración por companyId
 export const useCompanyConfigByCompany = (companyId?: number) => {
   const [config, setConfig] = useState<CompanyConfig | null>(null);
   const [loading, setLoading] = useState(false);

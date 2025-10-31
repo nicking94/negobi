@@ -120,7 +120,6 @@ export function RegisterForm() {
       <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Sección Empresa */}
           <div className="bg-gray_xxl p-4 border-b lg:border-b-0 lg:border-r border-green_b">
             <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l pb-2">
               <Building className="w-5 h-5 inline mr-2" />
@@ -287,7 +286,6 @@ export function RegisterForm() {
             />
           </div>
 
-          {/* Sección Administrador (sin cambios) */}
           <div className="bg-[var(--color-gray_xxl)] p-4 rounded-lg">
             <h3 className="text-lg font-semibold mb-3 text-green_b border-b border-green_l pb-2">
               <User className="w-5 h-5 inline mr-2" />

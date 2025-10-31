@@ -8,7 +8,6 @@ import {
   SyncWarehouses,
 } from "./warehouse.route";
 
-// Parámetros para obtener almacenes
 export interface GetWarehousesParams {
   page?: number;
   itemsPerPage?: number;
@@ -33,7 +32,6 @@ export interface Warehouse {
   deleted_at?: string | null;
 }
 
-// Datos para crear un almacén
 export interface CreateWarehouseData {
   companyBranchId: number;
   name: string;
@@ -45,7 +43,6 @@ export interface CreateWarehouseData {
   external_code?: string;
 }
 
-// Datos para actualizar un almacén
 export interface UpdateWarehouseData {
   companyBranchId?: number;
   name?: string;
@@ -57,13 +54,11 @@ export interface UpdateWarehouseData {
   external_code?: string;
 }
 
-// Datos para sincronización con ERP
 export interface SyncWarehouseData {
   companyId: number;
   data: CreateWarehouseData[];
 }
 
-// Interfaces de respuesta
 export interface WarehouseResponse {
   success: boolean;
   data: Warehouse;
@@ -104,18 +99,14 @@ export const warehouseService = {
     };
   },
 
-  // En services/warehouse/warehouse.service.ts - MÉTODO getWarehouses
   getWarehouses: async (params?: GetWarehousesParams): Promise<Warehouse[]> => {
     const queryParams = new URLSearchParams();
-
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }

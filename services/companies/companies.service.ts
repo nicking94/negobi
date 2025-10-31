@@ -10,7 +10,6 @@ export class CompaniesService {
   static getCompanies = async (querys: OrganizationQueryType) =>
     await api.get(CompaniesRoutes.GetCompanies, { params: querys });
 
-  // AGREGAR ESTE MÉTODO
   static getCompanyById = async (id: string) =>
     await api.get(`${CompaniesRoutes.GetCompanies}/${id}`);
 

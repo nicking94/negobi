@@ -7,7 +7,6 @@ import {
   GetDocumentItemsParams,
 } from "../../services/documentItems/documentItems.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseDocumentItemsFilters {
   documentId?: number;
   line_number?: number;
@@ -23,7 +22,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los items con filtros
   const loadDocumentItems = async (
     customFilters?: Partial<UseDocumentItemsFilters>
   ) => {
@@ -31,7 +29,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Combinar filtros
       const combinedFilters: GetDocumentItemsParams = {
         ...filters,
         ...customFilters,
@@ -61,7 +58,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Crear item
   const createDocumentItem = async (
     itemData: CreateDocumentItemData
   ): Promise<DocumentItem | null> => {
@@ -79,7 +75,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Actualizar item
   const updateDocumentItem = async (
     id: string,
     updates: UpdateDocumentItemData
@@ -103,7 +98,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Eliminar item
   const deleteDocumentItem = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -121,7 +115,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Obtener item por ID
   const getDocumentItemById = async (
     id: string
   ): Promise<DocumentItem | null> => {
@@ -138,7 +131,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Crear múltiples items
   const createMultipleDocumentItems = async (
     itemsData: CreateDocumentItemData[]
   ): Promise<DocumentItem[] | null> => {
@@ -159,7 +151,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
     }
   };
 
-  // Cargar items al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadDocumentItems();
   }, [
@@ -185,7 +176,6 @@ export const useDocumentItems = (filters: UseDocumentItemsFilters = {}) => {
   };
 };
 
-// Hook especializado para items de un documento específico
 export const useDocumentItemsByDocument = (documentId?: number) => {
   const [documentItems, setDocumentItems] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -231,7 +221,6 @@ export const useDocumentItemsByDocument = (documentId?: number) => {
   };
 };
 
-// Hook especializado para items de un producto específico
 export const useDocumentItemsByProduct = (productId?: number) => {
   const [productItems, setProductItems] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -277,7 +266,6 @@ export const useDocumentItemsByProduct = (productId?: number) => {
   };
 };
 
-// Hook para cálculos de totales de documento
 export const useDocumentTotals = (documentId?: number) => {
   const [totals, setTotals] = useState<{
     subtotal: number;
@@ -347,10 +335,7 @@ export const useDocumentTotals = (documentId?: number) => {
   };
 };
 
-// Hook para gestión de líneas de documento (para formularios)
-// Hook para gestión de líneas de documento (para formularios)
 export const useDocumentLinesManager = (documentId?: number) => {
-  // Usar el hook principal que sí incluye las funciones CRUD
   const {
     documentItems,
     loading,
@@ -361,7 +346,6 @@ export const useDocumentLinesManager = (documentId?: number) => {
     deleteDocumentItem,
   } = useDocumentItems({ documentId });
 
-  // Agregar nueva línea
   const addLine = async (
     lineData: Omit<CreateDocumentItemData, "documentId">
   ) => {
@@ -377,7 +361,6 @@ export const useDocumentLinesManager = (documentId?: number) => {
     return await createDocumentItem(newLineData);
   };
 
-  // Actualizar línea
   const updateLine = async (
     lineId: string,
     updates: UpdateDocumentItemData
@@ -385,12 +368,10 @@ export const useDocumentLinesManager = (documentId?: number) => {
     return await updateDocumentItem(lineId, updates);
   };
 
-  // Eliminar línea
   const removeLine = async (lineId: string) => {
     return await deleteDocumentItem(lineId);
   };
 
-  // Reordenar líneas (actualizar números de línea)
   const reorderLines = async (
     newOrder: { id: string; line_number: number }[]
   ) => {

@@ -279,7 +279,6 @@ export type SupplierType = {
   deleted_at?: string | null;
 };
 
-// En tu archivo de tipos, asegúrate de que SupplierCreatePayload tenga esto:
 export type SupplierCreatePayload = {
   companyId: number;
   supplier_code: string;
@@ -321,7 +320,6 @@ export type SupplierResponse = {
   data: SupplierType;
 };
 
-// Actualiza en tus types:
 export type SuppliersListResponse = {
   success: boolean;
   data: {
@@ -338,7 +336,6 @@ export type SupplierDeleteResponse = {
   };
 };
 
-// Sync Types
 export type SupplierSyncPayload = {
   companyId: number;
   data: SupplierCreatePayload[];
@@ -351,7 +348,6 @@ export type SupplierSyncResponse = {
   };
 };
 
-// Query Parameters
 export type SupplierQueryType = {
   page: number;
   itemsPerPage: number;

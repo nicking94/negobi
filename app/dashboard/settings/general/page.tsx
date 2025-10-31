@@ -24,7 +24,7 @@ const SettingsPage = () => {
     defaultPrice: "price3",
     syncServices: false,
     ordersWithPositiveBalance: true,
-    workWeek: [1, 2, 3, 4, 5], // Lunes a Viernes por defecto
+    workWeek: [1, 2, 3, 4, 5],
     enableEcommerceSync: false,
     enableDataReplication: true,
   });
@@ -48,7 +48,6 @@ const SettingsPage = () => {
   };
 
   const handleSaveSettings = () => {
-    // Aquí iría la lógica para guardar las configuraciones
     toast.success("Configuraciones guardadas exitosamente");
   };
 
@@ -57,7 +56,6 @@ const SettingsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -73,7 +71,6 @@ const SettingsPage = () => {
           </div>
 
           <div className="grid gap-8">
-            {/* Sección App */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray_b mb-4">App</h2>
 
@@ -165,7 +162,6 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {/* Sección Web */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray_b mb-4">Web</h2>
 

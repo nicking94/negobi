@@ -1,7 +1,7 @@
+// hooks/companies/useDeleteCompanies.ts
 import { CompaniesService } from "@/services/companies/companies.service";
 import { useState } from "react";
 
-// hooks/companies/useDeleteCompanies.ts
 const useDeleteCompanies = () => {
   const [loading, setLoading] = useState(false);
 

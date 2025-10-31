@@ -2,11 +2,9 @@ import { useMemo } from "react";
 import { useActiveTaxTypes } from "./useTaxTypes";
 import { AppliesTo } from "@/services/taxTypes/tayTypes.service";
 
-// Hook para opciones de tipos de impuesto (para dropdowns)
 export const useTaxTypeOptions = (appliesTo?: AppliesTo) => {
   const { activeTaxTypes, loading, error, refetch } = useActiveTaxTypes();
 
-  // Filtrar los taxTypes según el parámetro appliesTo
   const filteredTaxTypes = useMemo(() => {
     if (!appliesTo) return activeTaxTypes;
 

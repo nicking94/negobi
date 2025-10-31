@@ -2,13 +2,13 @@ import React from "react";
 
 const Integration = () => {
   return (
-    <section className="py-20 bg-green_xxl">
+    <section className="py-20 bg-gradient-to-br from-green_m to-green_b">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray_b mb-4">
+          <h2 className="text-3xl font-bold text-white mb-4">
             Integraciones sin esfuerzo
           </h2>
-          <p className="text-xl text-gray_m max-w-3xl mx-auto">
+          <p className="text-xl text-gray_xl max-w-3xl mx-auto">
             Negobi se conecta con las herramientas que ya usas para un flujo de
             trabajo perfecto
           </p>

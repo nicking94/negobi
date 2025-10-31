@@ -21,6 +21,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +68,8 @@ import {
 } from "@/services/documents/documents.service";
 import useGetClients from "@/hooks/clients/useGetClients";
 import { SelectSearchable } from "@/components/ui/select-searchable";
-import { PriceDisplay } from "@/components/PriceDisplay"; // Importar el componente
+import { PriceDisplay } from "@/components/PriceDisplay";
+import { useProductsForSelection } from "@/hooks/products/useProductsForSelection";
 
 const esLocale = {
   ...es,
@@ -85,7 +92,6 @@ const BudgetsPage = () => {
     selectedCompanyId,
     setSelectedCompanyId,
     isLoading: companyLoading,
-    userProfile,
   } = useUserCompany();
 
   const { createBudget, loading: creating } = useCreateBudget();
@@ -99,8 +105,9 @@ const BudgetsPage = () => {
     useBudgets({
       companyId: selectedCompanyId || companyId || 0,
     });
-
   const { companies } = useGetAllCompanies();
+  const { productOptions, loading: productsLoading } =
+    useProductsForSelection();
 
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -119,7 +126,20 @@ const BudgetsPage = () => {
     to: new Date(),
   });
 
-  // Estados para el formulario de crear/editar - ACTUALIZAR
+  const clearFilters = () => {
+    setSellerFilter("all");
+    setClientFilter("all");
+    setStatusFilter("all");
+    setDateRange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date(),
+    });
+    setSearchTerm("");
+  };
+
+  const closePopover = () => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  };
   const [formData, setFormData] = useState({
     document_number: "",
     document_date: new Date().toISOString().split("T")[0],
@@ -193,7 +213,6 @@ const BudgetsPage = () => {
     return options;
   }, [clients, companyId]);
 
-  // Mapear documentos a formato Budget
   const mappedBudgets: Budget[] = useMemo(() => {
     return budgets.map((doc) => ({
       ...doc,
@@ -227,12 +246,10 @@ const BudgetsPage = () => {
     }));
   }, [mappedBudgets]);
 
-  // Obtener presupuestos de un cliente específico
   const getClientBudgets = (clientName: string) => {
     return mappedBudgets.filter((budget) => budget.clientName === clientName);
   };
 
-  // Filtrar presupuestos según los criterios
   const filteredBudgets = useMemo(() => {
     return mappedBudgets.filter((budget) => {
       const matchesSearch =
@@ -279,7 +296,6 @@ const BudgetsPage = () => {
   ]);
 
   const handleCreateBudget = () => {
-    // Obtener la fecha actual sin problemas de zona horaria
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -324,15 +340,113 @@ const BudgetsPage = () => {
     setIsEditDialogOpen(true);
   };
 
+  const handleAddItem = () => {
+    const newItem = {
+      line_number: formData.items.length + 1,
+      product_id: 0,
+      quantity: 1,
+      unit_price: 0,
+      discount_amount: 0,
+      tax_amount: 0,
+      total_amount: 0,
+      product_name: "",
+    };
+
+    setFormData({
+      ...formData,
+      items: [...formData.items, newItem],
+    });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setFormData({
+      ...formData,
+      items: formData.items.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleItemChange = (
+    index: number,
+    field: string,
+    value: string | number
+  ) => {
+    const updatedItems = [...formData.items];
+
+    if (field === "product_id") {
+      const selectedProduct = productOptions.find(
+        (opt) => opt.value === value
+      )?.data;
+
+      if (selectedProduct) {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          product_id: parseInt(value as string),
+          product_name: selectedProduct.product_name,
+          unit_price: selectedProduct.base_price,
+          total_amount:
+            updatedItems[index].quantity * selectedProduct.base_price,
+        };
+      } else {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          [field]: parseInt(value as string) || 0,
+        };
+      }
+    } else {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: value,
+      };
+
+      if (field === "quantity" || field === "unit_price") {
+        const quantity =
+          field === "quantity"
+            ? (value as number)
+            : updatedItems[index].quantity;
+        const unit_price =
+          field === "unit_price"
+            ? (value as number)
+            : updatedItems[index].unit_price;
+        updatedItems[index].total_amount = quantity * unit_price;
+      }
+    }
+
+    setFormData({ ...formData, items: updatedItems });
+    calculateTotals(updatedItems);
+  };
+
+  const calculateTotals = (items: typeof formData.items) => {
+    const totals = items.reduce(
+      (acc, item) => {
+        const itemTotal = item.total_amount || 0;
+        const itemDiscount = item.discount_amount || 0;
+
+        return {
+          amount: acc.amount + itemTotal,
+          taxable_base: acc.taxable_base + (itemTotal - itemDiscount),
+          total_amount: acc.total_amount + itemTotal,
+        };
+      },
+      { amount: 0, taxable_base: 0, total_amount: 0 }
+    );
+
+    const tax = totals.taxable_base * 0.16;
+
+    setFormData((prev) => ({
+      ...prev,
+      amount: totals.amount,
+      taxable_base: totals.taxable_base,
+      tax: tax,
+      total_amount: totals.total_amount + tax,
+    }));
+  };
+
   const handleCompanyChange = (value: string) => {
     const newCompanyId = parseInt(value);
     setSelectedCompanyId(newCompanyId);
-
-    // Recargar los datos con la nueva empresa
     refetch();
   };
 
-  // Función para manejar cambio de cliente
   const handleClientChange = (value: string) => {
     setFormData({
       ...formData,
@@ -349,10 +463,9 @@ const BudgetsPage = () => {
     try {
       const budgetDetails = await getDocumentDetails(budget.id.toString());
       if (budgetDetails) {
-        // Usar el budget original y combinar con los detalles obtenidos
         const detailedBudget: Budget = {
-          ...budget, // Mantener todas las propiedades originales
-          ...budgetDetails.document, // Sobrescribir con los detalles actualizados
+          ...budget,
+          ...budgetDetails.document,
           clientName:
             budgetDetails.document.client?.legal_name || budget.clientName,
           sellerName:
@@ -369,7 +482,6 @@ const BudgetsPage = () => {
   };
 
   const handleResendBudget = (budget: Budget) => {
-    // Lógica para reenviar presupuesto
     toast.success(
       `Presupuesto ${budget.document_number} reenviado exitosamente`
     );
@@ -396,7 +508,6 @@ const BudgetsPage = () => {
   };
 
   const handleCreateSubmit = async () => {
-    // ✅ Usar la empresa del usuario logeado automáticamente
     const targetCompanyId = selectedCompanyId || companyId;
 
     if (!targetCompanyId) {
@@ -410,7 +521,8 @@ const BudgetsPage = () => {
     }
 
     try {
-      const budgetData: Omit<CreateDocumentData, "document_type"> = {
+      const budgetData: CreateDocumentData = {
+        document_type: "quote",
         document_number: formData.document_number,
         document_date: new Date(
           formData.document_date + "T00:00:00"
@@ -429,12 +541,19 @@ const BudgetsPage = () => {
         due_date: formData.due_date
           ? new Date(formData.due_date + "T00:00:00").toISOString()
           : undefined,
+
+        items: formData.items.map((item) => ({
+          line_number: item.line_number,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_amount: item.discount_amount || 0,
+          tax_amount: item.tax_amount || 0,
+          total_amount: item.total_amount || item.quantity * item.unit_price,
+        })),
       };
 
-      const validation = documentService.validateDocumentData({
-        ...budgetData,
-        document_type: "quote",
-      });
+      const validation = documentService.validateDocumentData(budgetData);
 
       if (!validation.isValid) {
         console.error("❌ Validación falló:", validation.errors);
@@ -513,7 +632,6 @@ const BudgetsPage = () => {
     }
   };
 
-  // REMOVER la función formatCurrency anterior
   const formatDate = (date: string | Date) => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return format(dateObj, "dd/MM/yyyy hh:mm a");
@@ -602,7 +720,7 @@ const BudgetsPage = () => {
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total_amount") || "0");
-        // Usar PriceDisplay en lugar de formatCurrency
+
         return <PriceDisplay value={total} variant="table" />;
       },
     },
@@ -685,7 +803,6 @@ const BudgetsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -713,88 +830,86 @@ const BudgetsPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="seller-filter">Vendedor</Label>
-                      <Select
-                        value={sellerFilter}
-                        onValueChange={setSellerFilter}
-                      >
-                        <SelectTrigger id="seller-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los vendedores" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todos los vendedores
-                          </SelectItem>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.name}>
-                              {seller.name}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="start">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="seller-filter">Vendedor</Label>
+                        <Select
+                          value={sellerFilter}
+                          onValueChange={setSellerFilter}
+                        >
+                          <SelectTrigger id="seller-filter" className="w-full">
+                            <SelectValue placeholder="Todos los vendedores" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los vendedores
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                            {sellers.map((seller) => (
+                              <SelectItem key={seller.id} value={seller.name}>
+                                {seller.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="client-filter">Cliente</Label>
-                      <Select
-                        value={clientFilter}
-                        onValueChange={setClientFilter}
-                      >
-                        <SelectTrigger id="client-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los clientes" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Todos los clientes
-                          </SelectItem>
-                          {clientFilterOptions.map((client) => (
-                            <SelectItem key={client.id} value={client.name}>
-                              {client.name}
+                      <div className="space-y-2">
+                        <Label htmlFor="client-filter">Cliente</Label>
+                        <Select
+                          value={clientFilter}
+                          onValueChange={setClientFilter}
+                        >
+                          <SelectTrigger id="client-filter" className="w-full">
+                            <SelectValue placeholder="Todos los clientes" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los clientes
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                            {clientFilterOptions.map((client) => (
+                              <SelectItem key={client.id} value={client.name}>
+                                {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <DropdownMenuSeparator />
+                      <div className="space-y-2">
+                        <Label htmlFor="status-filter">Estado</Label>
+                        <Select
+                          value={statusFilter}
+                          onValueChange={setStatusFilter}
+                        >
+                          <SelectTrigger id="status-filter" className="w-full">
+                            <SelectValue placeholder="Todos los estados" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los estados
+                            </SelectItem>
+                            <SelectItem value="draft">Borrador</SelectItem>
+                            <SelectItem value="pending">Pendiente</SelectItem>
+                            <SelectItem value="approved">Aprobado</SelectItem>
+                            <SelectItem value="completed">
+                              Completado
+                            </SelectItem>
+                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                            <SelectItem value="closed">Cerrado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estados</SelectItem>
-                          <SelectItem value="draft">Borrador</SelectItem>
-                          <SelectItem value="pending">Pendiente</SelectItem>
-                          <SelectItem value="approved">Aprobado</SelectItem>
-                          <SelectItem value="completed">Completado</SelectItem>
-                          <SelectItem value="cancelled">Cancelado</SelectItem>
-                          <SelectItem value="closed">Cerrado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="date-range">Período</Label>
-                      <div className="mt-1">
+                      <div className="space-y-2">
+                        <Label htmlFor="date-range">Período</Label>
                         <DatePicker
                           selected={dateRange?.from}
                           onChange={(dates: [Date | null, Date | null]) => {
@@ -813,10 +928,26 @@ const BudgetsPage = () => {
                           dateFormat="dd/MM/yyyy"
                           locale="es"
                         />
+                        <div className="flex justify-between pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearFilters}
+                          >
+                            Limpiar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={closePopover}
+                          >
+                            Aplicar
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <Button
@@ -842,7 +973,6 @@ const BudgetsPage = () => {
         </main>
       </div>
 
-      {/* Modal de detalles del presupuesto */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[800px] md:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -943,7 +1073,7 @@ const BudgetsPage = () => {
                 <div className="w-full md:w-1/3">
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Base Imponible:</span>
-                    {/* Usar PriceDisplay para base imponible */}
+
                     <PriceDisplay
                       value={selectedBudget.taxable_base || 0}
                       variant="default"
@@ -951,7 +1081,7 @@ const BudgetsPage = () => {
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">IVA:</span>
-                    {/* Usar PriceDisplay para IVA */}
+
                     <PriceDisplay
                       value={selectedBudget.tax || 0}
                       variant="default"
@@ -959,7 +1089,7 @@ const BudgetsPage = () => {
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Descuentos:</span>
-                    {/* Usar PriceDisplay para descuentos */}
+
                     <PriceDisplay
                       value={
                         (selectedBudget.discount_1 || 0) +
@@ -970,7 +1100,7 @@ const BudgetsPage = () => {
                   </div>
                   <div className="flex justify-between py-2 border-t">
                     <span className="font-medium">Total:</span>
-                    {/* Usar PriceDisplay para el total */}
+
                     <PriceDisplay
                       value={selectedBudget.total_amount || 0}
                       variant="summary"
@@ -1015,7 +1145,6 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para ver presupuestos del cliente */}
       <Dialog
         open={isClientBudgetsDialogOpen}
         onOpenChange={setIsClientBudgetsDialogOpen}
@@ -1057,7 +1186,6 @@ const BudgetsPage = () => {
                           {formatDate(budget.document_date)}
                         </td>
                         <td className="border border-gray_l px-4 py-2">
-                          {/* Usar PriceDisplay en la tabla de presupuestos del cliente */}
                           <PriceDisplay
                             value={budget.total_amount || 0}
                             variant="table"
@@ -1108,9 +1236,8 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Los modales de crear, editar y eliminar permanecen igual */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="w-full bg-gray_xxl sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full bg-gray_xxl sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
             <DialogTitle className="text-lg sm:text-xl">
               Crear Nuevo Presupuesto
@@ -1123,7 +1250,6 @@ const BudgetsPage = () => {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2 w-full">
-                {" "}
                 <Label htmlFor="client-select">Cliente *</Label>
                 <SelectSearchable
                   value={formData.clientId}
@@ -1185,6 +1311,161 @@ const BudgetsPage = () => {
                   <SelectItem value="approved">Aprobado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-4 mt-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-lg font-semibold">
+                  Items del Presupuesto
+                </Label>
+                <Button
+                  type="button"
+                  onClick={handleAddItem}
+                  size="sm"
+                  className="flex items-center gap-2"
+                  disabled={productsLoading}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Agregar Item</span>
+                </Button>
+              </div>
+
+              {formData.items.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500">No hay items agregados</p>
+                  <p className="text-sm text-gray-400">
+                    Haz clic en Agregar Item para comenzar
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {formData.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 md:grid-cols-7 gap-2 p-3 border border-gray-300 rounded-lg bg-white"
+                    >
+                      <div className="space-y-1 md:col-span-2">
+                        <Label htmlFor={`product-${index}`} className="text-xs">
+                          Producto *
+                        </Label>
+                        <SelectSearchable
+                          value={item.product_id?.toString() || ""}
+                          onValueChange={(value) =>
+                            handleItemChange(index, "product_id", value)
+                          }
+                          placeholder="Seleccionar producto..."
+                          options={productOptions}
+                          emptyMessage="No se encontraron productos."
+                          searchPlaceholder="Buscar producto..."
+                          className="h-8 text-sm"
+                          disabled={productsLoading}
+                        />
+                        {item.product_name && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {item.product_name}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`quantity-${index}`}
+                          className="text-xs"
+                        >
+                          Cantidad
+                        </Label>
+                        <Input
+                          id={`quantity-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "quantity",
+                              parseFloat(e.target.value) || 1
+                            )
+                          }
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor={`price-${index}`} className="text-xs">
+                          Precio Unit.
+                        </Label>
+                        <Input
+                          id={`price-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unit_price}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "unit_price",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`discount-${index}`}
+                          className="text-xs"
+                        >
+                          Descuento
+                        </Label>
+                        <Input
+                          id={`discount-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.discount_amount || 0}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "discount_amount",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor={`total-${index}`} className="text-xs">
+                          Total Item
+                        </Label>
+                        <Input
+                          id={`total-${index}`}
+                          type="number"
+                          step="0.01"
+                          value={item.total_amount || 0}
+                          disabled
+                          className="h-8 text-sm bg-gray-100 font-medium"
+                        />
+                      </div>
+
+                      <div className="space-y-1 flex items-end justify-center">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveItem(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1309,7 +1590,6 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para editar presupuesto */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -1377,7 +1657,7 @@ const BudgetsPage = () => {
                 className="w-full"
               />
             </div>
-            {/* SELECTOR DE CLIENTES CON SELECTSEARCHABLE PARA EDITAR */}
+
             <div className="space-y-2">
               <Label htmlFor="edit-client-select">Cliente *</Label>
               <SelectSearchable
@@ -1565,7 +1845,6 @@ const BudgetsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para eliminar presupuesto */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">

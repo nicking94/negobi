@@ -72,21 +72,21 @@ import { useBrands } from "@/hooks/brands/useBrands";
 
 import { SelectSearchable } from "@/components/ui/select-searchable";
 import { useCurrency } from "@/context/CurrencyContext";
+import useUserCompany from "@/hooks/auth/useUserCompany";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-// Schema COMPLETO según Swagger
 const productSchema = z.object({
-  // Información básica
   product_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   code: z.string().min(1, "El código es requerido"),
   sku: z.string().optional(),
   description: z.string().optional(),
-
-  // Relaciones
   companyId: z.number().min(1, "La compañía es requerida"),
   categoryId: z.number().min(1, "La categoría es requerida"),
   brand_id: z.number().optional().nullable(),
-
-  // Precios y costos
   base_price: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
   current_cost: z.number().min(0, "El costo actual debe ser mayor o igual a 0"),
   previous_cost: z
@@ -96,7 +96,6 @@ const productSchema = z.object({
     .number()
     .min(0, "El costo promedio debe ser mayor o igual a 0"),
 
-  // Niveles de precio
   price_level_1: z
     .number()
     .min(0, "El precio nivel 1 debe ser mayor o igual a 0"),
@@ -112,17 +111,11 @@ const productSchema = z.object({
   price_level_5: z
     .number()
     .min(0, "El precio nivel 5 debe ser mayor o igual a 0"),
-
-  // Gestión de inventario
   manages_serials: z.boolean(),
   manages_lots: z.boolean(),
   uses_decimals_in_quantity: z.boolean(),
   uses_scale_for_weight: z.boolean(),
-
-  // Impuestos
   is_tax_exempt: z.boolean(),
-
-  // Dimensiones y peso
   weight_value: z.number().min(0, "El peso debe ser mayor o igual a 0"),
   weight_unit: z.string(),
   volume_value: z.number().min(0, "El volumen debe ser mayor o igual a 0"),
@@ -131,12 +124,8 @@ const productSchema = z.object({
   width_value: z.number().min(0, "El ancho debe ser mayor o igual a 0"),
   height_value: z.number().min(0, "La altura debe ser mayor o igual a 0"),
   dimension_unit: z.string(),
-
-  // Visibilidad
   show_in_ecommerce: z.boolean(),
   show_in_sales_app: z.boolean(),
-
-  // Stock
   stock_quantity: z.number().min(0, "El stock debe ser mayor o igual a 0"),
   total_quantity_reserved: z
     .number()
@@ -144,11 +133,7 @@ const productSchema = z.object({
   total_quantity_on_order: z
     .number()
     .min(0, "La cantidad en orden debe ser mayor o igual a 0"),
-
-  // Estado
   is_active: z.boolean(),
-
-  // Códigos ERP
   erp_code_inst: z.string().optional(),
   external_code: z.string().optional(),
 });
@@ -167,10 +152,9 @@ const ProductsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+  const { companyId, selectedCompanyId } = useUserCompany();
+  const activeCompanyId = selectedCompanyId || companyId;
 
-  const activeCompanyId = 4;
-
-  // Debounce para la búsqueda
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -200,7 +184,6 @@ const ProductsPage = () => {
     is_active: true,
   });
 
-  // Obtener categorías
   const {
     productCategories: categories,
     loading: categoriesLoading,
@@ -211,7 +194,6 @@ const ProductsPage = () => {
     itemsPerPage: 100,
   });
 
-  // Obtener marcas
   const { brands, loading: brandsLoading } = useBrands({
     is_active: true,
   });
@@ -219,40 +201,27 @@ const ProductsPage = () => {
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      // Información básica
       product_name: "",
       code: "",
       sku: "",
       description: "",
-
-      // Relaciones
       companyId: activeCompanyId,
       categoryId: 0,
       brand_id: undefined,
-
-      // Precios y costos
       base_price: 0,
       current_cost: 0,
       previous_cost: 0,
       average_cost: 0,
-
-      // Niveles de precio
       price_level_1: 0,
       price_level_2: 0,
       price_level_3: 0,
       price_level_4: 0,
       price_level_5: 0,
-
-      // Gestión de inventario
       manages_serials: false,
       manages_lots: false,
       uses_decimals_in_quantity: false,
       uses_scale_for_weight: false,
-
-      // Impuestos
       is_tax_exempt: false,
-
-      // Dimensiones y peso
       weight_value: 0,
       weight_unit: "kg",
       volume_value: 0,
@@ -261,26 +230,19 @@ const ProductsPage = () => {
       width_value: 0,
       height_value: 0,
       dimension_unit: "cm",
-
-      // Visibilidad
       show_in_ecommerce: false,
       show_in_sales_app: false,
-
-      // Stock
       stock_quantity: 0,
       total_quantity_reserved: 0,
       total_quantity_on_order: 0,
 
-      // Estado
       is_active: true,
 
-      // Códigos ERP
       erp_code_inst: "",
       external_code: "",
     },
   });
 
-  // Filtrar productos por stock
   const displayProducts = inStockOnly
     ? products.filter((product) => product.stock_quantity > 0)
     : products;
@@ -302,42 +264,28 @@ const ProductsPage = () => {
         return;
       }
 
-      // Preparar datos COMPLETOS según Swagger
       const productData: CreateProductData | UpdateProductData = {
-        // Información básica
         product_name: data.product_name,
         code: data.code,
-        sku: data.sku,
-        description: data.description || "",
-
-        // Relaciones
+        sku: data.sku?.trim() || undefined,
+        description: data.description?.trim() || undefined,
         companyId: activeCompanyId,
         categoryId: data.categoryId,
-        brand_id: data.brand_id || null,
-
-        // Precios y costos
+        brand_id: data.brand_id || undefined,
         base_price: data.base_price,
         current_cost: data.current_cost,
         previous_cost: data.previous_cost,
         average_cost: data.average_cost,
-
-        // Niveles de precio
         price_level_1: data.price_level_1,
         price_level_2: data.price_level_2,
         price_level_3: data.price_level_3,
         price_level_4: data.price_level_4,
         price_level_5: data.price_level_5,
-
-        // Gestión de inventario
         manages_serials: data.manages_serials,
         manages_lots: data.manages_lots,
         uses_decimals_in_quantity: data.uses_decimals_in_quantity,
         uses_scale_for_weight: data.uses_scale_for_weight,
-
-        // Impuestos
         is_tax_exempt: data.is_tax_exempt,
-
-        // Dimensiones y peso
         weight_value: data.weight_value,
         weight_unit: data.weight_unit,
         volume_value: data.volume_value,
@@ -347,35 +295,33 @@ const ProductsPage = () => {
         height_value: data.height_value,
         dimension_unit: data.dimension_unit,
 
-        // Visibilidad
         show_in_ecommerce: data.show_in_ecommerce,
         show_in_sales_app: data.show_in_sales_app,
 
-        // Stock
         stock_quantity: data.stock_quantity,
         total_quantity_reserved: data.total_quantity_reserved,
         total_quantity_on_order: data.total_quantity_on_order,
-
-        // Estado
         is_active: data.is_active,
-
-        // Códigos ERP
-        erp_code_inst: data.erp_code_inst || "",
-        external_code: data.external_code || "",
+        erp_code_inst: data.erp_code_inst?.trim() || undefined,
+        external_code: data.external_code?.trim() || undefined,
       };
 
+      const cleanProductData = Object.fromEntries(
+        Object.entries(productData).filter(([_, value]) => value !== undefined)
+      );
+
       if (editingProduct && editingProduct.id) {
-        // Actualizar producto existente
         const result = await updateProduct(
           editingProduct.id.toString(),
-          productData
+          cleanProductData
         );
         if (result) {
           toast.success("Producto actualizado exitosamente");
         }
       } else {
-        // Crear nuevo producto
-        const result = await createProduct(productData as CreateProductData);
+        const result = await createProduct(
+          cleanProductData as CreateProductData
+        );
         if (result) {
           toast.success("Producto creado exitosamente");
         }
@@ -441,40 +387,27 @@ const ProductsPage = () => {
     const categoryId = product.categoryId || product.category?.id;
 
     form.reset({
-      // Información básica
       product_name: product.product_name,
       code: product.code || product.sku,
-      sku: product.sku,
+      sku: product.sku || "",
       description: product.description || "",
-
-      // Relaciones
       companyId: product.companyId || activeCompanyId,
       categoryId: categoryId || 0,
       brand_id: product.brand_id || undefined,
-
-      // Precios y costos
       base_price: product.base_price,
       current_cost: product.current_cost,
       previous_cost: product.previous_cost,
       average_cost: product.average_cost,
-
-      // Niveles de precio
       price_level_1: product.price_level_1,
       price_level_2: product.price_level_2,
       price_level_3: product.price_level_3,
       price_level_4: product.price_level_4,
       price_level_5: product.price_level_5,
-
-      // Gestión de inventario
       manages_serials: product.manages_serials,
       manages_lots: product.manages_lots,
       uses_decimals_in_quantity: product.uses_decimals_in_quantity,
       uses_scale_for_weight: product.uses_scale_for_weight,
-
-      // Impuestos
       is_tax_exempt: product.is_tax_exempt,
-
-      // Dimensiones y peso
       weight_value: product.weight_value,
       weight_unit: product.weight_unit || "kg",
       volume_value: product.volume_value,
@@ -483,20 +416,12 @@ const ProductsPage = () => {
       width_value: product.width_value,
       height_value: product.height_value,
       dimension_unit: product.dimension_unit || "cm",
-
-      // Visibilidad
       show_in_ecommerce: product.show_in_ecommerce,
       show_in_sales_app: product.show_in_sales_app,
-
-      // Stock
       stock_quantity: product.stock_quantity,
       total_quantity_reserved: product.total_quantity_reserved,
       total_quantity_on_order: product.total_quantity_on_order,
-
-      // Estado
       is_active: product.is_active,
-
-      // Códigos ERP
       erp_code_inst: product.erp_code_inst || "",
       external_code: product.external_code || "",
     });
@@ -678,7 +603,6 @@ const ProductsPage = () => {
     },
   ];
 
-  // Mostrar estado de carga o error
   if (
     (productsLoading && products.length === 0) ||
     categoriesLoading ||
@@ -756,57 +680,84 @@ const ProductsPage = () => {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button variant="outline" className="gap-2">
                     <Filter className="h-4 w-4" />
                     <span>Filtrar</span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[18rem]">
-                  <div className="flex items-center space-x-2 p-2">
-                    <Checkbox
-                      id="in-stock-only"
-                      checked={inStockOnly}
-                      onCheckedChange={(checked) =>
-                        setInStockOnly(checked === true)
-                      }
-                    />
-                    <label
-                      htmlFor="in-stock-only"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Solo con existencias
-                    </label>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5">
-                    <Label htmlFor="category-filter">Categoría</Label>
-                    <Select
-                      value={selectedCategory}
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger id="category-filter" className="mt-1">
-                        <SelectValue placeholder="Todas las categorías" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          Todas las categorías
-                        </SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category.id}
-                            value={category.id.toString()}
-                          >
-                            {category.category_name}
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="in-stock-only"
+                        checked={inStockOnly}
+                        onCheckedChange={(checked) =>
+                          setInStockOnly(checked === true)
+                        }
+                      />
+                      <label
+                        htmlFor="in-stock-only"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Solo con existencias
+                      </label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="category-filter">Categoría</Label>
+                      <Select
+                        value={selectedCategory}
+                        onValueChange={handleCategoryChange}
+                      >
+                        <SelectTrigger id="category-filter">
+                          <SelectValue placeholder="Todas las categorías" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            Todas las categorías
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          {categories.map((category) => (
+                            <SelectItem
+                              key={category.id}
+                              value={category.id.toString()}
+                            >
+                              {category.category_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setInStockOnly(false);
+                          setSelectedCategory("all");
+                        }}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
                   </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverContent>
+              </Popover>
             </div>
+
             <div>
               <Button
                 onClick={() => {
@@ -838,7 +789,6 @@ const ProductsPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar producto - COMPLETO */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -892,7 +842,6 @@ const ProductsPage = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Pestaña: Información Básica */}
                 <TabsContent value="basic" className="space-y-4 pt-4">
                   <Card>
                     <CardHeader>
@@ -1063,7 +1012,6 @@ const ProductsPage = () => {
                   </Card>
                 </TabsContent>
 
-                {/* Pestaña: Precios y Costos */}
                 <TabsContent value="pricing" className="space-y-4 pt-4">
                   <Card>
                     <CardHeader>
@@ -1211,7 +1159,6 @@ const ProductsPage = () => {
                   </Card>
                 </TabsContent>
 
-                {/* Pestaña: Gestión de Inventario */}
                 <TabsContent value="inventory" className="space-y-4 pt-4">
                   <Card>
                     <CardHeader>
@@ -1401,7 +1348,6 @@ const ProductsPage = () => {
                   </Card>
                 </TabsContent>
 
-                {/* Pestaña: Dimensiones y Peso */}
                 <TabsContent value="dimensions" className="space-y-4 pt-4">
                   <Card>
                     <CardHeader>
@@ -1634,7 +1580,6 @@ const ProductsPage = () => {
                   </Card>
                 </TabsContent>
 
-                {/* Pestaña: Visibilidad y Estado */}
                 <TabsContent value="visibility" className="space-y-4 pt-4">
                   <Card>
                     <CardHeader>

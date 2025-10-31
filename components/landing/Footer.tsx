@@ -9,11 +9,11 @@ const Footer = () => {
           <div className="mb-8 lg:mb-0">
             <div className="mb-4">
               <Image
-                src={logo} // Ajusta el nombre de tu archivo según corresponda
+                src={logo}
                 alt="Negobi Logo"
-                width={120} // Ajusta según el tamaño de tu logo
+                width={120}
                 height={40}
-                className="h-8 w-auto filter" // Ajusta la altura según necesites
+                className="h-8 w-auto filter"
               />
             </div>
             <p className="text-gray_l max-w-md">

@@ -8,9 +8,8 @@ import {
   ServicePriceAnalysis,
 } from "../../services/servicios/services.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseServicesFilters {
-  companyId: string; // Requerido
+  companyId: string;
   categoryId?: string;
   search?: string;
 }
@@ -20,7 +19,6 @@ export const useServices = (filters: UseServicesFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los servicios con filtros
   const loadServices = async (customFilters?: Partial<UseServicesFilters>) => {
     try {
       setLoading(true);
@@ -57,7 +55,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Crear servicio
   const createService = async (
     serviceData: CreateServiceData
   ): Promise<Service | null> => {
@@ -65,14 +62,12 @@ export const useServices = (filters: UseServicesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Validar datos
       const validation = serviceService.validateServiceData(serviceData);
       if (!validation.isValid) {
         setError(validation.errors.join(", "));
         return null;
       }
 
-      // Verificar si ya existe un servicio con el mismo código
       const codeExists = await serviceService.checkServiceCodeExists(
         filters.companyId,
         serviceData.code
@@ -82,7 +77,6 @@ export const useServices = (filters: UseServicesFilters) => {
         return null;
       }
 
-      // Verificar si ya existe un servicio con el mismo nombre
       const nameExists = await serviceService.checkServiceNameExists(
         filters.companyId,
         serviceData.name
@@ -94,7 +88,6 @@ export const useServices = (filters: UseServicesFilters) => {
 
       const newService = await serviceService.createService(serviceData);
 
-      // Normalizar el servicio creado
       const normalizedService: Service = {
         id: newService.id,
         price_level_1: newService.price_level_1,
@@ -104,7 +97,7 @@ export const useServices = (filters: UseServicesFilters) => {
         name: newService.name,
         code: newService.code,
         erp_code_inst: newService.erp_code_inst || "",
-        category_id: newService.category_id, // ← Esto es lo importante
+        category_id: newService.category_id,
         company_id: newService.company_id,
         external_code: newService.external_code || "",
         sync_with_erp: newService.sync_with_erp,
@@ -123,7 +116,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Actualizar servicio
   const updateService = async (
     id: string,
     updates: UpdateServiceData
@@ -132,7 +124,6 @@ export const useServices = (filters: UseServicesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Si se actualiza el código, verificar que no exista
       if (updates.code) {
         const existingServices = await serviceService.getServicesByCompany(
           filters.companyId
@@ -147,7 +138,6 @@ export const useServices = (filters: UseServicesFilters) => {
         }
       }
 
-      // Si se actualiza el nombre, verificar que no exista
       if (updates.name) {
         const existingServices = await serviceService.getServicesByCompany(
           filters.companyId
@@ -164,7 +154,6 @@ export const useServices = (filters: UseServicesFilters) => {
 
       const updatedService = await serviceService.updateService(id, updates);
 
-      // Extraer solo los campos necesarios del servicio actualizado
       const normalizedService: Service = {
         id: updatedService.id,
         price_level_1: updatedService.price_level_1,
@@ -174,7 +163,7 @@ export const useServices = (filters: UseServicesFilters) => {
         name: updatedService.name,
         code: updatedService.code,
         erp_code_inst: updatedService.erp_code_inst || "",
-        category_id: updatedService.category_id, // ← Esto es lo importante
+        category_id: updatedService.category_id,
         company_id: updatedService.company_id,
         external_code: updatedService.external_code || "",
         sync_with_erp: updatedService.sync_with_erp,
@@ -199,7 +188,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Eliminar servicio
   const deleteService = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -219,7 +207,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Actualizar precios de servicio
   const updateServicePrices = async (
     id: string,
     prices: {
@@ -240,7 +227,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Verificar si existe un código de servicio
   const checkServiceCodeExists = async (code: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -261,7 +247,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Verificar si existe un nombre de servicio
   const checkServiceNameExists = async (name: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -282,24 +267,20 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Validar datos del servicio
   const validateServiceData = (
     serviceData: CreateServiceData
   ): { isValid: boolean; errors: string[] } => {
     return serviceService.validateServiceData(serviceData);
   };
 
-  // Calcular precio promedio
   const calculateAveragePrice = (service: Service): number => {
     return serviceService.calculateAveragePrice(service);
   };
 
-  // Analizar precios del servicio
   const analyzeServicePrices = (service: Service): ServicePriceAnalysis => {
     return serviceService.analyzeServicePrices(service);
   };
 
-  // Crear múltiples servicios
   const createMultipleServices = async (
     servicesData: CreateServiceData[]
   ): Promise<Service[] | null> => {
@@ -307,7 +288,6 @@ export const useServices = (filters: UseServicesFilters) => {
       setLoading(true);
       setError(null);
 
-      // Validar todos los servicios primero
       for (const serviceData of servicesData) {
         const validation = serviceService.validateServiceData(serviceData);
         if (!validation.isValid) {
@@ -338,7 +318,6 @@ export const useServices = (filters: UseServicesFilters) => {
     }
   };
 
-  // Cargar servicios al montar el hook o cuando cambien los filtros
   useEffect(() => {
     if (filters.companyId) {
       loadServices();
@@ -363,7 +342,6 @@ export const useServices = (filters: UseServicesFilters) => {
   };
 };
 
-// Hook especializado para servicios por compañía
 export const useServicesByCompany = (companyId: string) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -409,7 +387,6 @@ export const useServicesByCompany = (companyId: string) => {
   };
 };
 
-// Hook especializado para servicios por categoría
 export const useServicesByCategory = (
   companyId: string,
   categoryId?: string
@@ -459,7 +436,6 @@ export const useServicesByCategory = (
   };
 };
 
-// Hook para select/dropdown de servicios
 export const useServicesForSelect = (companyId: string) => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; code: string }>
@@ -507,7 +483,6 @@ export const useServicesForSelect = (companyId: string) => {
   };
 };
 
-// Hook para búsqueda de servicios
 export const useServiceSearch = (companyId: string) => {
   const [searchResults, setSearchResults] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -605,7 +580,6 @@ export const useServiceSearch = (companyId: string) => {
   };
 };
 
-// Hook para estadísticas de servicios
 export const useServicesStatistics = (companyId: string) => {
   const [statistics, setStatistics] = useState<{
     total: number;
@@ -667,7 +641,6 @@ export const useServicesStatistics = (companyId: string) => {
   };
 };
 
-// Hook para análisis de precios de servicios
 export const useServicePriceAnalysis = (companyId: string) => {
   const { services, loading, error } = useServicesByCompany(companyId);
 
@@ -701,7 +674,6 @@ export const useServicePriceAnalysis = (companyId: string) => {
   };
 };
 
-// Hook para servicios con mejor valor
 export const useBestValueServices = (companyId: string, limit: number = 10) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);

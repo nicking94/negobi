@@ -1,4 +1,4 @@
-// components/auth/LoginForm.tsx (corregido)
+// components/auth/LoginForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,9 +54,6 @@ export function LoginForm() {
 
     if (result.success) {
       toast.success("Sesión iniciada correctamente");
-      // La redirección ya se maneja en el hook useLogin
-    } else {
-      // El error ya se maneja en el hook useLogin
     }
   };
 

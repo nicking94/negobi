@@ -42,7 +42,6 @@ import {
 import { useProductCategories } from "@/hooks/productCategories/useProductCategories";
 import useUserCompany from "@/hooks/auth/useUserCompany";
 
-// Esquema sin is_active (se manejará desde las acciones)
 const categorySchema = z.object({
   category_code: z.string().min(1, "El código es requerido"),
   category_name: z.string().min(1, "El nombre es requerido"),
@@ -107,7 +106,6 @@ const InstancesPage = () => {
 
   useEffect(() => {
     if (editingCategory) {
-      // Cuando hay una instancia para editar, llena el formulario con sus datos
       reset({
         category_code: editingCategory.category_code || "",
         category_name: editingCategory.category_name || "",
@@ -118,7 +116,6 @@ const InstancesPage = () => {
         show_in_sales_app: editingCategory.show_in_sales_app ?? true,
       });
     } else {
-      // Cuando no hay instancia para editar, resetea a los valores por defecto
       reset({
         category_code: "",
         category_name: "",
@@ -134,7 +131,6 @@ const InstancesPage = () => {
   const showInEcommerce = watch("show_in_ecommerce");
   const showInSalesApp = watch("show_in_sales_app");
 
-  // Tipo para los datos procesados
   type CategoryFormValues = {
     category_code: string;
     category_name: string;
@@ -178,14 +174,13 @@ const InstancesPage = () => {
           return;
         }
       } else {
-        // ✅ Asegurar que companyId esté disponible
         if (!companyId) {
           toast.error("No se pudo determinar la empresa del usuario");
           return;
         }
 
         const createData: CreateProductCategoryData = {
-          companyId: companyId, // ✅ Usar el companyId real del usuario
+          companyId: companyId,
           category_name: processedData.category_name,
           category_code: processedData.category_code,
           description: processedData.description,
@@ -215,7 +210,6 @@ const InstancesPage = () => {
     }
   };
 
-  // Función para cambiar el estado de la categoría (activar/desactivar)
   const handleToggleStatus = async (category: ProductCategory) => {
     if (!category.id) {
       toast.error("No se puede cambiar el estado: ID no disponible");
@@ -223,7 +217,6 @@ const InstancesPage = () => {
     }
 
     try {
-      // Preparar datos para la actualización - solo enviar campos esenciales
       const updateData: UpdateProductCategoryData = {
         category_name: category.category_name,
         category_code: category.category_code,
@@ -377,7 +370,6 @@ const InstancesPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Editar */}
                 <DropdownMenuItem
                   className={`cursor-pointer flex items-center gap-2 ${
                     !hasValidId ? "opacity-50 cursor-not-allowed" : ""
@@ -392,7 +384,6 @@ const InstancesPage = () => {
                   <span>Editar</span>
                 </DropdownMenuItem>
 
-                {/* Activar/Desactivar */}
                 <DropdownMenuItem
                   className={`cursor-pointer flex items-center gap-2 ${
                     !hasValidId ? "opacity-50 cursor-not-allowed" : ""
@@ -413,7 +404,6 @@ const InstancesPage = () => {
                   )}
                 </DropdownMenuItem>
 
-                {/* Eliminar */}
                 <DropdownMenuItem
                   className={`cursor-pointer flex items-center gap-2 text-red_m ${
                     !hasValidId ? "opacity-50 cursor-not-allowed" : ""
@@ -432,7 +422,6 @@ const InstancesPage = () => {
     },
   ];
 
-  // Mostrar estados de carga y error
   if (loading && productCategories.length === 0) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -483,7 +472,6 @@ const InstancesPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -521,7 +509,6 @@ const InstancesPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar instancia */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -531,7 +518,6 @@ const InstancesPage = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
-              {/* Nombre de la instancia */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_name">Nombre *</Label>
                 <div className="col-span-1 sm:col-span-3">
@@ -548,7 +534,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Código de la instancia */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_code">Código *</Label>
                 <div className="col-span-1 sm:col-span-3">
@@ -566,7 +551,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Descripción */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="description">Descripción *</Label>
                 <div className="col-span-1 sm:col-span-3">
@@ -585,7 +569,6 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Prefijo */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="prefix">Prefijo *</Label>
                 <div className="col-span-1 sm:col-span-3">
@@ -601,7 +584,7 @@ const InstancesPage = () => {
                   )}
                 </div>
               </div>
-              {/* Longitud correlativa */}
+
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
                 <Label htmlFor="correlative_length">Long. Correlativa *</Label>
                 <div className="col-span-1 sm:col-span-3">
@@ -620,11 +603,8 @@ const InstancesPage = () => {
                 </div>
               </div>
 
-              {/* Checkboxes para opciones - SIN is_active */}
               <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
                 <div className="col-span-1 sm:col-span-3 space-y-4">
-                  {/* Checkbox eliminado: is_active */}
-
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"

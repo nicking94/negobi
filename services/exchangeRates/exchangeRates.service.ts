@@ -20,19 +20,14 @@ export interface GetExchangeRatesParams {
 }
 
 export interface ExchangeRate {
-  // Campos del response (GET)
   id: number;
   exchange_rate: number;
   rate_date: string;
   rate_time: string;
   source: string;
   is_active: boolean;
-
-  // Campos de relación
   baseCurrencyId?: number;
   targetCurrencyId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -41,20 +36,16 @@ export interface ExchangeRate {
 }
 
 export interface CreateExchangeRateData {
-  // Campos requeridos para crear un tipo de cambio
   baseCurrencyId: number;
   targetCurrencyId: number;
   exchange_rate: number;
   rate_date: string;
-
-  // Campos opcionales para creación
   rate_time?: string;
   source?: string;
   is_active?: boolean;
 }
 
 export interface UpdateExchangeRateData {
-  // Todos los campos son opcionales para actualización
   baseCurrencyId?: number;
   targetCurrencyId?: number;
   exchange_rate?: number;
@@ -64,7 +55,6 @@ export interface UpdateExchangeRateData {
   is_active?: boolean;
 }
 
-// Response interfaces
 export interface ExchangeRateResponse {
   success: boolean;
   data: ExchangeRate;
@@ -85,7 +75,6 @@ export interface PaginatedExchangeRatesResponse {
 }
 
 export const exchangeRateService = {
-  // Crear un nuevo tipo de cambio
   createExchangeRate: async (
     exchangeRateData: CreateExchangeRateData
   ): Promise<ExchangeRate> => {
@@ -93,20 +82,17 @@ export const exchangeRateService = {
     return response.data.data;
   },
 
-  // Obtener todos los tipos de cambio
   getExchangeRates: async (
     params?: GetExchangeRatesParams
   ): Promise<ExchangeRate[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -139,7 +125,6 @@ export const exchangeRateService = {
     return response.data.data;
   },
 
-  // Actualizar un tipo de cambio
   updateExchangeRate: async (
     id: string,
     updates: UpdateExchangeRateData
@@ -148,18 +133,15 @@ export const exchangeRateService = {
     return response.data.data;
   },
 
-  // Eliminar un tipo de cambio
   deleteExchangeRate: async (id: string): Promise<void> => {
     await api.delete(`${DeleteExchangeRate}/${id}`);
   },
 
-  // Obtener un tipo de cambio por ID
   getExchangeRateById: async (id: string): Promise<ExchangeRate> => {
     const response = await api.get(`${GetExchangeRates}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getActiveExchangeRates: async (): Promise<ExchangeRate[]> => {
     return exchangeRateService.getExchangeRates({
       is_active: true,
@@ -208,8 +190,6 @@ export const exchangeRateService = {
     startDate: string,
     endDate: string
   ): Promise<ExchangeRate[]> => {
-    // Nota: Esto podría requerir un endpoint específico en la API
-    // Por ahora, obtenemos todos y filtramos por fecha
     const allRates = await exchangeRateService.getExchangeRates({
       itemsPerPage: 100,
     });
@@ -222,19 +202,16 @@ export const exchangeRateService = {
     });
   },
 
-  // Convertir moneda
   convertCurrency: async (
     amount: number,
     fromCurrencyId: number,
     toCurrencyId: number
   ): Promise<{ amount: number; exchange_rate: number } | null> => {
     try {
-      // Si es la misma moneda, no hay conversión
       if (fromCurrencyId === toCurrencyId) {
         return { amount, exchange_rate: 1 };
       }
 
-      // Buscar el tipo de cambio más reciente
       const exchangeRate = await exchangeRateService.getLatestExchangeRate(
         fromCurrencyId,
         toCurrencyId
@@ -255,7 +232,6 @@ export const exchangeRateService = {
     }
   },
 
-  // Crear tipos de cambio en lote
   createMultipleExchangeRates: async (
     exchangeRatesData: CreateExchangeRateData[]
   ): Promise<ExchangeRate[]> => {

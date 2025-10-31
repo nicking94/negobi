@@ -10,7 +10,6 @@ import {
   SyncResponse,
 } from "../../services/taxTypes/tayTypes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseTaxTypesFilters {
   search?: string;
   tax_name?: string;
@@ -24,7 +23,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los tipos de impuestos con filtros
   const loadTaxTypes = async (customFilters?: Partial<UseTaxTypesFilters>) => {
     try {
       setLoading(true);
@@ -55,7 +53,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Crear tipo de impuesto
   const createTaxType = async (
     taxTypeData: CreateTaxTypeData
   ): Promise<TaxType | null> => {
@@ -75,7 +72,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Actualizar tipo de impuesto
   const updateTaxType = async (
     id: string,
     updates: UpdateTaxTypeData
@@ -102,7 +98,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Eliminar tipo de impuesto
   const deleteTaxType = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -124,7 +119,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Obtener tipo de impuesto por ID
   const getTaxTypeById = async (id: string): Promise<TaxType | null> => {
     try {
       setLoading(true);
@@ -141,7 +135,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Sincronizar tipos de impuesto desde ERP
   const syncTaxTypes = async (
     syncData: SyncTaxTypesPayload
   ): Promise<SyncResponse | null> => {
@@ -149,7 +142,7 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
       setLoading(true);
       setError(null);
       const response = await taxTypeService.syncTaxTypes(syncData);
-      // Recargar tipos de impuesto después de sincronizar
+
       await loadTaxTypes();
       return response;
     } catch (err) {
@@ -164,7 +157,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     }
   };
 
-  // Calcular impuesto
   const calculateTax = (amount: number, taxTypeId: string): number => {
     const taxType = taxTypes.find((t) => t.id.toString() === taxTypeId);
     if (!taxType) return 0;
@@ -172,7 +164,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
     return taxTypeService.calculateTax(amount, taxType);
   };
 
-  // Cargar tipos de impuesto al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadTaxTypes();
   }, [
@@ -197,7 +188,6 @@ export const useTaxTypes = (filters: UseTaxTypesFilters = {}) => {
   };
 };
 
-// Hook especializado para tipos de impuesto activos
 export const useActiveTaxTypes = () => {
   const [activeTaxTypes, setActiveTaxTypes] = useState<TaxType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -233,7 +223,6 @@ export const useActiveTaxTypes = () => {
   };
 };
 
-// Hook especializado para impuestos de venta
 export const useSalesTaxTypes = () => {
   const [salesTaxTypes, setSalesTaxTypes] = useState<TaxType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -269,7 +258,6 @@ export const useSalesTaxTypes = () => {
   };
 };
 
-// Hook especializado para impuestos de compra
 export const usePurchaseTaxTypes = () => {
   const [purchaseTaxTypes, setPurchaseTaxTypes] = useState<TaxType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -305,9 +293,7 @@ export const usePurchaseTaxTypes = () => {
   };
 };
 
-// Hook para opciones de tipos de impuesto (para dropdowns) - VERSIÓN CORREGIDA
 export const useTaxTypeOptions = (appliesTo?: AppliesTo) => {
-  // Usar el hook base con filtro de activos y aplicar filtros adicionales
   const {
     taxTypes: allTaxTypes,
     loading,
@@ -317,7 +303,6 @@ export const useTaxTypeOptions = (appliesTo?: AppliesTo) => {
     is_active: true,
   });
 
-  // Filtrar los taxTypes según el parámetro appliesTo
   const filteredTaxTypes = useMemo(() => {
     if (!appliesTo) return allTaxTypes;
 
@@ -355,7 +340,6 @@ export const useTaxTypeOptions = (appliesTo?: AppliesTo) => {
   };
 };
 
-// Hook para cálculo de impuestos
 export const useTaxCalculator = () => {
   const { activeTaxTypes } = useActiveTaxTypes();
 

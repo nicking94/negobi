@@ -1,14 +1,13 @@
 // pages/orders/OrdersPage.tsx
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
   Eye,
   Search,
   Filter,
-  FileText,
   Package,
   CheckCircle,
   Clock,
@@ -22,13 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,6 +41,13 @@ import { DateRange } from "react-day-picker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Badge } from "@/components/ui/badge";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import {
   DOCUMENT_STATUSES,
   DocumentStatus,
@@ -55,10 +55,8 @@ import {
 import { useDocuments } from "@/hooks/documents/useDocuments";
 import { useUserCompany } from "@/hooks/auth/useUserCompany";
 import { DocumentDetailsModal } from "@/components/dashboard/documentDetailsModal";
-import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter";
 import { PriceDisplay } from "@/components/PriceDisplay";
 
-// Fixed OrderItem type with id property
 export type OrderItem = {
   id: string;
   product_name: string;
@@ -67,7 +65,6 @@ export type OrderItem = {
   total: number;
 };
 
-// Tipo Order basado en la API
 export type Order = {
   id: string;
   order_number: string;
@@ -92,7 +89,6 @@ export type Order = {
 const OrdersPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null
@@ -106,14 +102,31 @@ const OrdersPage = () => {
     to: new Date(),
   });
 
-  // Usar el hook de usuario para obtener la empresa actual
-  const { companyId, isLoading: userLoading, userCompany } = useUserCompany();
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
 
-  // Usar el hook de formateo de moneda
-  const { formatPrice, formatForTable, getNumericValue } =
-    useCurrencyFormatter();
+  const handleClientChange = (value: string) => {
+    setClientFilter(value);
+  };
 
-  // Actualizar el mapeo de estados
+  const handleOperationTypeChange = (value: string) => {
+    setOperationTypeFilter(value);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setClientFilter("all");
+    setOperationTypeFilter("all");
+    setDateRange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date(),
+    });
+  };
+
+  const { companyId, isLoading: userLoading } = useUserCompany();
+
   const mapApiStatusToLocalStatus = (apiStatus: string): Order["status"] => {
     switch (apiStatus) {
       case DOCUMENT_STATUSES.DRAFT:
@@ -130,7 +143,6 @@ const OrdersPage = () => {
     }
   };
 
-  // Mapear estados locales a estados de la API
   const mapLocalStatusToApiStatus = (
     localStatus: Order["status"]
   ): DocumentStatus => {
@@ -179,7 +191,6 @@ const OrdersPage = () => {
     }
   };
 
-  // Usar el hook de documentos con la empresa del usuario logeado
   const {
     documents: documentsData,
     loading: documentsLoading,
@@ -190,7 +201,6 @@ const OrdersPage = () => {
     document_type: "order",
   });
 
-  // Mapear documentos a órdenes
   const orders: Order[] = useMemo(() => {
     if (!documentsData || !Array.isArray(documentsData)) {
       return [];
@@ -250,7 +260,6 @@ const OrdersPage = () => {
     { value: "cancelled", label: "Cancelado" },
   ];
 
-  // Filtrar pedidos según los criterios
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const matchesSearch =
@@ -258,20 +267,16 @@ const OrdersPage = () => {
         order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.operation_type.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtrar por cliente (si no es "todos")
       const matchesClient =
         clientFilter === "all" || order.client === clientFilter;
 
-      // Filtrar por estado (si no es "todos")
       const matchesStatus =
         statusFilter === "all" || order.status === statusFilter;
 
-      // Filtrar por tipo de operación (si no es "todos")
       const matchesOperationType =
         operationTypeFilter === "all" ||
         order.operation_type === operationTypeFilter;
 
-      // Filtrar por rango de fechas
       const matchesDateRange =
         !dateRange?.from ||
         !dateRange?.to ||
@@ -490,13 +495,12 @@ const OrdersPage = () => {
         <main className="bg-gradient-to-br from-gray-50 to-gray-100 flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-full overflow-hidden">
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-              Pedidos {userCompany && `- ${userCompany.name}`}
+              Pedidos
             </h1>
           </div>
 
-          {/* Filtros - ELIMINADO EL SELECTOR DE EMPRESA */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
@@ -508,22 +512,22 @@ const OrdersPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
                         value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        onValueChange={handleStatusChange}
                       >
-                        <SelectTrigger id="status-filter" className="mt-1">
+                        <SelectTrigger id="status-filter">
                           <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
@@ -542,13 +546,13 @@ const OrdersPage = () => {
                       </Select>
                     </div>
 
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="client-filter">Cliente</Label>
                       <Select
                         value={clientFilter}
-                        onValueChange={setClientFilter}
+                        onValueChange={handleClientChange}
                       >
-                        <SelectTrigger id="client-filter" className="mt-1">
+                        <SelectTrigger id="client-filter">
                           <SelectValue placeholder="Todos los clientes" />
                         </SelectTrigger>
                         <SelectContent>
@@ -564,18 +568,15 @@ const OrdersPage = () => {
                       </Select>
                     </div>
 
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="operation-type-filter">
                         Tipo de Operación
                       </Label>
                       <Select
                         value={operationTypeFilter}
-                        onValueChange={setOperationTypeFilter}
+                        onValueChange={handleOperationTypeChange}
                       >
-                        <SelectTrigger
-                          id="operation-type-filter"
-                          className="mt-1"
-                        >
+                        <SelectTrigger id="operation-type-filter">
                           <SelectValue placeholder="Todos los tipos" />
                         </SelectTrigger>
                         <SelectContent>
@@ -589,9 +590,7 @@ const OrdersPage = () => {
                       </Select>
                     </div>
 
-                    <DropdownMenuSeparator />
-
-                    <div className="px-2 py-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="date-range">Período</Label>
                       <div className="mt-1">
                         <DatePicker
@@ -613,13 +612,33 @@ const OrdersPage = () => {
                         />
                       </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
-          {/* TABLA DE PEDIDOS */}
           {userLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
@@ -666,7 +685,6 @@ const OrdersPage = () => {
         </main>
       </div>
 
-      {/* Modal de Documento para mostrar detalles del pedido */}
       <DocumentDetailsModal
         documentId={selectedDocumentId}
         isOpen={isDocumentModalOpen}

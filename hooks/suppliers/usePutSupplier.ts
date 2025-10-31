@@ -1,4 +1,4 @@
-// hooks/suppliers/usePutSupplier.ts - VERSIÓN MEJORADA
+// hooks/suppliers/usePutSupplier.ts
 import { useState } from "react";
 import { SupplierUpdatePayload, SupplierType } from "@/types";
 import { supplierService } from "@/services/suppliers/suppliers.service";

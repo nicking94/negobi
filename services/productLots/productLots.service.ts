@@ -19,7 +19,6 @@ export interface GetProductLotsParams {
 }
 
 export interface ProductLot {
-  // Campos del response (GET)
   id: number;
   lot_number: string;
   expiration_date: string;
@@ -27,12 +26,8 @@ export interface ProductLot {
   quantity: number;
   purchase_price: number;
   notes: string;
-
-  // Campos de relación
   product_id?: number;
   currentWarehouseId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -41,12 +36,10 @@ export interface ProductLot {
 }
 
 export interface CreateProductLotData {
-  // Campos requeridos para crear un lote de producto
   product_id: number;
   lot_number: string;
   quantity: number;
 
-  // Campos opcionales para creación
   currentWarehouseId?: number;
   expiration_date?: string;
   manufacturing_date?: string;
@@ -55,7 +48,6 @@ export interface CreateProductLotData {
 }
 
 export interface UpdateProductLotData {
-  // Todos los campos son opcionales para actualización
   product_id?: number;
   lot_number?: string;
   currentWarehouseId?: number;
@@ -66,7 +58,6 @@ export interface UpdateProductLotData {
   notes?: string;
 }
 
-// Response interfaces
 export interface ProductLotResponse {
   success: boolean;
   data: ProductLot;
@@ -87,7 +78,6 @@ export interface PaginatedProductLotsResponse {
 }
 
 export const productLotService = {
-  // Crear un nuevo lote de producto
   createProductLot: async (
     productLotData: CreateProductLotData
   ): Promise<ProductLot> => {
@@ -95,20 +85,17 @@ export const productLotService = {
     return response.data.data;
   },
 
-  // Obtener todos los lotes de productos
   getProductLots: async (
     params?: GetProductLotsParams
   ): Promise<ProductLot[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -138,7 +125,6 @@ export const productLotService = {
     return response.data.data;
   },
 
-  // Actualizar un lote de producto
   updateProductLot: async (
     id: string,
     updates: UpdateProductLotData
@@ -147,18 +133,15 @@ export const productLotService = {
     return response.data.data;
   },
 
-  // Eliminar un lote de producto
   deleteProductLot: async (id: string): Promise<void> => {
     await api.delete(`${DeleteProductLot}/${id}`);
   },
 
-  // Obtener un lote de producto por ID
   getProductLotById: async (id: string): Promise<ProductLot> => {
     const response = await api.get(`${GetProductLots}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getProductLotsByProduct: async (productId: number): Promise<ProductLot[]> => {
     return productLotService.getProductLots({
       productId,
@@ -223,7 +206,6 @@ export const productLotService = {
     });
   },
 
-  // Calcular cantidad total por producto
   getTotalQuantityByProduct: async (productId: number): Promise<number> => {
     try {
       const productLots = await productLotService.getProductLotsByProduct(
@@ -236,7 +218,6 @@ export const productLotService = {
     }
   },
 
-  // Ajustar cantidad de lote
   adjustProductLotQuantity: async (
     id: string,
     adjustment: number
@@ -246,7 +227,6 @@ export const productLotService = {
     return productLotService.updateProductLot(id, { quantity: newQuantity });
   },
 
-  // Transferir lote a otro warehouse
   transferProductLotToWarehouse: async (
     id: string,
     warehouseId: number
@@ -256,7 +236,6 @@ export const productLotService = {
     });
   },
 
-  // Crear múltiples lotes
   createMultipleProductLots: async (
     productLotsData: CreateProductLotData[]
   ): Promise<ProductLot[]> => {
@@ -275,7 +254,6 @@ export const productLotService = {
     return createdLots;
   },
 
-  // Obtener estadísticas de lotes por producto
   getProductLotStats: async (
     productId: number
   ): Promise<{

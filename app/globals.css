@@ -151,7 +151,6 @@ input[type="checkbox"]:focus {
   box-shadow: 0 0 0 2px var(--color-green_xxl);
 }
 
-/* Para checkboxes más grandes si es necesario */
 input[type="checkbox"].checkbox-lg {
   width: 1.25rem;
   height: 1.25rem;

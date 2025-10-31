@@ -9,7 +9,6 @@ import {
   TransactionDirection,
 } from "../../services/operationTypes/operationTypes.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseOperationTypesFilters {
   type_name?: string;
   description?: string;
@@ -24,7 +23,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los tipos de operación con filtros
   const loadOperationTypes = async (
     customFilters?: Partial<UseOperationTypesFilters>
   ) => {
@@ -61,7 +59,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Crear tipo de operación
   const createOperationType = async (
     operationTypeData: CreateOperationTypeData
   ): Promise<OperationType | null> => {
@@ -83,7 +80,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Actualizar tipo de operación
   const updateOperationType = async (
     id: string,
     updates: UpdateOperationTypeData
@@ -113,7 +109,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Eliminar tipo de operación
   const deleteOperationType = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -135,7 +130,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Obtener tipo de operación por ID
   const getOperationTypeById = async (
     id: string
   ): Promise<OperationType | null> => {
@@ -156,7 +150,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Activar/desactivar tipo de operación
   const toggleOperationTypeStatus = async (
     id: string,
     isActive: boolean
@@ -173,7 +166,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un nombre de tipo
   const checkTypeNameExists = async (typeName: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -189,7 +181,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
     }
   };
 
-  // Cargar tipos de operación al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadOperationTypes();
   }, [
@@ -215,7 +206,6 @@ export const useOperationTypes = (filters: UseOperationTypesFilters = {}) => {
   };
 };
 
-// Hook especializado para tipos de operación activos
 export const useActiveOperationTypes = () => {
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -251,7 +241,6 @@ export const useActiveOperationTypes = () => {
   };
 };
 
-// Hook especializado para tipos de operación por módulo
 export const useOperationTypesByModule = (module?: OperationModule) => {
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -297,7 +286,6 @@ export const useOperationTypesByModule = (module?: OperationModule) => {
   };
 };
 
-// Hook especializado para tipos de operación por dirección
 export const useOperationTypesByDirection = (
   direction?: TransactionDirection
 ) => {
@@ -347,7 +335,6 @@ export const useOperationTypesByDirection = (
   };
 };
 
-// Hook para select/dropdown de tipos de operación
 export const useOperationTypesForSelect = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string }>
@@ -386,7 +373,6 @@ export const useOperationTypesForSelect = () => {
   };
 };
 
-// Hook para tipos de operación agrupados por módulo
 export const useOperationTypesGroupedByModule = () => {
   const [groupedOperationTypes, setGroupedOperationTypes] = useState<
     Record<string, OperationType[]>
@@ -425,7 +411,6 @@ export const useOperationTypesGroupedByModule = () => {
   };
 };
 
-// Hook para búsqueda de tipos de operación
 export const useOperationTypeSearch = () => {
   const [searchResults, setSearchResults] = useState<OperationType[]>([]);
   const [loading, setLoading] = useState(false);

@@ -21,7 +21,6 @@ const useGetCompanies = () => {
         itemsPerPage,
       });
 
-      // Transformar los datos para asegurar que id y organizationId estén definidos
       const transformedCompanies = data.data.data.map((company: any) => ({
         ...company,
         id: company.id || 0,

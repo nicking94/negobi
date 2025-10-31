@@ -46,12 +46,9 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
         companyId: currentCompanyId,
       };
 
-      console.log("📋 Cargando documentos con filtros:", combinedFilters);
-
       const documentsData = await documentService.getDocuments(combinedFilters);
 
       if (Array.isArray(documentsData)) {
-        console.log(`✅ Se cargaron ${documentsData.length} documentos`);
         setDocuments(documentsData);
       } else {
         console.warn("⚠️ documentsData no es array:", documentsData);
@@ -92,7 +89,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     }
   };
 
-  // Actualizar documento
   const updateDocument = async (
     id: string,
     updates: UpdateDocumentData
@@ -115,7 +111,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
     }
   };
 
-  // Eliminar documento
   const deleteDocument = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -135,7 +130,7 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
 
   const updateDocumentStatus = async (
     id: string,
-    status: DocumentStatus // Especificar el tipo correcto
+    status: DocumentStatus
   ): Promise<Document | null> => {
     return updateDocument(id, { status });
   };
@@ -160,7 +155,6 @@ export const useDocuments = (filters: UseDocumentsFilters) => {
   };
 };
 
-// Hook especializado para órdenes (mantener compatibilidad)
 export const useOrders = (
   filters: Omit<UseDocumentsFilters, "document_type">
 ) => {
@@ -169,10 +163,9 @@ export const useOrders = (
     document_type: "order",
   });
 
-  // Mapear documentos a formato de orden para compatibilidad
   const orders = documentsHook.documents.map((doc) => ({
     ...doc,
-    // Mantener compatibilidad con propiedades antiguas de orden
+
     order_number: doc.document_number,
     order_date: doc.document_date,
     order_type: doc.document_type,
@@ -181,6 +174,6 @@ export const useOrders = (
   return {
     ...documentsHook,
     orders,
-    documents: documentsHook.documents, // Mantener ambos por si acaso
+    documents: documentsHook.documents,
   };
 };

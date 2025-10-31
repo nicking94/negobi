@@ -1,3 +1,4 @@
+//app/recovery/page.tsx
 import { RecoveryForm } from "@/components/auth/RecoveryForm";
 import Link from "next/link";
 

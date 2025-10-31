@@ -20,13 +20,11 @@ export const supplierService = {
     return response.data;
   },
 
-  // GET - Obtener proveedor por ID
   async getSupplierById(id: number): Promise<SupplierResponse> {
     const response = await api.get<SupplierResponse>(`/suppliers/${id}`);
     return response.data;
   },
 
-  // POST - Crear nuevo proveedor
   async createSupplier(
     supplierData: SupplierCreatePayload
   ): Promise<SupplierResponse> {
@@ -37,7 +35,6 @@ export const supplierService = {
     return response.data;
   },
 
-  // PATCH - Actualizar proveedor
   async updateSupplier(
     id: number,
     supplierData: SupplierUpdatePayload
@@ -49,7 +46,6 @@ export const supplierService = {
     return response.data;
   },
 
-  // DELETE - Eliminar proveedor
   async deleteSupplier(id: number): Promise<SupplierDeleteResponse> {
     const response = await api.delete<SupplierDeleteResponse>(
       `/suppliers/${id}`
@@ -57,7 +53,6 @@ export const supplierService = {
     return response.data;
   },
 
-  // POST - Sincronizar proveedores desde ERP
   async syncSuppliers(
     syncData: SupplierSyncPayload
   ): Promise<SupplierSyncResponse> {

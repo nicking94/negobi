@@ -7,9 +7,8 @@ import {
   GetBankAccountsParams,
 } from "../../services/bankAccounts/bankAccounts.service";
 
-// Definir el tipo para los filtros del hook - companyId es obligatorio
 export interface UseBankAccountsFilters {
-  companyId: number; // Obligatorio
+  companyId: number;
   search?: string;
   name?: string;
   code?: string;
@@ -20,7 +19,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las cuentas bancarias con filtros
   const loadBankAccounts = async (
     customFilters?: Partial<UseBankAccountsFilters>
   ) => {
@@ -55,7 +53,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
     }
   };
 
-  // Crear cuenta bancaria
   const createBankAccount = async (
     accountData: CreateBankAccountData
   ): Promise<BankAccount | null> => {
@@ -77,7 +74,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
     }
   };
 
-  // Actualizar cuenta bancaria
   const updateBankAccount = async (
     id: string,
     updates: UpdateBankAccountData
@@ -107,7 +103,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
     }
   };
 
-  // Eliminar cuenta bancaria
   const deleteBankAccount = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -127,7 +122,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
     }
   };
 
-  // Obtener cuenta bancaria por ID
   const getBankAccountById = async (
     id: string
   ): Promise<BankAccount | null> => {
@@ -146,7 +140,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
     }
   };
 
-  // Cargar cuentas bancarias al montar el hook o cuando cambien los filtros
   useEffect(() => {
     if (filters.companyId) {
       loadBankAccounts();
@@ -165,7 +158,6 @@ export const useBankAccounts = (filters: UseBankAccountsFilters) => {
   };
 };
 
-// Hook especializado para cuentas bancarias activas
 export const useActiveBankAccounts = (companyId: number) => {
   const [activeAccounts, setActiveAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
@@ -211,7 +203,6 @@ export const useActiveBankAccounts = (companyId: number) => {
   };
 };
 
-// Hook especializado para cuentas por método de pago
 export const useBankAccountsByPaymentMethod = (
   companyId: number,
   paymentMethodId?: number
@@ -267,7 +258,6 @@ export const useBankAccountsByPaymentMethod = (
   };
 };
 
-// Hook para opciones de cuentas bancarias (para dropdowns)
 export const useBankAccountOptions = (companyId: number) => {
   const { activeBankAccounts, loading, error, refetch } =
     useActiveBankAccounts(companyId);

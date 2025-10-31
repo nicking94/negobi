@@ -1,4 +1,4 @@
-// hooks/auth/useLogout.ts (actualizado)
+// hooks/auth/useLogout.ts
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,10 +18,8 @@ const useLogout = () => {
       localStorage.removeItem("company_tax_id");
       localStorage.removeItem("user_profile");
 
-      // Mostrar mensaje de éxito
       toast.success("Sesión cerrada correctamente");
 
-      // Redirigir al login
       setTimeout(() => {
         router.push("/login");
       }, 1000);

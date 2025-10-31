@@ -30,12 +30,10 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useGetOrganizations from "@/hooks/organizations/useGetOrganizations";
 import { toast, Toaster } from "sonner";
-import { OrganizationsService } from "@/services/organizations/organizations.service";
 import usePostOrganizations from "@/hooks/organizations/useAddOrganizations";
 import useDeleteOrganizations from "@/hooks/organizations/useDeleteOrganizations";
 import { OrganizationType, ApiError } from "@/types";
 
-// ✅ Schema de validación
 const organizationSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   rif: z.string().min(1, "ID Empresa inválido").max(8, "ID Empresa inválido"),
@@ -45,7 +43,6 @@ const organizationSchema = z.object({
 
 type OrganizationForm = z.infer<typeof organizationSchema>;
 
-// ✅ Tipo para el error del servidor
 interface ServerError {
   statusCode?: number;
   message?: string;
@@ -60,7 +57,6 @@ const OrganizationsPage = () => {
   const [organizationToDelete, setOrganizationToDelete] =
     useState<OrganizationType | null>(null);
 
-  // ✅ Hooks - ahora usando search en lugar de searchTerm
   const { newOrganization, loading: creating } = usePostOrganizations();
   const { deleteOrganization, loading: deleteLoading } =
     useDeleteOrganizations();
@@ -71,13 +67,12 @@ const OrganizationsPage = () => {
     total,
     setPage,
     setItemsPerPage,
-    setSearch, // ✅ Cambiado de setSearchTerm a setSearch
+    setSearch,
     page,
     itemsPerPage,
-    search, // ✅ Cambiado de searchTerm a search
+    search,
   } = useGetOrganizations();
 
-  // ✅ Form
   const {
     register,
     handleSubmit,
@@ -104,7 +99,6 @@ const OrganizationsPage = () => {
         setEditingOrg(null);
         setIsModalOpen(false);
       } else {
-        // Para creación
         const createPayload = {
           name: name.trim(),
           legal_tax_id: rif.trim().toUpperCase(),
@@ -114,7 +108,6 @@ const OrganizationsPage = () => {
 
         const response = await newOrganization(createPayload);
 
-        // Verificar si la respuesta es exitosa por el status code
         if (response.status === 201 || response.status === 200) {
           toast.success("Organización creada exitosamente");
           setModified((prev) => !prev);
@@ -134,7 +127,6 @@ const OrganizationsPage = () => {
         const serverError = apiError.response.data as ServerError;
         console.error("📋 Error del servidor:", serverError);
 
-        // Manejo específico de errores
         if (apiError.response.status === 409) {
           toast.error("Ya existe una organización con ese RIF o email");
         } else if (serverError.statusCode === 409) {
@@ -205,7 +197,6 @@ const OrganizationsPage = () => {
     setIsModalOpen(true);
   };
 
-  // ✅ Columnas de la tabla
   const columns: ColumnDef<OrganizationType>[] = [
     {
       accessorKey: "name",
@@ -301,7 +292,6 @@ const OrganizationsPage = () => {
             </h1>
           </div>
 
-          {/* 🔍 BARRA DE BÚSQUEDA - Ahora funcional */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -343,7 +333,6 @@ const OrganizationsPage = () => {
         </main>
       </div>
 
-      {/* Modal de confirmación para eliminar organización */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
           <DialogHeader>
@@ -391,7 +380,6 @@ const OrganizationsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de creación/edición */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95%] sm:max-w-[425px]">
           <DialogHeader>

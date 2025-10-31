@@ -7,7 +7,6 @@ import {
   GetZonesParams,
 } from "../../services/zones/zones.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseZonesFilters {
   zone_name?: string;
   zip_code?: string;
@@ -19,7 +18,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todas las zonas con filtros
   const loadZones = async (customFilters?: Partial<UseZonesFilters>) => {
     try {
       setLoading(true);
@@ -48,7 +46,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Crear zona
   const createZone = async (zoneData: CreateZoneData): Promise<Zone | null> => {
     try {
       setLoading(true);
@@ -64,7 +61,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Actualizar zona
   const updateZone = async (
     id: string,
     updates: UpdateZoneData
@@ -85,7 +81,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Eliminar zona
   const deleteZone = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -101,7 +96,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Obtener zona por ID
   const getZoneById = async (id: string): Promise<Zone | null> => {
     try {
       setLoading(true);
@@ -116,7 +110,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Activar/desactivar zona
   const toggleZoneStatus = async (
     id: string,
     isActive: boolean
@@ -133,7 +126,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un nombre de zona
   const checkZoneNameExists = async (zoneName: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -149,7 +141,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un código postal
   const checkZipCodeExists = async (zipCode: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -165,17 +156,14 @@ export const useZones = (filters: UseZonesFilters = {}) => {
     }
   };
 
-  // Validar código postal
   const validateZipCode = (zipCode: string): boolean => {
     return zoneService.validateZipCode(zipCode);
   };
 
-  // Formatear código postal
   const formatZipCode = (zipCode: string): string => {
     return zoneService.formatZipCode(zipCode);
   };
 
-  // Cargar zonas al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadZones();
   }, [filters.zone_name, filters.zip_code, filters.search]);
@@ -197,7 +185,6 @@ export const useZones = (filters: UseZonesFilters = {}) => {
   };
 };
 
-// Hook especializado para zonas activas
 export const useActiveZones = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -231,7 +218,6 @@ export const useActiveZones = () => {
   };
 };
 
-// Hook para select/dropdown de zonas
 export const useZonesForSelect = () => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; zip_code: string }>
@@ -267,7 +253,6 @@ export const useZonesForSelect = () => {
   };
 };
 
-// Hook para búsqueda de zonas
 export const useZoneSearch = () => {
   const [searchResults, setSearchResults] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -330,7 +315,6 @@ export const useZoneSearch = () => {
   };
 };
 
-// Hook para gestión de representantes
 export const useZoneRepresentatives = () => {
   const [representatives, setRepresentatives] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -385,35 +369,28 @@ export const useZoneRepresentatives = () => {
   };
 };
 
-// Hook para análisis de zonas
 export const useZonesAnalysis = () => {
   const { zones, loading, error } = useActiveZones();
 
   const analysis = {
-    // Total de zonas
     totalZones: zones.length,
 
-    // Zonas por código postal (primeros 2 dígitos)
     zonesByZipCodeArea: zones.reduce((areas, zone) => {
       const zipArea = zone.zip_code.substring(0, 2);
       areas[zipArea] = (areas[zipArea] || 0) + 1;
       return areas;
     }, {} as Record<string, number>),
 
-    // Zonas con representante
     zonesWithRepresentative: zones.filter(
       (zone) => zone.representative && zone.representative.trim() !== ""
     ),
 
-    // Zonas sin representante
     zonesWithoutRepresentative: zones.filter(
       (zone) => !zone.representative || zone.representative.trim() === ""
     ),
 
-    // Códigos postales únicos
     uniqueZipCodes: [...new Set(zones.map((zone) => zone.zip_code))],
 
-    // Representantes únicos
     uniqueRepresentatives: [
       ...new Set(zones.map((zone) => zone.representative).filter(Boolean)),
     ],

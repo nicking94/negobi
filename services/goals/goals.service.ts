@@ -7,7 +7,6 @@ import {
   DeleteGoal,
 } from "../goals/goals.route";
 
-// Parámetros para obtener objetivos
 export interface GetGoalsParams {
   page?: number;
   itemsPerPage?: number;
@@ -29,7 +28,6 @@ export interface GetGoalsParams {
   zoneId?: number;
 }
 
-// Tipos y constantes
 export const GOAL_TYPES = {
   COMPANY: "company",
   SALES_PERSON: "sales_person",
@@ -51,9 +49,7 @@ export type GoalType = (typeof GOAL_TYPES)[keyof typeof GOAL_TYPES];
 export type PeriodType = (typeof PERIOD_TYPES)[keyof typeof PERIOD_TYPES];
 export type GoalStatus = (typeof GOAL_STATUSES)[keyof typeof GOAL_STATUSES];
 
-// Interfaz principal del objetivo
 export interface Goal {
-  // Campos principales
   id: number;
   goal_type: GoalType;
   period_type: PeriodType;
@@ -62,13 +58,9 @@ export interface Goal {
   start_date: string;
   end_date: string;
   status: GoalStatus;
-
-  // Campos de relación (opcionales en response)
   companyId?: number;
   userId?: number;
   zoneId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -90,7 +82,6 @@ export interface CreateGoalData {
   external_code?: string | null;
 }
 
-// Datos para actualizar un objetivo
 export interface UpdateGoalData {
   goal_type?: GoalType;
   period_type?: PeriodType;
@@ -104,7 +95,6 @@ export interface UpdateGoalData {
   zoneId?: number;
 }
 
-// Interfaces de respuesta
 export interface GoalResponse {
   success: boolean;
   data: Goal;
@@ -124,7 +114,6 @@ export interface PaginatedGoalsResponse {
   };
 }
 
-// Interfaz para progreso de objetivo
 export interface GoalProgress {
   goal: Goal;
   current_amount: number;
@@ -135,7 +124,6 @@ export interface GoalProgress {
 }
 
 export const goalService = {
-  // En validateCreateGoalData, agregar más validaciones:
   validateCreateGoalData: (
     goalData: CreateGoalData
   ): { isValid: boolean; errors: string[] } => {
@@ -176,7 +164,6 @@ export const goalService = {
       }
     }
 
-    // Validaciones específicas por tipo de objetivo
     if (goalData.goal_type === GOAL_TYPES.COMPANY && !goalData.companyId) {
       errors.push("companyId es requerido para objetivos de empresa");
     }
@@ -194,16 +181,14 @@ export const goalService = {
       errors,
     };
   },
-  // En la función createGoal, reemplaza esta parte:
+
   createGoal: async (goalData: CreateGoalData): Promise<Goal> => {
     try {
-      // Validar datos antes de enviar
       const validation = goalService.validateCreateGoalData(goalData);
       if (!validation.isValid) {
         throw new Error(`Datos inválidos: ${validation.errors.join(", ")}`);
       }
 
-      // CORREGIDO: Formatear datos según el Swagger
       const formattedData = {
         goal_type: goalData.goal_type,
         period_type: goalData.period_type,
@@ -236,7 +221,6 @@ export const goalService = {
         console.error("Status:", error.response.status);
         console.error("Headers:", error.response.headers);
 
-        // Log más detallado del error
         if (error.response.data && error.response.data.message) {
           console.error("Mensaje de error:", error.response.data.message);
         }
@@ -251,7 +235,6 @@ export const goalService = {
     }
   },
 
-  // Obtener todos los objetivos con paginación
   getGoals: async (
     params?: GetGoalsParams
   ): Promise<{
@@ -261,14 +244,12 @@ export const goalService = {
   }> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) queryParams.append("search", params.search);
     if (params?.order) queryParams.append("order", params.order);
     if (params?.goal_type) queryParams.append("goal_type", params.goal_type);
@@ -309,36 +290,32 @@ export const goalService = {
     if (params?.zoneId) queryParams.append("zoneId", params.zoneId.toString());
 
     const response = await api.get(`${GetGoals}?${queryParams}`);
-    return response.data.data; // Retorna la estructura paginada
+    return response.data.data;
   },
 
-  // Obtener un objetivo por ID
   getGoalById: async (id: string): Promise<Goal> => {
     const response = await api.get(`${GetGoalById}/${id}`);
     return response.data.data;
   },
 
-  // Actualizar un objetivo
   updateGoal: async (id: string, updates: UpdateGoalData): Promise<Goal> => {
     const response = await api.patch(`${PatchGoal}/${id}`, updates);
     return response.data.data;
   },
 
-  // Eliminar un objetivo
   deleteGoal: async (id: string): Promise<void> => {
     await api.delete(`${DeleteGoal}/${id}`);
   },
 
-  // Métodos adicionales útiles - CORREGIDOS
   getActiveGoals: async (): Promise<Goal[]> => {
     try {
       const now = new Date().toISOString();
       const response = await goalService.getGoals({
-        end_date_from: now, // Objetivos que aún no han vencido
+        end_date_from: now,
         status: GOAL_STATUSES.NOT_REACHED,
         itemsPerPage: 10,
       });
-      return response?.data || []; // Extraer el array de goals con validación
+      return response?.data || [];
     } catch (error) {
       console.error("Error getting active goals:", error);
       return [];
@@ -414,22 +391,18 @@ export const goalService = {
     return response.data;
   },
 
-  // Cambiar estado de objetivo
   updateGoalStatus: async (id: string, status: GoalStatus): Promise<Goal> => {
     return goalService.updateGoal(id, { status });
   },
 
-  // Marcar objetivo como alcanzado
   markGoalAsReached: async (id: string): Promise<Goal> => {
     return goalService.updateGoalStatus(id, GOAL_STATUSES.REACHED);
   },
 
-  // Marcar objetivo como no alcanzado
   markGoalAsNotReached: async (id: string): Promise<Goal> => {
     return goalService.updateGoalStatus(id, GOAL_STATUSES.NOT_REACHED);
   },
 
-  // Calcular progreso de objetivo (simulado - en una implementación real esto vendría del backend)
   calculateGoalProgress: (
     goal: Goal,
     currentAmount: number,
@@ -454,12 +427,10 @@ export const goalService = {
         ? (currentQuantity / goal.target_quantity) * 100
         : 0;
 
-    // Usar el progreso más bajo como indicador general
     const progressPercentage = Math.min(amountProgress, quantityProgress);
 
-    // Considerar que está en camino si el progreso es al menos el porcentaje esperado basado en el tiempo transcurrido
     const expectedProgress = (daysPassed / totalDays) * 100;
-    const isOnTrack = progressPercentage >= expectedProgress * 0.8; // 80% del progreso esperado
+    const isOnTrack = progressPercentage >= expectedProgress * 0.8;
 
     return {
       goal,
@@ -471,24 +442,21 @@ export const goalService = {
     };
   },
 
-  // Validar fechas de objetivo
   validateGoalDates: (startDate: string, endDate: string): boolean => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     return start < end;
   },
 
-  // Obtener objetivos para select/dropdown - CORREGIDO
   getGoalsForSelect: async (): Promise<
     Array<{ value: number; label: string; type: GoalType }>
   > => {
     try {
       const response = await goalService.getGoals({
-        itemsPerPage: 10, // Aumentar para obtener más opciones
-        status: GOAL_STATUSES.NOT_REACHED, // Solo objetivos activos
+        itemsPerPage: 10,
+        status: GOAL_STATUSES.NOT_REACHED,
       });
 
-      // Asegurar que tenemos datos válidos
       const goals = response?.data || [];
 
       return goals.map((goal) => ({
@@ -502,7 +470,6 @@ export const goalService = {
     }
   },
 
-  // Obtener resumen de objetivos por tipo - ACTUALIZADO
   getGoalsSummaryByType: async (): Promise<Record<GoalType, number>> => {
     try {
       const goals = await goalService.getActiveGoals();
@@ -516,7 +483,6 @@ export const goalService = {
     }
   },
 
-  // Obtener objetivos próximos a vencer (menos de 7 días) - ACTUALIZADO
   getUpcomingGoals: async (daysThreshold: number = 7): Promise<Goal[]> => {
     try {
       const now = new Date();

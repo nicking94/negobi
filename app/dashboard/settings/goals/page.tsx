@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
@@ -64,11 +64,9 @@ import {
   GOAL_STATUSES,
 } from "@/services/goals/goals.service";
 
-// Importar React Date Picker
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Tipo basado en la API real
 type Goal = {
   id: number;
   goal_type: GoalType;
@@ -91,7 +89,6 @@ type Goal = {
 const GoalsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
 
-  // Estado para filtros
   const [filters, setFilters] = useState({
     search: "",
     goal_type: "" as GoalType | "",
@@ -128,8 +125,6 @@ const GoalsPage = () => {
     setItemsPerPage,
   } = useGoals(cleanFilters);
 
-  const { options: goalOptions } = useGoalsForSelect();
-
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
@@ -144,10 +139,9 @@ const GoalsPage = () => {
       new Date().setMonth(new Date().getMonth() + 1)
     ).toISOString(),
     status: GOAL_STATUSES.NOT_REACHED,
-    companyId: 1, // Esto debería venir del contexto de la empresa
+    companyId: 1,
   });
 
-  // Opciones para los selects
   const goalTypes = [
     { value: GOAL_TYPES.COMPANY, label: "Empresa" },
     { value: GOAL_TYPES.SALES_PERSON, label: "Vendedor" },
@@ -186,7 +180,7 @@ const GoalsPage = () => {
           formData.zoneId && {
             zoneId: formData.zoneId,
           }),
-        // No enviar external_code si es null o undefined
+
         ...(formData.external_code && {
           external_code: formData.external_code,
         }),
@@ -199,11 +193,9 @@ const GoalsPage = () => {
       }
     } catch (error) {
       console.error("❌ Error en handleCreateGoal:", error);
-      // El toast ya se maneja en el hook
     }
   };
 
-  // Manejar actualización de meta
   const handleEditGoal = async () => {
     if (!selectedGoal) return;
 
@@ -233,7 +225,6 @@ const GoalsPage = () => {
     }
   };
 
-  // Manejar eliminación de meta
   const handleDeleteGoal = async (goal: Goal) => {
     try {
       const success = await deleteGoal(goal.id.toString());
@@ -278,7 +269,6 @@ const GoalsPage = () => {
     setIsEditDialogOpen(true);
   };
 
-  // Funciones de formato
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-VE", {
       style: "currency",
@@ -309,12 +299,10 @@ const GoalsPage = () => {
     }
   };
 
-  // Manejar cambios en los filtros
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Columnas para la DataTable
   const columns: ColumnDef<Goal>[] = [
     {
       accessorKey: "goal_type",
@@ -426,7 +414,6 @@ const GoalsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -440,7 +427,6 @@ const GoalsPage = () => {
             </h1>
           </div>
 
-          {/* Filtros */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -515,7 +501,6 @@ const GoalsPage = () => {
             </Button>
           </div>
 
-          {/* Tabla de metas */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -539,7 +524,6 @@ const GoalsPage = () => {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0">
           <div className="flex flex-col sm:flex-row">
-            {/* Sidebar ilustrativo */}
             <div className="hidden sm:block w-1/3 bg-gradient-to-b from-green_xxl/10 to-gray_xxl/5 p-6">
               <div className="flex flex-col items-center text-center">
                 <div className="p-3 bg-green_xxl/20 rounded-full mb-4">
@@ -574,7 +558,6 @@ const GoalsPage = () => {
               </div>
             </div>
 
-            {/* Formulario */}
             <div className="flex-1 p-6">
               <DialogHeader className="text-left pb-4">
                 <DialogTitle className="text-xl flex items-center gap-2">
@@ -765,7 +748,6 @@ const GoalsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para editar meta */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>

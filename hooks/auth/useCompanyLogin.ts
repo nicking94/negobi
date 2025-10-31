@@ -18,7 +18,6 @@ const useCompanyLogin = () => {
       const { data, status } = await AuthService.companyLoginAction(loginData);
 
       if (status === 200) {
-        // Adaptar según la respuesta real del endpoint de company login
         const userData = {
           id: data.data.user?.id?.toString() || "",
           email: data.data.user?.email || "",

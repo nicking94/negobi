@@ -14,7 +14,7 @@ export interface GetDocumentsParams {
   itemsPerPage?: number;
   order?: "ASC" | "DESC";
   search?: string;
-  companyId: number; // Ahora es requerido
+  companyId: number;
   document_type?: DocumentType;
   document_number?: string;
   startDate?: string;
@@ -27,7 +27,6 @@ export interface GetDocumentsParams {
   status?: DocumentStatus;
 }
 
-// Tipos para documentos (reemplazan orders)
 export type DocumentType =
   | "order"
   | "quote"
@@ -89,8 +88,6 @@ export interface Document {
   due_date: string;
   purchase_invoice_date: string;
   dispatch_status?: string;
-
-  // Campos de relación (IDs)
   companyId?: number;
   clientId?: number;
   supplierId?: number;
@@ -102,8 +99,6 @@ export interface Document {
   responsibleUserId?: number;
   sourceDocumentId?: number;
   salespersonId?: number;
-
-  // Campos extendidos (actualizados según la documentación de la API)
   company?: {
     id: number;
     name: string;
@@ -111,7 +106,7 @@ export interface Document {
   client?: {
     id: number;
     legal_name: string;
-    tax_id?: string; // ✅ Añadir esta propiedad
+    tax_id?: string;
     contact?: string;
     email?: string;
     address?: string;
@@ -139,20 +134,16 @@ export interface Document {
     currency_name: string;
   };
 
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
-
-  // Observaciones
   observations?: Array<{
     campo: string;
     valor: string;
   }>;
 
-  // Campos adicionales de la API
   is_correlative?: boolean;
   sign?: boolean;
   reference_amount?: number;
@@ -166,7 +157,7 @@ export interface Document {
   server_code?: string;
   delivery_date?: string;
 }
-// AÑADIR ESTAS INTERFACES
+
 export interface DocumentItem {
   line_number: number;
   product_id: number;
@@ -185,15 +176,12 @@ export interface DocumentPayment {
   change_amount?: number;
 }
 
-// Datos para crear un documento
 export interface CreateDocumentData {
   document_type: DocumentType;
   document_number: string;
   document_date: string;
   companyId: number;
-
-  // Campos opcionales
-  items?: DocumentItem[]; // Array de items
+  items?: DocumentItem[];
   payments?: DocumentPayment[];
   clientId?: number;
   supplierId?: number;
@@ -244,7 +232,6 @@ export interface CreateDocumentData {
   }>;
 }
 
-// Datos para actualizar un documento
 export interface UpdateDocumentData {
   document_type?: DocumentType;
   document_number?: string;
@@ -299,7 +286,6 @@ export interface UpdateDocumentData {
   }>;
 }
 
-// Interfaces de respuesta
 export interface DocumentResponse {
   success: boolean;
   data: Document;
@@ -319,7 +305,6 @@ export interface PaginatedDocumentsResponse {
   };
 }
 
-// Constantes para órdenes (para mantener compatibilidad)
 export const DOCUMENT_TYPES = {
   ORDER: "order",
   QUOTE: "quote",
@@ -361,7 +346,6 @@ export const documentService = {
     try {
       const queryParams = new URLSearchParams();
 
-      // Parámetros requeridos
       queryParams.append("page", params.page?.toString() || "1");
       queryParams.append(
         "itemsPerPage",
@@ -369,7 +353,6 @@ export const documentService = {
       );
       queryParams.append("companyId", params.companyId.toString());
 
-      // Parámetros opcionales
       if (params.document_type) {
         queryParams.append("document_type", params.document_type);
       }
@@ -438,19 +421,10 @@ export const documentService = {
   },
 
   getDocumentById: async (id: string): Promise<Document> => {
-    console.log("🔍 documentService.getDocumentById - ID:", id);
     const response = await api.get(`${GetDocumentById}/${id}`);
-
-    console.log("📦 documentService.getDocumentById - Respuesta COMPLETA:", {
-      response,
-      responseData: response.data,
-      responseDataData: response.data?.data,
-    });
-
     return response.data.data;
   },
 
-  // Actualizar un documento
   updateDocument: async (
     id: string,
     updates: UpdateDocumentData
@@ -459,12 +433,10 @@ export const documentService = {
     return response.data.data;
   },
 
-  // Eliminar un documento
   deleteDocument: async (id: string): Promise<void> => {
     await api.delete(`${DeleteDocument}/${id}`);
   },
 
-  // Métodos específicos para órdenes (para mantener compatibilidad)
   getOrders: async (
     params: GetDocumentsParams & { document_type?: "order" }
   ): Promise<Document[]> => {
@@ -488,14 +460,12 @@ export const documentService = {
     return documentService.updateDocument(id, updates);
   },
 
-  // Métodos utilitarios
   generateDocumentNumber: (prefix: string = "DOC"): string => {
     const timestamp = new Date().getTime();
     const random = Math.floor(Math.random() * 1000);
     return `${prefix}-${timestamp}-${random}`;
   },
 
-  // En documentService, actualizar la validación
   validateDocumentData: (documentData: CreateDocumentData) => {
     const errors: string[] = [];
 
@@ -515,7 +485,6 @@ export const documentService = {
       errors.push("La compañía es requerida");
     }
 
-    // Validar items si existen
     if (documentData.items) {
       documentData.items.forEach((item, index) => {
         if (!item.product_id) {
@@ -527,7 +496,6 @@ export const documentService = {
       });
     }
 
-    // Validar pagos si existen
     if (documentData.payments) {
       const totalPayments = documentData.payments.reduce(
         (sum, payment) => sum + (payment.amount || 0),

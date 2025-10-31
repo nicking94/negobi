@@ -1,4 +1,4 @@
-// hooks/users/useGetUsers.ts - VERSIÓN CORREGIDA
+// hooks/users/useGetUsers.ts
 import {
   UsersService,
   UsersListResponse,
@@ -59,22 +59,17 @@ const useGetUsers = (props?: UseGetUsersProps): UseGetUsersReturn => {
         itemsPerPage,
       };
 
-      // ✅ CORRECCIÓN: Asegurar que companyId siempre sea válido
       let effectiveCompanyId: number;
 
       if (isSuperAdmin) {
-        // Para superAdmin, usar el companyId del estado o del prop
         effectiveCompanyId = companyId || propCompanyId || userCompanyId || 1;
       } else {
-        // Para no superAdmin, forzar el userCompanyId
         effectiveCompanyId = userCompanyId || 1;
       }
 
-      // ✅ Asegurar que companyId sea un número válido
       if (effectiveCompanyId && effectiveCompanyId > 0) {
         params.companyId = effectiveCompanyId;
       } else {
-        // Si no hay companyId válido, usar un valor por defecto
         console.warn(
           "⚠️ No se encontró companyId válido, usando valor por defecto 1"
         );

@@ -1,4 +1,4 @@
-// components/auth/NewPasswordForm.tsx - ACTUALIZADO
+// components/auth/NewPasswordForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,7 +76,6 @@ export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
     }
   };
 
-  // Función para verificar la fortaleza de la contraseña (mantener igual)
   const checkPasswordStrength = (password: string) => {
     const requirements = [
       { test: (p: string) => p.length >= 6, text: "Mínimo 6 caracteres" },
@@ -107,7 +106,6 @@ export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
     <Form {...form}>
       <Toaster richColors position="top-right" />
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Campo Nueva Contraseña */}
         <FormField
           control={form.control}
           name="password"
@@ -140,7 +138,6 @@ export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
                 </div>
               </FormControl>
 
-              {/* Indicador de fortaleza de contraseña */}
               {passwordValue && (
                 <div className="mt-3 p-3 bg-gray_xxl rounded-lg">
                   <div className="space-y-2">
@@ -184,7 +181,6 @@ export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
           )}
         />
 
-        {/* Campo Confirmar Contraseña */}
         <FormField
           control={form.control}
           name="confirmPassword"
@@ -221,7 +217,6 @@ export function NewPasswordForm({ legal_tax_id }: NewPasswordType) {
           )}
         />
 
-        {/* Botón */}
         <div className="flex justify-center pt-2">
           <Button
             type="submit"

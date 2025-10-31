@@ -47,7 +47,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  // { icon: FaHome, label: "Inicio", path: "/dashboard" },
+  { icon: FaHome, label: "Inicio", path: "/dashboard" },
   {
     icon: FaFileAlt,
     label: "Documentos",
@@ -80,28 +80,28 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  // {
-  //   icon: FaCogs,
-  //   label: "Operaciones",
-  //   hasSubmenu: true,
-  //   submenuItems: [
-  //     {
-  //       icon: FaCreditCard,
-  //       label: "Cobranzas",
-  //       path: "/dashboard/collections",
-  //     },
-  //     {
-  //       icon: FaUsers,
-  //       label: "Visitas",
-  //       path: "/dashboard/visits",
-  //     },
-  //     {
-  //       icon: FaMapMarkerAlt,
-  //       label: "Geolocalización",
-  //       path: "/dashboard/geolocalization",
-  //     },
-  //   ],
-  // },
+  {
+    icon: FaCogs,
+    label: "Operaciones",
+    hasSubmenu: true,
+    submenuItems: [
+      {
+        icon: FaCreditCard,
+        label: "Cobranzas",
+        path: "/dashboard/collections",
+      },
+      {
+        icon: FaUsers,
+        label: "Visitas",
+        path: "/dashboard/visits",
+      },
+      {
+        icon: FaMapMarkerAlt,
+        label: "Geolocalización",
+        path: "/dashboard/geolocalization",
+      },
+    ],
+  },
 
   {
     icon: FaFolder,
@@ -146,34 +146,34 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  // {
-  //   icon: FaChartBar,
-  //   label: "Indicadores",
-  //   hasSubmenu: true,
-  //   submenuItems: [
-  //     {
-  //       icon: FaChartLine,
-  //       label: "Operaciones",
-  //       path: "/dashboard/indicators/operations",
-  //     },
-  //     {
-  //       icon: FaDollarSign,
-  //       label: "Ventas",
-  //       path: "/dashboard/indicators/sales",
-  //     },
-  //     {
-  //       icon: FaBox,
-  //       label: "Productos",
-  //       path: "/dashboard/indicators/products",
-  //     },
-  //     {
-  //       icon: FaUserFriends,
-  //       label: "Vendedores",
-  //       path: "/dashboard/indicators/sellers",
-  //     },
-  //   ],
-  // },
-  // { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
+  {
+    icon: FaChartBar,
+    label: "Indicadores",
+    hasSubmenu: true,
+    submenuItems: [
+      {
+        icon: FaChartLine,
+        label: "Operaciones",
+        path: "/dashboard/indicators/operations",
+      },
+      {
+        icon: FaDollarSign,
+        label: "Ventas",
+        path: "/dashboard/indicators/sales",
+      },
+      {
+        icon: FaBox,
+        label: "Productos",
+        path: "/dashboard/indicators/products",
+      },
+      {
+        icon: FaUserFriends,
+        label: "Vendedores",
+        path: "/dashboard/indicators/sellers",
+      },
+    ],
+  },
+  { icon: FaChartPie, label: "Reportes", path: "/dashboard/reports" },
 ];
 
 const Sidebar = () => {
@@ -188,22 +188,16 @@ const Sidebar = () => {
     );
   };
 
-  // Efecto para controlar el scroll del body cuando el menú está abierto en móviles
   useEffect(() => {
-    // Verificar si estamos en un dispositivo móvil
     const isMobile = window.innerWidth < 768;
 
     if (sidebarOpen && isMobile) {
-      // Guardar la posición actual del scroll
       const scrollY = window.scrollY;
-
-      // Prevenir el scroll del body
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = "100%";
 
       return () => {
-        // Restaurar el scroll al cerrar el menú
         document.body.style.position = "";
         document.body.style.top = "";
         document.body.style.width = "";
@@ -246,7 +240,6 @@ const Sidebar = () => {
   };
   return (
     <>
-      {/* Overlay para móviles */}
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden",
@@ -257,7 +250,6 @@ const Sidebar = () => {
         onClick={toggleSidebar}
       />
 
-      {/* Sidebar con posición fija y transición de transformación */}
       <div
         className={cn(
           "bg-white/95 backdrop-blur-sm border-r border-gray_xl/60 flex flex-col shadow-xl transition-all duration-300 ease-in-out fixed z-50 h-screen top-0",
@@ -266,7 +258,6 @@ const Sidebar = () => {
             : "-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 md:overflow-hidden"
         )}
       >
-        {/* Botón de cerrar para desktop - solo visible cuando el sidebar está abierto */}
         {sidebarOpen && (
           <button
             onClick={toggleSidebar}

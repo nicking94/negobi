@@ -454,7 +454,6 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-8">
-            {/* Gráfico de Compras */}
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-2 md:pb-3 lg:pb-4">
                 <CardTitle className="text-base md:text-lg font-semibold text-gray_b flex items-center gap-2">

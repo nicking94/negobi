@@ -19,7 +19,6 @@ export interface GetCurrenciesParams {
 }
 
 export interface Currency {
-  // Campos del response (GET)
   id: number;
   currency_name: string;
   currency_code: string;
@@ -27,8 +26,6 @@ export interface Currency {
   decimal_places: number;
   is_main_currency: boolean;
   is_active: boolean;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -37,19 +34,15 @@ export interface Currency {
 }
 
 export interface CreateCurrencyData {
-  // Campos requeridos para crear una moneda
   currency_name: string;
   currency_code: string;
   currency_symbol: string;
-
-  // Campos opcionales para creación
   decimal_places?: number;
   is_main_currency?: boolean;
   is_active?: boolean;
 }
 
 export interface UpdateCurrencyData {
-  // Todos los campos son opcionales para actualización
   currency_name?: string;
   currency_code?: string;
   currency_symbol?: string;
@@ -58,7 +51,6 @@ export interface UpdateCurrencyData {
   is_active?: boolean;
 }
 
-// Response interfaces
 export interface CurrencyResponse {
   success: boolean;
   data: Currency;
@@ -79,7 +71,6 @@ export interface PaginatedCurrenciesResponse {
 }
 
 export const currencyService = {
-  // Crear una nueva moneda
   createCurrency: async (
     currencyData: CreateCurrencyData
   ): Promise<Currency> => {
@@ -87,18 +78,15 @@ export const currencyService = {
     return response.data.data;
   },
 
-  // Obtener todas las monedas
   getCurrencies: async (params?: GetCurrenciesParams): Promise<Currency[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -128,7 +116,6 @@ export const currencyService = {
     return response.data.data;
   },
 
-  // Actualizar una moneda
   updateCurrency: async (
     id: string,
     updates: UpdateCurrencyData
@@ -137,18 +124,15 @@ export const currencyService = {
     return response.data.data;
   },
 
-  // Eliminar una moneda
   deleteCurrency: async (id: string): Promise<void> => {
     await api.delete(`${DeleteCurrency}/${id}`);
   },
 
-  // Obtener una moneda por ID
   getCurrencyById: async (id: string): Promise<Currency> => {
     const response = await api.get(`${GetCurrencies}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getActiveCurrencies: async (): Promise<Currency[]> => {
     return currencyService.getCurrencies({
       is_active: true,

@@ -38,7 +38,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Constantes para localStorage
 const NEGOBI_JWT_TOKEN = "NEGOBI_JWT_TOKEN";
 const NEGOBI_JWT_REFRESH_TOKEN = "NEGOBI_JWT_REFRESH_TOKEN";
 const NEGOBI_USER_DATA = "NEGOBI_USER_DATA";
@@ -49,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Función para obtener el perfil completo del usuario
   const fetchUserProfile = async (): Promise<User | null> => {
     try {
       const token = localStorage.getItem(NEGOBI_JWT_TOKEN);
@@ -82,11 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(NEGOBI_JWT_REFRESH_TOKEN, refreshToken);
     }
 
-    // Disparar evento para notificar cambios
     window.dispatchEvent(new Event("storage"));
   };
 
-  // Verificar autenticación al cargar
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem(NEGOBI_JWT_TOKEN);
@@ -95,22 +91,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (token) {
         try {
-          // Intentar obtener datos frescos del servidor
           const freshUserData = await fetchUserProfile();
 
           if (freshUserData) {
             setUser(freshUserData);
-            // Actualizar localStorage con datos frescos
+
             localStorage.setItem(
               NEGOBI_USER_DATA,
               JSON.stringify(freshUserData)
             );
           } else if (userData) {
-            // Fallback a datos almacenados
             setUser(JSON.parse(userData));
           }
 
-          // Si no está marcado "recordar sesión", limpiar después de un tiempo
           if (!rememberMe) {
             setTimeout(() => {
               if (localStorage.getItem(NEGOBI_REMEMBER_ME) !== "true") {

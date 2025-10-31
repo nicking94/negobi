@@ -1,7 +1,6 @@
 // utils/formatCurrency.ts
 import { useCurrency } from "@/context/CurrencyContext";
 
-// Esta función ahora puede usar el contexto
 export const useFormatCurrency = () => {
   const { formatPrice } = useCurrency();
   return formatPrice;

@@ -6,7 +6,6 @@ import {
   DeleteDocumentItem,
 } from "../documentItems/documentItems.route";
 
-// Importar tipos de documentos si es necesario
 import { Document } from "../documents/documents.service";
 
 export interface GetDocumentItemsParams {
@@ -23,7 +22,6 @@ export interface GetDocumentItemsParams {
 }
 
 export interface DocumentItem {
-  // Campos del response (GET)
   id: number;
   line_number: number;
   product_id: number;
@@ -58,12 +56,8 @@ export interface DocumentItem {
   product_external_code: string;
   warehouse_external_code: string;
   server_external_code: string;
-
-  // Campos de relación
   documentId?: number;
-  document?: Document; // Documento relacionado según el swagger
-
-  // Campos de sistema
+  document?: Document;
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -72,14 +66,11 @@ export interface DocumentItem {
 }
 
 export interface CreateDocumentItemData {
-  // Campos requeridos para crear un item
   documentId: number;
   line_number: number;
   product_id: number;
   quantity: number;
   unit_price: number;
-
-  // Campos opcionales para creación
   unit_cost?: number;
   discount_percent?: number;
   discount_amount?: number;
@@ -113,7 +104,6 @@ export interface CreateDocumentItemData {
 }
 
 export interface UpdateDocumentItemData {
-  // Todos los campos son opcionales para actualización
   documentId?: number;
   line_number?: number;
   product_id?: number;
@@ -151,7 +141,6 @@ export interface UpdateDocumentItemData {
   server_external_code?: string;
 }
 
-// Response interfaces
 export interface DocumentItemResponse {
   success: boolean;
   data: DocumentItem;
@@ -175,7 +164,6 @@ export interface PaginatedDocumentItemsResponse {
 }
 
 export const documentItemService = {
-  // Crear un nuevo item de documento
   createDocumentItem: async (
     itemData: CreateDocumentItemData
   ): Promise<DocumentItem> => {
@@ -183,20 +171,17 @@ export const documentItemService = {
     return response.data.data;
   },
 
-  // Obtener todos los items de documentos
   getDocumentItems: async (
     params?: GetDocumentItemsParams
   ): Promise<DocumentItem[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -226,7 +211,6 @@ export const documentItemService = {
     return response.data.data;
   },
 
-  // Actualizar un item de documento
   updateDocumentItem: async (
     id: string,
     updates: UpdateDocumentItemData
@@ -235,18 +219,15 @@ export const documentItemService = {
     return response.data.data;
   },
 
-  // Eliminar un item de documento
   deleteDocumentItem: async (id: string): Promise<void> => {
     await api.delete(`${DeleteDocumentItem}/${id}`);
   },
 
-  // Obtener un item por ID
   getDocumentItemById: async (id: string): Promise<DocumentItem> => {
     const response = await api.get(`${GetDocumentItems}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getDocumentItemsByDocument: async (
     documentId: number
   ): Promise<DocumentItem[]> => {
@@ -256,17 +237,13 @@ export const documentItemService = {
         itemsPerPage: 100,
       });
 
-      console.log("🔍 Respuesta completa de items:", response);
-
-      // Manejar diferentes estructuras de respuesta con tipos seguros
       if (Array.isArray(response)) {
         return response;
       } else if (response && typeof response === "object") {
-        // Si es la estructura paginada que vemos en los logs
         if ("data" in response && Array.isArray((response as any).data)) {
           return (response as any).data;
         }
-        // Si tiene propiedad data con sub-propiedad data (respuesta paginada estructurada)
+
         if (
           "data" in response &&
           (response as any).data &&
@@ -275,7 +252,7 @@ export const documentItemService = {
         ) {
           return (response as any).data.data;
         }
-        // Si es un objeto con propiedades de array
+
         if ("items" in response && Array.isArray((response as any).items)) {
           return (response as any).items;
         }
@@ -300,7 +277,6 @@ export const documentItemService = {
     });
   },
 
-  // Calcular totales de un documento
   calculateDocumentTotals: async (
     documentId: number
   ): Promise<{
@@ -335,7 +311,6 @@ export const documentItemService = {
     };
   },
 
-  // Crear múltiples items a la vez
   createMultipleDocumentItems: async (
     itemsData: CreateDocumentItemData[]
   ): Promise<DocumentItem[]> => {

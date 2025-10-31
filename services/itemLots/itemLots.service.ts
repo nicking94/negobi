@@ -17,15 +17,10 @@ export interface GetItemLotsParams {
 }
 
 export interface ItemLot {
-  // Campos del response (GET)
   id: number;
   quantity: number;
-
-  // Campos de relación
   itemId?: number;
   productLotId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -34,20 +29,17 @@ export interface ItemLot {
 }
 
 export interface CreateItemLotData {
-  // Campos requeridos para crear un lote de item
   itemId: number;
   productLotId: number;
   quantity: number;
 }
 
 export interface UpdateItemLotData {
-  // Todos los campos son opcionales para actualización
   itemId?: number;
   productLotId?: number;
   quantity?: number;
 }
 
-// Response interfaces
 export interface ItemLotResponse {
   success: boolean;
   data: ItemLot;
@@ -68,24 +60,20 @@ export interface PaginatedItemLotsResponse {
 }
 
 export const itemLotService = {
-  // Crear un nuevo lote de item
   createItemLot: async (itemLotData: CreateItemLotData): Promise<ItemLot> => {
     const response = await api.post(PostItemLot, itemLotData);
     return response.data.data;
   },
 
-  // Obtener todos los lotes de items
   getItemLots: async (params?: GetItemLotsParams): Promise<ItemLot[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -106,7 +94,6 @@ export const itemLotService = {
     return response.data.data;
   },
 
-  // Actualizar un lote de item
   updateItemLot: async (
     id: string,
     updates: UpdateItemLotData
@@ -115,18 +102,15 @@ export const itemLotService = {
     return response.data.data;
   },
 
-  // Eliminar un lote de item
   deleteItemLot: async (id: string): Promise<void> => {
     await api.delete(`${DeleteItemLot}/${id}`);
   },
 
-  // Obtener un lote de item por ID
   getItemLotById: async (id: string): Promise<ItemLot> => {
     const response = await api.get(`${GetItemLots}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getItemLotsByItem: async (itemId: number): Promise<ItemLot[]> => {
     return itemLotService.getItemLots({
       itemId,
@@ -158,7 +142,6 @@ export const itemLotService = {
     }
   },
 
-  // Calcular cantidad total por item
   getTotalQuantityByItem: async (itemId: number): Promise<number> => {
     try {
       const itemLots = await itemLotService.getItemLotsByItem(itemId);
@@ -169,7 +152,6 @@ export const itemLotService = {
     }
   },
 
-  // Calcular cantidad total por lote de producto
   getTotalQuantityByProductLot: async (
     productLotId: number
   ): Promise<number> => {
@@ -184,7 +166,6 @@ export const itemLotService = {
     }
   },
 
-  // Crear múltiples lotes de items
   createMultipleItemLots: async (
     itemLotsData: CreateItemLotData[]
   ): Promise<ItemLot[]> => {
@@ -203,7 +184,6 @@ export const itemLotService = {
     return createdItemLots;
   },
 
-  // Actualizar cantidad de lote
   updateItemLotQuantity: async (
     id: string,
     newQuantity: number
@@ -211,7 +191,6 @@ export const itemLotService = {
     return itemLotService.updateItemLot(id, { quantity: newQuantity });
   },
 
-  // Ajustar cantidad de lote (sumar o restar)
   adjustItemLotQuantity: async (
     id: string,
     adjustment: number

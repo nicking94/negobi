@@ -18,16 +18,11 @@ export interface GetItemTaxesParams {
 }
 
 export interface ItemTax {
-  // Campos del response (GET)
   id: number;
   tax_rate: number;
   tax_amount: number;
-
-  // Campos de relación
   itemId?: number;
   taxTypeId?: number;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -36,7 +31,6 @@ export interface ItemTax {
 }
 
 export interface CreateItemTaxData {
-  // Campos requeridos para crear un impuesto de item
   itemId: number;
   taxTypeId: number;
   tax_rate: number;
@@ -44,14 +38,12 @@ export interface CreateItemTaxData {
 }
 
 export interface UpdateItemTaxData {
-  // Todos los campos son opcionales para actualización
   itemId?: number;
   taxTypeId?: number;
   tax_rate?: number;
   tax_amount?: number;
 }
 
-// Response interfaces
 export interface ItemTaxResponse {
   success: boolean;
   data: ItemTax;
@@ -72,24 +64,20 @@ export interface PaginatedItemTaxesResponse {
 }
 
 export const itemTaxService = {
-  // Crear un nuevo impuesto de item
   createItemTax: async (itemTaxData: CreateItemTaxData): Promise<ItemTax> => {
     const response = await api.post(PostItemTax, itemTaxData);
     return response.data.data;
   },
 
-  // Obtener todos los impuestos de items
   getItemTaxes: async (params?: GetItemTaxesParams): Promise<ItemTax[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -113,7 +101,6 @@ export const itemTaxService = {
     return response.data.data;
   },
 
-  // Actualizar un impuesto de item
   updateItemTax: async (
     id: string,
     updates: UpdateItemTaxData
@@ -122,18 +109,15 @@ export const itemTaxService = {
     return response.data.data;
   },
 
-  // Eliminar un impuesto de item
   deleteItemTax: async (id: string): Promise<void> => {
     await api.delete(`${DeleteItemTax}/${id}`);
   },
 
-  // Obtener un impuesto de item por ID
   getItemTaxById: async (id: string): Promise<ItemTax> => {
     const response = await api.get(`${GetItemTaxes}/${id}`);
     return response.data.data;
   },
 
-  // Métodos adicionales útiles
   getItemTaxesByItem: async (itemId: number): Promise<ItemTax[]> => {
     return itemTaxService.getItemTaxes({
       itemId,
@@ -165,7 +149,6 @@ export const itemTaxService = {
     }
   },
 
-  // Calcular impuestos para un item
   calculateItemTaxes: async (
     itemId: number,
     baseAmount: number,
@@ -179,21 +162,17 @@ export const itemTaxService = {
 
     for (const taxTypeId of taxTypeIds) {
       try {
-        // Buscar si ya existe una configuración específica para este item y tipo de impuesto
         const existingItemTax =
           await itemTaxService.getItemTaxesByItemAndTaxType(itemId, taxTypeId);
 
         if (existingItemTax) {
-          // Usar la configuración existente
           calculatedTaxes.push({
             taxTypeId,
             tax_rate: existingItemTax.tax_rate,
             tax_amount: existingItemTax.tax_amount,
           });
         } else {
-          // Aquí podrías integrar con el servicio de taxTypes para obtener la tasa por defecto
-          // Por ahora, usaremos un cálculo básico
-          const defaultTaxRate = 0; // Esto debería venir de taxTypes service
+          const defaultTaxRate = 0;
           const taxAmount = baseAmount * (defaultTaxRate / 100);
 
           calculatedTaxes.push({
@@ -213,7 +192,6 @@ export const itemTaxService = {
     return calculatedTaxes;
   },
 
-  // Crear múltiples impuestos de items
   createMultipleItemTaxes: async (
     itemTaxesData: CreateItemTaxData[]
   ): Promise<ItemTax[]> => {
@@ -232,7 +210,6 @@ export const itemTaxService = {
     return createdItemTaxes;
   },
 
-  // Actualizar o crear impuestos de items en lote
   upsertItemTaxes: async (
     itemId: number,
     taxes: { taxTypeId: number; tax_rate: number; tax_amount: number }[]
@@ -241,7 +218,6 @@ export const itemTaxService = {
 
     for (const tax of taxes) {
       try {
-        // Verificar si ya existe
         const existingItemTax =
           await itemTaxService.getItemTaxesByItemAndTaxType(
             itemId,
@@ -249,7 +225,6 @@ export const itemTaxService = {
           );
 
         if (existingItemTax) {
-          // Actualizar existente
           const updatedItemTax = await itemTaxService.updateItemTax(
             existingItemTax.id.toString(),
             {
@@ -259,7 +234,6 @@ export const itemTaxService = {
           );
           results.push(updatedItemTax);
         } else {
-          // Crear nuevo
           const newItemTax = await itemTaxService.createItemTax({
             itemId,
             taxTypeId: tax.taxTypeId,

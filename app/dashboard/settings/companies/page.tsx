@@ -53,6 +53,11 @@ import {
   CreateCompanyFormValues,
   EditCompanyFormValues,
 } from "@/hooks/companies/useCompanyForm";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type Company = {
   id: number;
@@ -87,8 +92,6 @@ const CompaniesPage = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Usar el hook personalizado para el formulario
   const isEditMode = !!selectedCompany;
   const { form, hasAdminError, getAdminError } = useCompanyForm(isEditMode);
 
@@ -182,7 +185,6 @@ const CompaniesPage = () => {
           toast.error("Error al actualizar la empresa");
         }
       } else {
-        // Para creación, enviar todos los datos incluyendo admin
         const createData = data as CreateCompanyFormValues;
 
         const companyData = {
@@ -244,7 +246,6 @@ const CompaniesPage = () => {
     }
 
     try {
-      // Enviar solo datos de la empresa (sin admin) junto con el cambio de estado
       const updateData = {
         name: company.name,
         code: company.code,
@@ -279,7 +280,10 @@ const CompaniesPage = () => {
     return format(new Date(date), "dd/MM/yyyy hh:mm a");
   };
 
-  // Filtrar empresas por búsqueda y estado
+  const handleClearFilters = () => {
+    setStatusFilter("all");
+  };
+
   const filteredCompanies =
     companiesResponse?.filter((company: Company) => {
       const matchesSearch =
@@ -452,35 +456,60 @@ const CompaniesPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estados</SelectItem>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status.id} value={status.name}>
-                              {status.label}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="status-filter">Estado</Label>
+                        <Select
+                          value={statusFilter}
+                          onValueChange={setStatusFilter}
+                        >
+                          <SelectTrigger id="status-filter">
+                            <SelectValue placeholder="Todos los estados" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los estados
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            {statusOptions.map((status) => (
+                              <SelectItem key={status.id} value={status.name}>
+                                {status.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearFilters}
+                        >
+                          Limpiar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            document.dispatchEvent(
+                              new KeyboardEvent("keydown", { key: "Escape" })
+                            );
+                          }}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <Button
@@ -506,7 +535,6 @@ const CompaniesPage = () => {
         </main>
       </div>
 
-      {/* Modal de confirmación para eliminar empresa */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
           <DialogHeader>
@@ -554,7 +582,6 @@ const CompaniesPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para crear/editar empresa */}
       <Dialog
         open={isEditDialogOpen || isCreateDialogOpen}
         onOpenChange={(open) => {
@@ -582,7 +609,6 @@ const CompaniesPage = () => {
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
-            {/* Información de la Empresa */}
             <div className="space-y-4">
               <h3 className="font-semibold text-gray_b">
                 Información de la Empresa
@@ -699,7 +725,6 @@ const CompaniesPage = () => {
               </div>
             </div>
 
-            {/* Información del Administrador - SOLO MOSTRAR EN CREACIÓN */}
             {!selectedCompany && (
               <div className="space-y-4 pt-4">
                 <h3 className="font-semibold text-gray_b">

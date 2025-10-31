@@ -8,7 +8,6 @@ import {
   SyncOrderItemsData,
 } from "../../services/orderItems/orderItems.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseOrderItemsFilters {
   order_id?: number;
   product_id?: number;
@@ -24,7 +23,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los items de pedido con filtros
   const loadOrderItems = async (
     customFilters?: Partial<UseOrderItemsFilters>
   ) => {
@@ -59,7 +57,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Crear item de pedido
   const createOrderItem = async (
     orderItemData: CreateOrderItemData
   ): Promise<OrderItem | null> => {
@@ -81,7 +78,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Actualizar item de pedido
   const updateOrderItem = async (
     id: string,
     updates: UpdateOrderItemData
@@ -111,7 +107,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Eliminar item de pedido
   const deleteOrderItem = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -131,7 +126,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Obtener item de pedido por ID
   const getOrderItemById = async (id: string): Promise<OrderItem | null> => {
     try {
       setLoading(true);
@@ -148,7 +142,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Sincronizar items desde ERP
   const syncOrderItems = async (
     syncData: SyncOrderItemsData
   ): Promise<boolean> => {
@@ -156,7 +149,7 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
       setLoading(true);
       setError(null);
       await orderItemService.syncOrderItems(syncData);
-      // Recargar los items después de la sincronización
+
       await loadOrderItems();
       return true;
     } catch (err) {
@@ -171,7 +164,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Calcular totales de un pedido
   const calculateOrderTotals = async (orderId: number) => {
     try {
       setLoading(true);
@@ -187,7 +179,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Verificar si un producto ya existe en un pedido
   const checkProductInOrder = async (
     orderId: number,
     productId: number
@@ -208,7 +199,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
     }
   };
 
-  // Cargar items de pedido al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadOrderItems();
   }, [
@@ -236,7 +226,6 @@ export const useOrderItems = (filters: UseOrderItemsFilters = {}) => {
   };
 };
 
-// Hook especializado para items de un pedido específico
 export const useOrderItemsByOrder = (orderId?: number) => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -278,7 +267,6 @@ export const useOrderItemsByOrder = (orderId?: number) => {
   };
 };
 
-// Hook especializado para items de un producto específico
 export const useOrderItemsByProduct = (productId?: number) => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -324,7 +312,6 @@ export const useOrderItemsByProduct = (productId?: number) => {
   };
 };
 
-// Hook para items de alto valor
 export const useHighValueOrderItems = (minAmount: number = 1000) => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -361,7 +348,6 @@ export const useHighValueOrderItems = (minAmount: number = 1000) => {
   };
 };
 
-// Hook para cálculo de totales de pedido
 export const useOrderTotals = (orderId?: number) => {
   const [totals, setTotals] = useState<{
     subtotal: number;

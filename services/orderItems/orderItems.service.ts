@@ -8,7 +8,6 @@ import {
   PostSyncOrderItems,
 } from "./orderItems.route";
 
-// Parámetros para obtener items de pedido
 export interface GetOrderItemsParams {
   page?: number;
   itemsPerPage?: number;
@@ -22,9 +21,7 @@ export interface GetOrderItemsParams {
   total_amount?: number;
 }
 
-// Interfaz principal del item de pedido
 export interface OrderItem {
-  // Campos principales
   id: number;
   order_id: number;
   product_id: number;
@@ -48,8 +45,6 @@ export interface OrderItem {
   total_amount: number;
   description: string;
   external_item_code: string;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -57,7 +52,6 @@ export interface OrderItem {
   deleted_at?: string | null;
 }
 
-// Datos para crear un item de pedido
 export interface CreateOrderItemData {
   order_id: number;
   product_id: number;
@@ -81,7 +75,6 @@ export interface CreateOrderItemData {
   external_item_code: string;
 }
 
-// Datos para actualizar un item de pedido
 export interface UpdateOrderItemData {
   order_id?: number;
   product_id?: number;
@@ -105,7 +98,6 @@ export interface UpdateOrderItemData {
   external_item_code?: string;
 }
 
-// Datos para sincronización desde ERP
 export interface SyncOrderItemsData {
   companyId: number;
   data: Array<{
@@ -132,7 +124,6 @@ export interface SyncOrderItemsData {
   }>;
 }
 
-// Interfaces de respuesta
 export interface OrderItemResponse {
   success: boolean;
   data: OrderItem;
@@ -150,7 +141,6 @@ export interface SyncOrderItemsResponse {
   };
 }
 
-// Constantes para valores predefinidos
 export const PRICE_TYPES = {
   STANDARD: "standard",
   PROMOTIONAL: "promotional",
@@ -167,7 +157,6 @@ export type PriceType = (typeof PRICE_TYPES)[keyof typeof PRICE_TYPES];
 export type SignType = (typeof SIGN_TYPES)[keyof typeof SIGN_TYPES];
 
 export const orderItemService = {
-  // Crear un nuevo item de pedido
   createOrderItem: async (
     orderItemData: CreateOrderItemData
   ): Promise<OrderItem> => {
@@ -178,11 +167,9 @@ export const orderItemService = {
     return response.data.data;
   },
 
-  // Obtener todos los items de pedido
   getOrderItems: async (params?: GetOrderItemsParams): Promise<OrderItem[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
@@ -190,7 +177,6 @@ export const orderItemService = {
     );
     queryParams.append("order", params?.order || "DESC");
 
-    // Parámetros opcionales de filtro
     if (params?.order_id) {
       queryParams.append("order_id", params.order_id.toString());
     }
@@ -219,7 +205,6 @@ export const orderItemService = {
     return response.data.data;
   },
 
-  // Obtener un item de pedido por ID
   getOrderItemById: async (id: string): Promise<OrderItem> => {
     const response = await api.get<OrderItemResponse>(
       `${GetOrderItemById}/${id}`
@@ -227,7 +212,6 @@ export const orderItemService = {
     return response.data.data;
   },
 
-  // Actualizar un item de pedido
   updateOrderItem: async (
     id: string,
     updates: UpdateOrderItemData
@@ -239,17 +223,14 @@ export const orderItemService = {
     return response.data.data;
   },
 
-  // Eliminar un item de pedido
   deleteOrderItem: async (id: string): Promise<void> => {
     await api.delete(`${DeleteOrderItem}/${id}`);
   },
 
-  // Sincronizar items de pedido desde ERP
   syncOrderItems: async (syncData: SyncOrderItemsData): Promise<void> => {
     await api.post<SyncOrderItemsResponse>(PostSyncOrderItems, syncData);
   },
 
-  // Métodos adicionales útiles
   getOrderItemsByOrder: async (orderId: number): Promise<OrderItem[]> => {
     return orderItemService.getOrderItems({
       order_id: orderId,
@@ -273,7 +254,6 @@ export const orderItemService = {
     });
   },
 
-  // Calcular totales de un pedido
   calculateOrderTotals: async (
     orderId: number
   ): Promise<{
@@ -306,7 +286,6 @@ export const orderItemService = {
     };
   },
 
-  // Obtener items con alto valor
   getHighValueItems: async (minAmount: number = 1000): Promise<OrderItem[]> => {
     const allItems = await orderItemService.getOrderItems({
       itemsPerPage: 10,
@@ -314,7 +293,6 @@ export const orderItemService = {
     return allItems.filter((item) => item.total_amount >= minAmount);
   },
 
-  // Verificar si un producto ya existe en un pedido
   checkProductInOrder: async (
     orderId: number,
     productId: number

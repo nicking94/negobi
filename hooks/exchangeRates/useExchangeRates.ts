@@ -7,7 +7,6 @@ import {
   GetExchangeRatesParams,
 } from "../../services/exchangeRates/exchangeRates.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseExchangeRatesFilters {
   baseCurrencyId?: number;
   targetCurrencyId?: number;
@@ -23,7 +22,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los tipos de cambio con filtros
   const loadExchangeRates = async (
     customFilters?: Partial<UseExchangeRatesFilters>
   ) => {
@@ -58,7 +56,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Crear tipo de cambio
   const createExchangeRate = async (
     exchangeRateData: CreateExchangeRateData
   ): Promise<ExchangeRate | null> => {
@@ -80,7 +77,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Actualizar tipo de cambio
   const updateExchangeRate = async (
     id: string,
     updates: UpdateExchangeRateData
@@ -110,7 +106,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Eliminar tipo de cambio
   const deleteExchangeRate = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -130,7 +125,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Obtener tipo de cambio por ID
   const getExchangeRateById = async (
     id: string
   ): Promise<ExchangeRate | null> => {
@@ -149,7 +143,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Crear múltiples tipos de cambio
   const createMultipleExchangeRates = async (
     exchangeRatesData: CreateExchangeRateData[]
   ): Promise<ExchangeRate[] | null> => {
@@ -174,7 +167,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Convertir moneda
   const convertCurrency = async (
     amount: number,
     fromCurrencyId: number,
@@ -199,7 +191,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
     }
   };
 
-  // Cargar tipos de cambio al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadExchangeRates();
   }, [
@@ -226,7 +217,6 @@ export const useExchangeRates = (filters: UseExchangeRatesFilters = {}) => {
   };
 };
 
-// Hook especializado para tipos de cambio activos
 export const useActiveExchangeRates = () => {
   const [activeExchangeRates, setActiveExchangeRates] = useState<
     ExchangeRate[]
@@ -264,7 +254,6 @@ export const useActiveExchangeRates = () => {
   };
 };
 
-// Hook especializado para un par de monedas específico
 export const useExchangeRatesByCurrencyPair = (
   baseCurrencyId?: number,
   targetCurrencyId?: number
@@ -319,7 +308,6 @@ export const useExchangeRatesByCurrencyPair = (
   };
 };
 
-// Hook para el tipo de cambio más reciente de un par
 export const useLatestExchangeRate = (
   baseCurrencyId?: number,
   targetCurrencyId?: number
@@ -371,7 +359,6 @@ export const useLatestExchangeRate = (
   };
 };
 
-// Hook para conversión de moneda en tiempo real
 export const useCurrencyConverter = () => {
   const [conversionResult, setConversionResult] = useState<{
     amount: number;
@@ -418,7 +405,6 @@ export const useCurrencyConverter = () => {
   };
 };
 
-// Hook para tipos de cambio por fecha
 export const useExchangeRatesByDate = (date?: string) => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -464,7 +450,6 @@ export const useExchangeRatesByDate = (date?: string) => {
   };
 };
 
-// Hook para gestión de tipos de cambio históricos
 export const useExchangeRateHistory = (
   baseCurrencyId?: number,
   targetCurrencyId?: number,
@@ -504,7 +489,6 @@ export const useExchangeRateHistory = (
         endDateStr
       );
 
-      // Filtrar por el par de monedas específico
       const filteredRates = rates.filter(
         (rate) =>
           rate.baseCurrencyId === targetBaseId &&

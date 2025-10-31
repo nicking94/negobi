@@ -29,11 +29,9 @@ import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { Toaster, toast } from "sonner";
 import { useProfile } from "@/hooks/users/useProfile";
-import { useTranslation } from "@/hooks/translation/useTranslation";
 
 const ProfilePage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const { translateRole } = useTranslation();
   const [activeSection, setActiveSection] = useState("profile");
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -52,7 +50,6 @@ const ProfilePage = () => {
     "administration",
   ].includes(profile?.role || "");
 
-  // Datos del usuario desde el hook
   const [userData, setUserData] = useState({
     first_name: "",
     last_name: "",
@@ -158,7 +155,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Función para calcular días restantes
   const calculateRemainingDays = (expiresAt: string): number => {
     const expirationDate = new Date(expiresAt);
     const today = new Date();
@@ -167,10 +163,6 @@ const ProfilePage = () => {
     return Math.max(0, remainingDays);
   };
 
-  // Verificar si el usuario es superadmin
-  const isSuperAdmin = profile?.role === "superAdmin";
-
-  // Mostrar loading mientras se carga el perfil
   if (loadingProfile) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20">
@@ -207,14 +199,6 @@ const ProfilePage = () => {
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Perfil de Usuario
             </h1>
-            {profile && (
-              <div className="text-sm text-gray_m">
-                Rol:{" "}
-                <span className="font-medium text-green_b capitalize">
-                  {translateRole(profile.role) || "Usuario"}
-                </span>
-              </div>
-            )}
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray_xxl p-6">
@@ -257,7 +241,6 @@ const ProfilePage = () => {
               )}
             </div>
 
-            {/* Sección de Información Personal */}
             {activeSection === "profile" && (
               <Card className="bg-white border-0 shadow-none">
                 <CardHeader className="px-0 pt-0">
@@ -371,7 +354,6 @@ const ProfilePage = () => {
               </Card>
             )}
 
-            {/* Sección de Cambio de Contraseña */}
             {activeSection === "password" && (
               <Card className="bg-white border-0 shadow-none">
                 <CardHeader className="px-0 pt-0">
@@ -385,7 +367,6 @@ const ProfilePage = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                    {/* Campo de Legal Tax ID - SIEMPRE visible */}
                     <div className="space-y-2">
                       <Label htmlFor="taxId" className="text-gray_b">
                         ID la Empresa *
@@ -485,7 +466,6 @@ const ProfilePage = () => {
               </Card>
             )}
 
-            {/* Sección de API Key para usuarios autorizados */}
             {activeSection === "apiKey" && canViewApiKey && (
               <Card className="bg-white border-0 shadow-none">
                 <CardHeader className="px-0 pt-0">
@@ -499,7 +479,6 @@ const ProfilePage = () => {
                   <div className="space-y-6">
                     {profile?.api_key?.key ? (
                       <>
-                        {/* API Key Principal */}
                         <div className="space-y-2">
                           <Label htmlFor="apiKey" className="text-gray_b">
                             Tu API Key
@@ -528,9 +507,7 @@ const ProfilePage = () => {
                           </div>
                         </div>
 
-                        {/* Información detallada de la API Key */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray_xxl">
-                          {/* Estado */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm flex items-center gap-2">
                               <div
@@ -549,7 +526,6 @@ const ProfilePage = () => {
                             </div>
                           </div>
 
-                          {/* Duración */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm flex items-center gap-2">
                               <Clock className="h-4 w-4" />
@@ -560,7 +536,6 @@ const ProfilePage = () => {
                             </div>
                           </div>
 
-                          {/* Expiración */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
@@ -577,7 +552,6 @@ const ProfilePage = () => {
                             </div>
                           </div>
 
-                          {/* Días Restantes */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm">
                               Días Restantes
@@ -603,9 +577,7 @@ const ProfilePage = () => {
                           </div>
                         </div>
 
-                        {/* Información adicional */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray_xxl">
-                          {/* Fecha de Creación */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm">
                               Fecha de Creación
@@ -623,7 +595,6 @@ const ProfilePage = () => {
                             </div>
                           </div>
 
-                          {/* ID de la API Key */}
                           <div className="space-y-2">
                             <Label className="text-gray_b text-sm">
                               ID de la API Key

@@ -9,7 +9,6 @@ import {
   StockAnalysis,
 } from "../../services/stockByWarehouse/stockByWarehouse.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseStockByWarehouseFilters {
   warehouseId?: number;
   productId?: number;
@@ -23,7 +22,6 @@ export const useStockByWarehouse = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar todos los stocks con filtros
   const loadStocks = async (
     customFilters?: Partial<UseStockByWarehouseFilters>
   ) => {
@@ -58,7 +56,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Crear stock por almacén
   const createStockByWarehouse = async (
     stockData: CreateStockByWarehouseData
   ): Promise<StockByWarehouse | null> => {
@@ -80,7 +77,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Actualizar stock por almacén
   const updateStockByWarehouse = async (
     id: string,
     updates: UpdateStockByWarehouseData
@@ -108,7 +104,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Eliminar stock por almacén
   const deleteStockByWarehouse = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -128,7 +123,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Obtener stock por almacén por ID
   const getStockByWarehouseById = async (
     id: string
   ): Promise<StockByWarehouse | null> => {
@@ -149,7 +143,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Sincronizar stocks desde ERP
   const syncStockByWarehouse = async (
     syncData: SyncStockByWarehouseData
   ): Promise<boolean> => {
@@ -157,7 +150,7 @@ export const useStockByWarehouse = (
       setLoading(true);
       setError(null);
       await stockByWarehouseService.syncStockByWarehouse(syncData);
-      // Recargar los stocks después de la sincronización
+
       await loadStocks();
       return true;
     } catch (err) {
@@ -172,7 +165,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Obtener stock por almacén y producto
   const getStockByWarehouseAndProduct = async (
     warehouseId: number,
     productId: number
@@ -197,7 +189,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Actualizar cantidad de stock
   const updateStockQuantity = async (
     id: string,
     newStock: number
@@ -214,7 +205,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Ajustar cantidad de stock
   const adjustStockQuantity = async (
     id: string,
     adjustment: number
@@ -246,7 +236,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Actualizar stock de reserva
   const updateReserveStock = async (
     id: string,
     newReserveStock: number
@@ -265,7 +254,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Actualizar stock entrante
   const updateIncomingStock = async (
     id: string,
     newIncomingStock: number
@@ -284,17 +272,14 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Calcular stock disponible
   const calculateAvailableStock = (stockRecord: StockByWarehouse): number => {
     return stockByWarehouseService.calculateAvailableStock(stockRecord);
   };
 
-  // Analizar nivel de stock
   const analyzeStockLevel = (stockRecord: StockByWarehouse): StockAnalysis => {
     return stockByWarehouseService.analyzeStockLevel(stockRecord);
   };
 
-  // Verificar si hay stock suficiente
   const hasSufficientStock = (
     stockRecord: StockByWarehouse,
     requiredQuantity: number
@@ -305,7 +290,6 @@ export const useStockByWarehouse = (
     );
   };
 
-  // Transferir stock entre almacenes
   const transferStock = async (
     fromStockId: string,
     toStockId: string,
@@ -320,7 +304,6 @@ export const useStockByWarehouse = (
         quantity
       );
       if (success) {
-        // Recargar los stocks después de la transferencia
         await loadStocks();
       }
       return success;
@@ -334,7 +317,6 @@ export const useStockByWarehouse = (
     }
   };
 
-  // Cargar stocks al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadStocks();
   }, [filters.warehouseId, filters.productId, filters.search]);
@@ -361,7 +343,6 @@ export const useStockByWarehouse = (
   };
 };
 
-// Hook especializado para stock por almacén específico
 export const useStockByWarehouseId = (warehouseId?: number) => {
   const [stocks, setStocks] = useState<StockByWarehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -379,7 +360,7 @@ export const useStockByWarehouseId = (warehouseId?: number) => {
       setError(null);
       const warehouseStocks = await stockByWarehouseService.getStockByWarehouse(
         {
-          warehouseId: targetWarehouseId, // ✅ Now correctly passed as object
+          warehouseId: targetWarehouseId,
           itemsPerPage: 10,
         }
       );
@@ -408,7 +389,6 @@ export const useStockByWarehouseId = (warehouseId?: number) => {
   };
 };
 
-// Hook especializado para stock por producto específico
 export const useStockByProductId = (productId?: number) => {
   const [stocks, setStocks] = useState<StockByWarehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -454,12 +434,10 @@ export const useStockByProductId = (productId?: number) => {
   };
 };
 
-// Hook para análisis de inventario
 export const useInventoryAnalysis = (warehouseId?: number) => {
   const { stocks, loading, error } = useStockByWarehouseId(warehouseId);
 
   const analysis = {
-    // Totales
     totalItems: stocks.length,
     totalPhysicalStock: stocks.reduce((total, stock) => total + stock.stock, 0),
     totalReservedStock: stocks.reduce(
@@ -476,7 +454,6 @@ export const useInventoryAnalysis = (warehouseId?: number) => {
       0
     ),
 
-    // Análisis por nivel de stock
     outOfStockItems: stocks.filter((stock) => {
       const analysis = stockByWarehouseService.analyzeStockLevel(stock);
       return analysis.stock_level === "OUT_OF_STOCK";
@@ -497,17 +474,15 @@ export const useInventoryAnalysis = (warehouseId?: number) => {
       return analysis.stock_level === "HIGH";
     }).length,
 
-    // Productos que necesitan reabastecimiento
     needsReplenishment: stocks.filter((stock) => {
       const analysis = stockByWarehouseService.analyzeStockLevel(stock);
       return analysis.needs_replenishment;
     }).length,
 
-    // Valor total estimado (placeholder - en una implementación real usarías precios de productos)
     estimatedTotalValue: stocks.reduce(
       (total, stock) => total + stock.stock,
       0
-    ), // Asumiendo 1 unidad = 1 valor
+    ),
   };
 
   return {
@@ -518,7 +493,6 @@ export const useInventoryAnalysis = (warehouseId?: number) => {
   };
 };
 
-// Hook para gestión de stock bajo
 export const useLowStockManagement = (warehouseId?: number) => {
   const [lowStockItems, setLowStockItems] = useState<StockByWarehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -558,7 +532,6 @@ export const useLowStockManagement = (warehouseId?: number) => {
   };
 };
 
-// Hook para gestión de stock agotado
 export const useOutOfStockManagement = (warehouseId?: number) => {
   const [outOfStockItems, setOutOfStockItems] = useState<StockByWarehouse[]>(
     []
@@ -600,7 +573,6 @@ export const useOutOfStockManagement = (warehouseId?: number) => {
   };
 };
 
-// Hook para transferencias entre almacenes
 export const useStockTransfers = () => {
   const { stocks, loading, error, refetch, transferStock } =
     useStockByWarehouse();

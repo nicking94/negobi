@@ -47,16 +47,21 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import useGetPaymentTerms from "@/hooks/paymentTerms/useGetPaymentTerms";
 import { useCreatePaymentTerm } from "@/hooks/paymentTerms/useCreatePaymentTerm";
 import { useDeletePaymentTerms } from "@/hooks/paymentTerms/useDeletePaymentTerms";
 import { usePatchPaymentTerms } from "@/hooks/paymentTerms/usePatchPaymentTerms";
 import { PaymentTermType } from "@/types";
 
-// Schema modificado para permitir string vacío en la descripción
 const paymentTermSchema = z.object({
   term_name: z.string().min(1, "El nombre es requerido"),
-  term_description: z.string().optional(), // Cambiado a optional para permitir string vacío
+  term_description: z.string().optional(),
   number_of_days: z.number().min(0, "Los días deben ser un número positivo"),
 });
 
@@ -100,6 +105,15 @@ const PaymentTermsPage = () => {
   useEffect(() => {
     setPage(1);
   }, [statusFilter, setPage]);
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+  };
 
   const {
     createPaymentTerm: createPaymentTermAction,
@@ -158,14 +172,12 @@ const PaymentTermsPage = () => {
 
   const onSubmit = async (data: PaymentTermFormValues) => {
     try {
-      // Asegurar que la descripción sea string vacío si no se ingresa valor
       const formData = {
         ...data,
-        term_description: data.term_description || "", // Forzar string vacío si es undefined
+        term_description: data.term_description || "",
       };
 
       if (selectedPaymentTerm) {
-        // Actualizar término de pago existente
         await updatePaymentTermAction({
           id: selectedPaymentTerm.id.toString(),
           data: {
@@ -174,7 +186,6 @@ const PaymentTermsPage = () => {
           },
         });
       } else {
-        // Crear nuevo término de pago
         await createPaymentTermAction({
           ...formData,
           is_active: true,
@@ -189,7 +200,7 @@ const PaymentTermsPage = () => {
     setSelectedPaymentTerm(paymentTerm);
     form.reset({
       term_name: paymentTerm.term_name,
-      term_description: paymentTerm.term_description || "", // Asegurar string vacío si es null/undefined
+      term_description: paymentTerm.term_description || "",
       number_of_days: paymentTerm.number_of_days,
     });
     setIsEditDialogOpen(true);
@@ -234,7 +245,7 @@ const PaymentTermsPage = () => {
         id: paymentTerm.id.toString(),
         data: {
           term_name: paymentTerm.term_name,
-          term_description: paymentTerm.term_description || "", // Asegurar string vacío
+          term_description: paymentTerm.term_description || "",
           number_of_days: paymentTerm.number_of_days,
           is_active: !paymentTerm.is_active,
         },
@@ -253,7 +264,6 @@ const PaymentTermsPage = () => {
     }
   };
 
-  // Estados de carga combinados
   const isActionLoading = isCreateLoading || isUpdateLoading || isDeleteLoading;
 
   const columns: ColumnDef<PaymentTermType>[] = [
@@ -404,7 +414,7 @@ const PaymentTermsPage = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
+            <div className="flex gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray_m" />
                 <Input
@@ -416,22 +426,32 @@ const PaymentTermsPage = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtrar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[18rem]">
-                    <div className="px-2 py-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium">
+                        Filtros de Términos de Pago
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Ajusta los filtros para encontrar los términos de pago
+                        que necesitas.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="status-filter">Estado</Label>
                       <Select
                         value={statusFilter}
-                        onValueChange={setStatusFilter}
+                        onValueChange={handleStatusChange}
                       >
-                        <SelectTrigger id="status-filter" className="mt-1">
+                        <SelectTrigger id="status-filter">
                           <SelectValue placeholder="Todos los estados" />
                         </SelectTrigger>
                         <SelectContent>
@@ -444,10 +464,32 @@ const PaymentTermsPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          document.dispatchEvent(
+                            new KeyboardEvent("keydown", { key: "Escape" })
+                          );
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+
             <Button
               onClick={handleCreateClick}
               className="flex items-center gap-2"
@@ -477,7 +519,6 @@ const PaymentTermsPage = () => {
         </main>
       </div>
 
-      {/* Modal de confirmación para eliminar */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="w-full bg-white sm:max-w-[500px] p-4 sm:p-6">
           <DialogHeader>
@@ -526,7 +567,6 @@ const PaymentTermsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para crear/editar */}
       <Dialog
         open={isEditDialogOpen || isCreateDialogOpen}
         onOpenChange={(open) => {

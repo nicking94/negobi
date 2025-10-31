@@ -1,4 +1,4 @@
-// hooks/auth/useUserCompany.ts - ACTUALIZADO
+// hooks/auth/useUserCompany.ts
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect, useMemo } from "react";
 import { UsersService } from "@/services/users/users.service";
@@ -31,7 +31,6 @@ export const useUserCompany = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userCompany, setUserCompany] = useState<any>(null);
-  // ✅ NUEVO: Estado para la empresa seleccionada
   const [selectedCompanyId, setSelectedCompanyId] = useState<
     number | undefined
   >(undefined);
@@ -43,7 +42,6 @@ export const useUserCompany = () => {
         return;
       }
 
-      // Si ya tenemos el perfil, no hacer fetch nuevamente
       if (userProfile && userProfile.id === parseInt(user.id)) {
         setIsLoading(false);
         return;
@@ -75,7 +73,7 @@ export const useUserCompany = () => {
 
           if (response.data.company) {
             setUserCompany(response.data.company);
-            // ✅ Inicializar selectedCompanyId con la empresa del usuario
+
             if (!selectedCompanyId && response.data.company.id) {
               setSelectedCompanyId(response.data.company.id);
             }
@@ -103,11 +101,9 @@ export const useUserCompany = () => {
     };
 
     fetchUserProfile();
-  }, [user]); // Solo dependencia de user
+  }, [user]);
 
-  // CORRECCIÓN: Usar useMemo para evitar recálculos innecesarios
   const companyId = useMemo(() => {
-    // ✅ Prioridad: selectedCompanyId > userCompany > userProfile
     return (
       selectedCompanyId ||
       userProfile?.company_id ||
@@ -133,8 +129,8 @@ export const useUserCompany = () => {
 
   return {
     companyId,
-    selectedCompanyId, // ✅ NUEVO: Exportar selectedCompanyId
-    setSelectedCompanyId, // ✅ NUEVO: Exportar setSelectedCompanyId
+    selectedCompanyId,
+    setSelectedCompanyId,
     isLoading: isLoading || authLoading,
     hasCompany: !!companyId,
     user: userProfile,

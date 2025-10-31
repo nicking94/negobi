@@ -7,7 +7,6 @@ import {
   GetWarehousesParams,
 } from "../../services/warehouse/warehouse.service";
 
-// Definir el tipo para los filtros del hook
 export interface UseWarehousesFilters {
   search?: string;
   companyId?: number;
@@ -19,7 +18,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // En hooks/warehouse/useWarehouses.ts
   const loadWarehouses = async (
     customFilters?: Partial<UseWarehousesFilters>
   ) => {
@@ -62,7 +60,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Crear almacén
   const createWarehouse = async (
     warehouseData: CreateWarehouseData
   ): Promise<Warehouse | null> => {
@@ -82,7 +79,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Actualizar almacén
   const updateWarehouse = async (
     id: string,
     updates: UpdateWarehouseData
@@ -110,7 +106,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Eliminar almacén
   const deleteWarehouse = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -130,7 +125,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Obtener almacén por ID
   const getWarehouseById = async (id: string): Promise<Warehouse | null> => {
     try {
       setLoading(true);
@@ -145,7 +139,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Activar/desactivar almacén
   const toggleWarehouseStatus = async (
     id: string,
     isActive: boolean
@@ -162,7 +155,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un código de almacén
   const checkWarehouseCodeExists = async (code: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -183,7 +175,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Verificar si existe un nombre de almacén
   const checkWarehouseNameExists = async (name: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -204,24 +195,20 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
     }
   };
 
-  // Validar teléfono
   const validatePhone = (phone: string): boolean => {
     return warehouseService.validatePhone(phone);
   };
 
-  // Formatear teléfono
   const formatPhone = (phone: string): string => {
     return warehouseService.formatPhone(phone);
   };
 
-  // Filtrar almacenes por sucursal
   const getWarehousesByBranch = (branchId: number): Warehouse[] => {
     return warehouses.filter(
       (warehouse) => warehouse.companyBranchId === branchId
     );
   };
 
-  // Cargar almacenes al montar el hook o cuando cambien los filtros
   useEffect(() => {
     loadWarehouses();
   }, [filters.search, filters.companyId, filters.branchId]);
@@ -244,7 +231,6 @@ export const useWarehouses = (filters: UseWarehousesFilters = {}) => {
   };
 };
 
-// Hook especializado para almacenes activos
 export const useActiveWarehouses = (companyId?: number) => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -280,7 +266,6 @@ export const useActiveWarehouses = (companyId?: number) => {
   };
 };
 
-// Hook para select/dropdown de almacenes
 export const useWarehousesForSelect = (companyId?: number) => {
   const [options, setOptions] = useState<
     Array<{ value: number; label: string; code: string; branchId: number }>
@@ -320,7 +305,6 @@ export const useWarehousesForSelect = (companyId?: number) => {
   };
 };
 
-// Hook para búsqueda de almacenes
 export const useWarehouseSearch = (companyId?: number) => {
   const [searchResults, setSearchResults] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -391,39 +375,32 @@ export const useWarehouseSearch = (companyId?: number) => {
   };
 };
 
-// Hook para análisis de almacenes
 export const useWarehousesAnalysis = (companyId?: number) => {
   const { warehouses, loading, error } = useActiveWarehouses(companyId);
 
   const analysis = {
-    // Total de almacenes
     totalWarehouses: warehouses.length,
 
-    // Almacenes por sucursal
     warehousesByBranch: warehouses.reduce((branches, warehouse) => {
       const branchId = warehouse.companyBranchId;
       branches[branchId] = (branches[branchId] || 0) + 1;
       return branches;
     }, {} as Record<number, number>),
 
-    // Almacenes activos vs inactivos
     activeWarehouses: warehouses.filter((warehouse) => warehouse.is_active)
       .length,
     inactiveWarehouses: warehouses.filter((warehouse) => !warehouse.is_active)
       .length,
 
-    // Almacenes con información de contacto completa
     warehousesWithCompleteContact: warehouses.filter(
       (warehouse) => warehouse.contact_person && warehouse.contact_phone
     ).length,
 
-    // Almacenes con dirección
     warehousesWithAddress: warehouses.filter(
       (warehouse) =>
         warehouse.location_address && warehouse.location_address.trim() !== ""
     ).length,
 
-    // Sucursales únicas
     uniqueBranches: [
       ...new Set(warehouses.map((warehouse) => warehouse.companyBranchId)),
     ],

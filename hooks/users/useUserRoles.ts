@@ -1,4 +1,4 @@
-// hooks/users/useUserRoles.ts - CORREGIDO
+// hooks/users/useUserRoles.ts
 import { useState, useEffect, useMemo } from "react";
 import {
   UsersService,
@@ -31,9 +31,8 @@ export const useUserRoles = () => {
     };
 
     fetchRoles();
-  }, []); // Array de dependencias vacío para que solo se ejecute una vez
+  }, []);
 
-  // CORRECCIÓN: Usar useMemo para filtrar roles
   const getFilteredRoles = useMemo(() => {
     return (allRoles: string[]): string[] => {
       if (isSuperAdmin) {
@@ -47,7 +46,7 @@ export const useUserRoles = () => {
         return allRoles.filter((role) => !restrictedRoles.includes(role));
       }
     };
-  }, [isSuperAdmin, isAdmin]); // Dependencias específicas
+  }, [isSuperAdmin, isAdmin]);
 
   return {
     data,

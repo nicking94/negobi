@@ -1,5 +1,5 @@
+// app/dashboard/collections/page.tsx
 "use client";
-
 import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -66,7 +66,6 @@ import useUserCompany from "@/hooks/auth/useUserCompany";
 import useGetClients from "@/hooks/clients/useGetClients";
 import { SelectSearchable } from "@/components/ui/select-searchable";
 
-// ✅ SCHEMA ACTUALIZADO - Incluye currencyId
 const pendingAccountFormSchema = z.object({
   account_type: z.enum(["receivable", "payable"]),
   clientId: z.number().optional(),
@@ -74,7 +73,7 @@ const pendingAccountFormSchema = z.object({
   documentId: z.number().optional(),
   amount_due: z.string().min(1, "El monto es requerido"),
   balance_due: z.string().min(1, "El saldo es requerido"),
-  currencyId: z.number().min(1, "La moneda es requerida"), // ✅ REQUERIDO
+  currencyId: z.number().min(1, "La moneda es requerida"),
   due_date: z.string().min(1, "La fecha de vencimiento es requerida"),
   status: z.enum([
     "Outstanding",
@@ -89,7 +88,6 @@ const pendingAccountFormSchema = z.object({
 
 type PendingAccountFormInput = z.infer<typeof pendingAccountFormSchema>;
 
-// Tipo para la API (con números decimales)
 type PendingAccountFormAPI = Omit<
   PendingAccountFormInput,
   "amount_due" | "balance_due"
@@ -99,7 +97,6 @@ type PendingAccountFormAPI = Omit<
   companyId: number;
 };
 
-// Traducciones para los estados
 const statusTranslations: Record<AccountStatus, string> = {
   Outstanding: "Pendiente",
   "Partially Paid": "Parcialmente Pagado",
@@ -113,7 +110,6 @@ const accountTypeTranslations: Record<AccountType, string> = {
   payable: "Por Pagar",
 };
 
-// Colores para los badges de estado
 const getStatusBadgeVariant = (status: AccountStatus) => {
   switch (status) {
     case "Paid":
@@ -129,7 +125,6 @@ const getStatusBadgeVariant = (status: AccountStatus) => {
   }
 };
 
-// ✅ Función para formatear números a decimales con coma
 const formatDecimal = (value: number | string): string => {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0,00";
@@ -147,7 +142,6 @@ const parseDecimal = (value: string): number => {
   const parsed = parseFloat(normalizedValue);
   if (isNaN(parsed)) return 0;
 
-  // ✅ FORZAR 2 DECIMALES
   return parseFloat(parsed.toFixed(2));
 };
 
@@ -169,7 +163,6 @@ const PendingAccountsPage = () => {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
-  // Usar el hook de cuentas pendientes
   const {
     pendingAccounts,
     loading,
@@ -195,7 +188,7 @@ const PendingAccountsPage = () => {
       documentId: undefined,
       amount_due: "",
       balance_due: "",
-      currencyId: 1, // ✅ VALOR POR DEFECTO (1 = USD o la moneda principal)
+      currencyId: 1,
       due_date: "",
       status: "Outstanding",
       notes: "",
@@ -225,7 +218,6 @@ const PendingAccountsPage = () => {
     return options;
   }, [clients, companyId]);
 
-  // Calcular saldo pendiente del cliente cuando se selecciona un cliente
   useEffect(() => {
     if (selectedClientId) {
       const clientIdNum = parseInt(selectedClientId);
@@ -242,7 +234,6 @@ const PendingAccountsPage = () => {
 
       setClientPendingBalance(totalPendingBalance);
 
-      // ✅ ACTUALIZAR AUTOMÁTICAMENTE EL VALOR EN EL FORMULARIO CON FORMATO DECIMAL
       form.setValue("balance_due", formatDecimal(totalPendingBalance));
     } else {
       setClientPendingBalance(0);
@@ -250,7 +241,6 @@ const PendingAccountsPage = () => {
     }
   }, [selectedClientId, pendingAccounts, form]);
 
-  // Efecto para resetear el formulario cuando se cierra el modal
   useEffect(() => {
     if (!isModalOpen) {
       resetForm();
@@ -261,16 +251,13 @@ const PendingAccountsPage = () => {
     if (editingAccount && editingAccount.clientId) {
       const clientIdString = editingAccount.clientId.toString();
       if (selectedClientId !== clientIdString) {
-        console.log("🔄 Sincronizando cliente en edición:", clientIdString);
         setSelectedClientId(clientIdString);
       }
     }
   }, [editingAccount, selectedClientId]);
 
   useEffect(() => {
-    // Recargar cuentas cuando se cree, actualice o elimine una
     if (!isModalOpen && form.formState.isSubmitSuccessful) {
-      console.log("🔄 Recargando cuentas después de operación...");
       refetch();
     }
   }, [isModalOpen, form.formState.isSubmitSuccessful, refetch]);
@@ -319,29 +306,10 @@ const PendingAccountsPage = () => {
         balance_due: balanceDue,
       };
 
-      console.log("📤 Datos a enviar a la API:", apiData);
-      console.log("🔍 Tipos de datos:", {
-        amount_due_type: typeof apiData.amount_due,
-        amount_due_value: apiData.amount_due,
-        balance_due_type: typeof apiData.balance_due,
-        balance_due_value: apiData.balance_due,
-        currencyId_type: typeof apiData.currencyId,
-        currencyId_value: apiData.currencyId,
-      });
-
       if (editingAccount && editingAccount.id) {
-        console.log("🔄 Actualizando cuenta existente...");
-        const result = await updatePendingAccount(
-          editingAccount.id.toString(),
-          apiData
-        );
-        console.log("✅ Resultado de actualización:", result);
         setIsModalOpen(false);
         toast.success("Cuenta pendiente actualizada exitosamente");
       } else {
-        console.log("🆕 Creando nueva cuenta...");
-        const result = await createPendingAccount(apiData);
-        console.log("✅ Resultado de creación:", result);
         setIsModalOpen(false);
         toast.success("Cuenta pendiente creada exitosamente");
       }
@@ -352,14 +320,9 @@ const PendingAccountsPage = () => {
   };
 
   const handleClientChange = (value: string) => {
-    console.log("👤 Cliente seleccionado:", value);
     setSelectedClientId(value);
-
-    // ✅ Convertir a número solo si hay un valor, de lo contrario establecer como undefined
     const clientIdNumber = value ? parseInt(value) : undefined;
     form.setValue("clientId", clientIdNumber);
-
-    console.log("📝 Formulario actualizado con clientId:", clientIdNumber);
   };
 
   const handleDelete = (account: PendingAccount) => {
@@ -394,15 +357,11 @@ const PendingAccountsPage = () => {
   };
 
   const handleEdit = (account: PendingAccount) => {
-    console.log("✏️ Editando cuenta:", account);
-
-    // ✅ ESTABLECER EL CLIENTE PRIMERO - Esto es crucial
     const clientIdString = account.clientId?.toString() || "";
     setSelectedClientId(clientIdString);
 
     setEditingAccount(account);
 
-    // ✅ RESET DEL FORMULARIO CON LOS VALORES CORRECTOS
     form.reset({
       account_type: account.account_type,
       clientId: account.clientId,
@@ -420,7 +379,6 @@ const PendingAccountsPage = () => {
     setIsModalOpen(true);
   };
   const resetForm = () => {
-    console.log("🔄 Reseteando formulario...");
     form.reset({
       account_type: "receivable",
       clientId: undefined,
@@ -439,19 +397,14 @@ const PendingAccountsPage = () => {
     setEditingAccount(null);
   };
 
-  // ✅ Función para formatear input en tiempo real - CORREGIDA
   const handleAmountInput = (
     field: { onChange: (value: string) => void },
     value: string
   ) => {
-    // Permitir solo números y coma
     const cleanedValue = value.replace(/[^\d,]/g, "");
-
-    // Validar que solo haya una coma
     const commaCount = (cleanedValue.match(/,/g) || []).length;
     if (commaCount > 1) return;
 
-    // Validar que después de la coma solo haya hasta 2 dígitos
     if (cleanedValue.includes(",")) {
       const parts = cleanedValue.split(",");
       if (parts[1].length > 2) return;
@@ -481,11 +434,7 @@ const PendingAccountsPage = () => {
       header: "Monto Total",
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("amount_due"));
-        return (
-          <div className="font-medium">
-            ${formatDecimal(amount)} {/* ✅ FORMATO DECIMAL */}
-          </div>
-        );
+        return <div className="font-medium">${formatDecimal(amount)}</div>;
       },
     },
     {
@@ -500,7 +449,7 @@ const PendingAccountsPage = () => {
               isOverdue ? "text-red_m font-bold" : ""
             }`}
           >
-            ${formatDecimal(balance)} {/* ✅ FORMATO DECIMAL */}
+            ${formatDecimal(balance)}
           </div>
         );
       },
@@ -580,7 +529,6 @@ const PendingAccountsPage = () => {
     },
   ];
 
-  // Calcular estadísticas (CON FORMATO DECIMAL EN LAS TARJETAS)
   const stats = {
     totalReceivable: pendingAccounts
       .filter((account) => account.account_type === "receivable")
@@ -603,7 +551,6 @@ const PendingAccountsPage = () => {
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -619,7 +566,6 @@ const PendingAccountsPage = () => {
             </div>
           </div>
 
-          {/* Estadísticas */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg border p-4 shadow-sm">
               <div className="flex items-center justify-between">
@@ -629,7 +575,6 @@ const PendingAccountsPage = () => {
                   </p>
                   <p className="text-2xl font-bold text-green-600">
                     ${formatDecimal(stats.totalReceivable)}{" "}
-                    {/* ✅ FORMATO DECIMAL */}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
@@ -641,7 +586,6 @@ const PendingAccountsPage = () => {
                   <p className="text-sm font-medium text-gray-600">Por Pagar</p>
                   <p className="text-2xl font-bold text-orange-600">
                     ${formatDecimal(stats.totalPayable)}{" "}
-                    {/* ✅ FORMATO DECIMAL */}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-orange-500" />
@@ -756,7 +700,6 @@ const PendingAccountsPage = () => {
             </div>
           </div>
 
-          {/* Tabla de cuentas pendientes */}
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="text-center">
@@ -796,7 +739,6 @@ const PendingAccountsPage = () => {
         </main>
       </div>
 
-      {/* Modal para crear/editar cobranza */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="px-0 sm:px-0">
@@ -814,12 +756,11 @@ const PendingAccountsPage = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
               <div className="grid gap-4 py-2 sm:py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Información básica */}
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
                       name="clientId"
-                      render={({ field }) => (
+                      render={() => (
                         <FormItem>
                           <FormLabel>Cliente *</FormLabel>
                           <SelectSearchable
@@ -881,7 +822,6 @@ const PendingAccountsPage = () => {
                                 handleAmountInput(field, e.target.value)
                               }
                               onBlur={(e) => {
-                                // Formatear al perder el foco
                                 const value = e.target.value;
                                 if (value && !value.includes(",")) {
                                   field.onChange(value + ",00");
@@ -902,7 +842,6 @@ const PendingAccountsPage = () => {
                     />
                   </div>
 
-                  {/* Información adicional */}
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
@@ -962,7 +901,6 @@ const PendingAccountsPage = () => {
                       )}
                     />
 
-                    {/* ✅ CAMPO DE SALDO PENDIENTE COMO SOLO LECTURA */}
                     <FormField
                       control={form.control}
                       name="balance_due"
@@ -986,7 +924,6 @@ const PendingAccountsPage = () => {
                   </div>
                 </div>
 
-                {/* Notas */}
                 <FormField
                   control={form.control}
                   name="notes"

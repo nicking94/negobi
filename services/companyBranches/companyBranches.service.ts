@@ -34,12 +34,9 @@ export interface CompanyBranch {
 }
 
 export interface CreateCompanyBranchData {
-  // Campos requeridos para crear una sucursal
   companyId: number;
   name: string;
   code: string;
-
-  // Campos opcionales para creación
   contact_email?: string;
   main_phone?: string;
   physical_address?: string;
@@ -48,7 +45,6 @@ export interface CreateCompanyBranchData {
 }
 
 export interface UpdateCompanyBranchData {
-  // Todos los campos son opcionales para actualización
   name?: string;
   code?: string;
   contact_email?: string;
@@ -58,7 +54,6 @@ export interface UpdateCompanyBranchData {
   is_central?: boolean;
 }
 
-// Response interfaces
 export interface CompanyBranchResponse {
   success: boolean;
   data: CompanyBranch;
@@ -93,8 +88,6 @@ export const companyBranchService = {
 
       if (params.companyId && params.companyId > 0) {
         queryParams.append("companyId", params.companyId.toString());
-      } else {
-        console.log("🔵 Solicitando TODAS las sucursales (sin companyId)");
       }
 
       if (params?.search) {
@@ -139,7 +132,6 @@ export const companyBranchService = {
     }
   },
 
-  // Actualizar una sucursal - CORREGIDO
   updateCompanyBranch: async (
     id: string,
     updates: UpdateCompanyBranchData
@@ -154,7 +146,6 @@ export const companyBranchService = {
     }
   },
 
-  // Obtener una sucursal por ID - CORREGIDO
   getCompanyBranchById: async (id: string): Promise<CompanyBranch> => {
     const response = await api.get(`${GetCompanyBranches}/${id}`);
     const responseData = response.data;

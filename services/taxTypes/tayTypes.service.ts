@@ -18,11 +18,9 @@ export interface GetTaxTypesParams {
   is_active?: boolean;
 }
 
-// Tipos para los valores enumerados
 export type AppliesTo = "Sales" | "Purchases" | "Both";
 
 export interface TaxType {
-  // Campos del response (GET)
   id: number;
   tax_name: string;
   tax_code: string;
@@ -32,8 +30,6 @@ export interface TaxType {
   applies_to_purchase: boolean;
   description: string;
   is_active: boolean;
-
-  // Campos de sistema
   external_code?: string;
   sync_with_erp: boolean;
   created_at: string;
@@ -46,8 +42,8 @@ export interface CreateTaxTypeData {
   tax_code: string;
   default_rate: number;
   is_percentage?: boolean;
-  applies_to_sales?: boolean; // Add this
-  applies_to_purchase?: boolean; // Add this
+  applies_to_sales?: boolean;
+  applies_to_purchase?: boolean;
   description?: string;
   is_active?: boolean;
 }
@@ -57,13 +53,12 @@ export interface UpdateTaxTypeData {
   tax_code?: string;
   default_rate?: number;
   is_percentage?: boolean;
-  applies_to_sales?: boolean; // Add this
-  applies_to_purchase?: boolean; // Add this
+  applies_to_sales?: boolean;
+  applies_to_purchase?: boolean;
   description?: string;
   is_active?: boolean;
 }
 
-// Interfaces para sincronización
 export interface SyncTaxTypeData {
   tax_name: string;
   tax_code: string;
@@ -86,7 +81,6 @@ export interface SyncResponse {
   };
 }
 
-// Response interfaces
 export interface TaxTypeResponse {
   success: boolean;
   data: TaxType;
@@ -107,30 +101,23 @@ export interface PaginatedTaxTypesResponse {
 }
 
 export const taxTypeService = {
-  // Crear un nuevo tipo de impuesto
   createTaxType: async (taxTypeData: CreateTaxTypeData): Promise<TaxType> => {
-    // If user provides applies_to, convert it
     const formattedData = { ...taxTypeData };
-
-    // Remove applies_to if it exists (it shouldn't be in CreateTaxTypeData anymore)
     delete (formattedData as any).applies_to;
 
     const response = await api.post(PostTaxType, formattedData);
     return response.data;
   },
 
-  // Obtener todos los tipos de impuestos
   getTaxTypes: async (params?: GetTaxTypesParams): Promise<TaxType[]> => {
     const queryParams = new URLSearchParams();
 
-    // Parámetros requeridos
     queryParams.append("page", params?.page?.toString() || "1");
     queryParams.append(
       "itemsPerPage",
       params?.itemsPerPage?.toString() || "10"
     );
 
-    // Parámetros opcionales
     if (params?.search) {
       queryParams.append("search", params.search);
     }
@@ -154,32 +141,27 @@ export const taxTypeService = {
     return response.data;
   },
 
-  // Actualizar un tipo de impuesto
   updateTaxType: async (
     id: string,
     updates: UpdateTaxTypeData
   ): Promise<TaxType> => {
     const formattedUpdates = { ...updates };
 
-    // Remove applies_to if it exists
     delete (formattedUpdates as any).applies_to;
 
     const response = await api.patch(`${PatchTaxType}/${id}`, formattedUpdates);
     return response.data;
   },
 
-  // Eliminar un tipo de impuesto
   deleteTaxType: async (id: string): Promise<void> => {
     await api.delete(`${DeleteTaxType}/${id}`);
   },
 
-  // Obtener un tipo de impuesto por ID
   getTaxTypeById: async (id: string): Promise<TaxType> => {
     const response = await api.get(`${GetTaxTypes}/${id}`);
     return response.data;
   },
 
-  // Sincronizar tipos de impuestos desde ERP
   syncTaxTypes: async (
     syncData: SyncTaxTypesPayload
   ): Promise<SyncResponse> => {
@@ -187,7 +169,6 @@ export const taxTypeService = {
     return response.data;
   },
 
-  // Métodos adicionales útiles
   getActiveTaxTypes: async (): Promise<TaxType[]> => {
     return taxTypeService.getTaxTypes({
       is_active: true,
@@ -226,7 +207,6 @@ export const taxTypeService = {
     }
   },
 
-  // Calcular impuesto
   calculateTax: (amount: number, taxType: TaxType): number => {
     if (taxType.is_percentage) {
       return amount * (taxType.default_rate / 100);

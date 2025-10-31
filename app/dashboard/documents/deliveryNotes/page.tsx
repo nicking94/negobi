@@ -10,7 +10,6 @@ import {
   Filter,
   Truck,
   Building,
-  Package,
   Calendar,
   Hash,
   Receipt,
@@ -50,8 +49,12 @@ import useGetClients from "@/hooks/clients/useGetClients";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCurrencyFormatter } from "@/hooks/currencies/useCurrencyFormatter"; // Importar el hook
-import { PriceDisplay } from "@/components/PriceDisplay"; // Importar el componente
+import { PriceDisplay } from "@/components/PriceDisplay";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type DeliveryNote = {
   id: string;
@@ -76,16 +79,11 @@ const DeliveryNotesPage = () => {
     useState<DeliveryNote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
   const [clientFilter, setClientFilter] = useState<string>("all");
-
-  // Usar el hook de formateo de moneda
-  const { formatPrice, formatForTable, getNumericValue } =
-    useCurrencyFormatter();
 
   const { clientsResponse, loading: clientsLoading } = useGetClients({
     search: searchTerm,
@@ -93,7 +91,6 @@ const DeliveryNotesPage = () => {
 
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
 
-  // Componentes auxiliares (deberían estar en un archivo separado o en el mismo)
   const InfoRow = ({
     label,
     value,
@@ -136,7 +133,6 @@ const DeliveryNotesPage = () => {
         (client, index) => {
           const notesForClient = [];
 
-          // Cada cliente tendrá entre 1-3 notas de entrega
           const noteCount = Math.floor(Math.random() * 3) + 1;
 
           for (let i = 0; i < noteCount; i++) {
@@ -148,7 +144,7 @@ const DeliveryNotesPage = () => {
 
             notesForClient.push({
               id: `${client.id}-${i + 1}`,
-              client: client.legal_name, // Usar el nombre legal del cliente real
+              client: client.legal_name,
               correlative: `NE${String(clientsResponse.length + index).padStart(
                 5,
                 "0"
@@ -187,7 +183,6 @@ const DeliveryNotesPage = () => {
     }
   }, [clientsResponse]);
 
-  // Obtener lista de clientes únicos desde los clientes reales
   const clients = useMemo(() => {
     if (!clientsResponse || clientsResponse.length === 0) {
       return [];
@@ -200,11 +195,9 @@ const DeliveryNotesPage = () => {
     }));
   }, [clientsResponse]);
 
-  // Filtrar notas de entrega según los criterios
   const filteredDeliveryNotes = useMemo(() => {
     let filteredNotes = deliveryNotes;
 
-    // Filtrar por cliente seleccionado
     if (clientFilter !== "all") {
       const selectedClientName = clients.find(
         (c) => c.id === clientFilter
@@ -214,14 +207,6 @@ const DeliveryNotesPage = () => {
       );
     }
 
-    // Filtrar por estado (si no es "todos")
-    if (statusFilter !== "all") {
-      filteredNotes = filteredNotes.filter(
-        (note) => note.status === statusFilter
-      );
-    }
-
-    // Filtrar por rango de fechas
     if (dateRange?.from && dateRange?.to) {
       filteredNotes = filteredNotes.filter(
         (note) =>
@@ -231,7 +216,7 @@ const DeliveryNotesPage = () => {
     }
 
     return filteredNotes;
-  }, [deliveryNotes, clientFilter, statusFilter, dateRange, clients]);
+  }, [deliveryNotes, clientFilter, dateRange, clients]);
 
   const handleViewDeliveryNote = (note: DeliveryNote) => {
     setSelectedDeliveryNote(note);
@@ -246,35 +231,8 @@ const DeliveryNotesPage = () => {
     toast.success(`Nota de entrega ${note.correlative} procesada exitosamente`);
   };
 
-  // REMOVER la función formatCurrency anterior
   const formatDate = (date: Date) => {
     return format(date, "dd/MM/yyyy hh:mm a");
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      pending: "bg-yellow-100 text-yellow-800",
-      delivered: "bg-green_xxl text-green_b",
-      cancelled: "bg-red_xxl text-red_b",
-      in_transit: "bg-blue-100 text-blue-800",
-    };
-
-    const statusText = {
-      pending: "Pendiente",
-      delivered: "Entregado",
-      cancelled: "Cancelado",
-      in_transit: "En tránsito",
-    };
-
-    return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
-          statusClasses[status as keyof typeof statusClasses]
-        }`}
-      >
-        {statusText[status as keyof typeof statusText]}
-      </span>
-    );
   };
 
   const columns: ColumnDef<DeliveryNote>[] = [
@@ -322,16 +280,7 @@ const DeliveryNotesPage = () => {
       header: "Total",
       cell: ({ row }) => {
         const total = parseFloat(row.getValue("total"));
-        // Usar PriceDisplay en lugar de formatCurrency
         return <PriceDisplay value={total} variant="table" />;
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Estado",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as string;
-        return <div className="font-medium">{getStatusBadge(status)}</div>;
       },
     },
     {
@@ -373,12 +322,20 @@ const DeliveryNotesPage = () => {
     },
   ];
 
+  const handleClearFilters = () => {
+    setClientFilter("all");
+
+    setDateRange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date(),
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
       <Sidebar />
 
-      {/* Contenedor principal sin margen lateral */}
       <div className="flex flex-col flex-1 w-full transition-all duration-300">
         <DashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -392,7 +349,6 @@ const DeliveryNotesPage = () => {
             </h1>
           </div>
 
-          {/* Búsqueda y Filtros - REORGANIZADO como en sucursales */}
           <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div className="flex flex-col md:flex-row gap-2 w-full max-w-[30rem]">
               <div className="w-full max-w-[30rem] relative">
@@ -407,107 +363,95 @@ const DeliveryNotesPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <Filter className="h-4 w-4" />
                       <span>Filtrar</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[18rem]">
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="status-filter">Estado</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estados</SelectItem>
-                          <SelectItem value="pending">Pendiente</SelectItem>
-                          <SelectItem value="in_transit">
-                            En tránsito
-                          </SelectItem>
-                          <SelectItem value="delivered">Entregado</SelectItem>
-                          <SelectItem value="cancelled">Cancelado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="client-filter">Cliente</Label>
+                        <Select
+                          value={clientFilter}
+                          onValueChange={setClientFilter}
+                          disabled={clientsLoading}
+                        >
+                          <SelectTrigger id="client-filter">
+                            <Building className="h-4 w-4 mr-2" />
+                            <SelectValue
+                              placeholder={
+                                clientsLoading
+                                  ? "Cargando clientes..."
+                                  : "Todos los clientes"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              Todos los clientes
+                            </SelectItem>
+                            {clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <DropdownMenuSeparator />
+                      <div className="space-y-2">
+                        <Label htmlFor="date-range">Período</Label>
+                        <div className="mt-1">
+                          <DatePicker
+                            selected={dateRange?.from}
+                            onChange={(dates: [Date | null, Date | null]) => {
+                              const [start, end] = dates;
+                              setDateRange({
+                                from: start || undefined,
+                                to: end || undefined,
+                              });
+                            }}
+                            startDate={dateRange?.from}
+                            endDate={dateRange?.to}
+                            selectsRange
+                            isClearable
+                            placeholderText="Seleccionar rango"
+                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            dateFormat="dd/MM/yyyy"
+                          />
+                        </div>
+                      </div>
 
-                    <div className="px-2 py-1.5">
-                      <Label htmlFor="date-range">Período</Label>
-                      <div className="mt-1">
-                        <DatePicker
-                          selected={dateRange?.from}
-                          onChange={(dates: [Date | null, Date | null]) => {
-                            const [start, end] = dates;
-                            setDateRange({
-                              from: start || undefined,
-                              to: end || undefined,
-                            });
+                      <div className="flex justify-between pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearFilters}
+                        >
+                          Limpiar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            document.dispatchEvent(
+                              new KeyboardEvent("keydown", { key: "Escape" })
+                            );
                           }}
-                          startDate={dateRange?.from}
-                          endDate={dateRange?.to}
-                          selectsRange
-                          isClearable
-                          placeholderText="Seleccionar rango"
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          dateFormat="dd/MM/yyyy"
-                        />
+                        >
+                          Aplicar
+                        </Button>
                       </div>
                     </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Selector de Cliente a la DERECHA como en sucursales */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label
-                  htmlFor="client-selector"
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Filtrar por Cliente:
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={clientFilter}
-                    onValueChange={setClientFilter}
-                    disabled={clientsLoading}
-                  >
-                    <SelectTrigger
-                      id="client-selector"
-                      className="w-full md:w-64"
-                    >
-                      <Building className="h-4 w-4 mr-2" />
-                      <SelectValue
-                        placeholder={
-                          clientsLoading
-                            ? "Cargando clientes..."
-                            : "Todos los clientes"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los clientes</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
 
-          {/* Loading state */}
           {clientsLoading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green_m mx-auto"></div>
@@ -517,7 +461,6 @@ const DeliveryNotesPage = () => {
             </div>
           )}
 
-          {/* Tabla de notas de entrega */}
           {!clientsLoading && (
             <DataTable<DeliveryNote, DeliveryNote>
               columns={columns}
@@ -577,7 +520,6 @@ const DeliveryNotesPage = () => {
 
           {selectedDeliveryNote && (
             <div className="p-6 space-y-6">
-              {/* Información Básica */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-4 flex items-center gap-3">
@@ -618,7 +560,6 @@ const DeliveryNotesPage = () => {
                 </Card>
               </div>
 
-              {/* Cliente y Vendedor */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <InfoCard title="Información del Cliente">
                   <div className="space-y-2">
@@ -651,7 +592,6 @@ const DeliveryNotesPage = () => {
                 </InfoCard>
               </div>
 
-              {/* Información de Contacto */}
               <InfoCard title="Información de Contacto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -670,7 +610,6 @@ const DeliveryNotesPage = () => {
                 </div>
               </InfoCard>
 
-              {/* Notas */}
               {selectedDeliveryNote.notes && (
                 <InfoCard title="Notas">
                   <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-md border border-yellow-200">
@@ -678,67 +617,9 @@ const DeliveryNotesPage = () => {
                   </p>
                 </InfoCard>
               )}
-
-              {/* Productos */}
-              <InfoCard title="Productos a Entregar">
-                <div className="bg-gray-50 rounded-md p-6 text-center border border-gray-200">
-                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">
-                    Detalle de productos por implementar
-                  </p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Aquí se mostrará la lista de productos asociados a esta
-                    entrega
-                  </p>
-                </div>
-              </InfoCard>
-
-              {/* Resumen Financiero */}
-              <InfoCard title="Resumen Financiero">
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <InfoRow
-                        label="Subtotal"
-                        // Usar PriceDisplay para subtotal
-                        value={
-                          <PriceDisplay
-                            value={selectedDeliveryNote.total * 0.85}
-                            variant="default"
-                          />
-                        }
-                      />
-                      <InfoRow
-                        label="IVA (15%)"
-                        // Usar PriceDisplay para IVA
-                        value={
-                          <PriceDisplay
-                            value={selectedDeliveryNote.total * 0.15}
-                            variant="default"
-                          />
-                        }
-                        valueClass="text-blue-600"
-                      />
-                    </div>
-
-                    <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200">
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="font-bold text-gray-900">Total</span>
-                        {/* Usar PriceDisplay para el total */}
-                        <PriceDisplay
-                          value={selectedDeliveryNote.total}
-                          variant="summary"
-                          className="font-bold text-lg text-green-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </InfoCard>
             </div>
           )}
 
-          {/* Footer Actions */}
           <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
             <Button
               type="button"
