@@ -1,12 +1,9 @@
 // app/dashboard/collections/page.tsx
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
-  Trash2,
-  Edit,
-  Plus,
   Search,
   Filter,
   DollarSign,
@@ -17,17 +14,9 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,23 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+
 import { useSidebar } from "@/context/SidebarContext";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { DataTable } from "@/components/ui/dataTable";
-
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast, Toaster } from "sonner";
+import { Toaster } from "sonner";
 import { usePendingAccounts } from "@/hooks/pendingAccounts/usePendingAccounts";
 import {
   PendingAccount,
@@ -63,39 +41,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import useUserCompany from "@/hooks/auth/useUserCompany";
-import useGetClients from "@/hooks/clients/useGetClients";
-import { SelectSearchable } from "@/components/ui/select-searchable";
-
-const pendingAccountFormSchema = z.object({
-  account_type: z.enum(["receivable", "payable"]),
-  clientId: z.number().optional(),
-  supplierId: z.number().optional(),
-  documentId: z.number().optional(),
-  amount_due: z.string().min(1, "El monto es requerido"),
-  balance_due: z.string().min(1, "El saldo es requerido"),
-  currencyId: z.number().min(1, "La moneda es requerida"),
-  due_date: z.string().min(1, "La fecha de vencimiento es requerida"),
-  status: z.enum([
-    "Outstanding",
-    "Partially Paid",
-    "Paid",
-    "Overdue",
-    "Cancelled",
-  ]),
-  notes: z.string().optional(),
-  external_code: z.string().optional(),
-});
-
-type PendingAccountFormInput = z.infer<typeof pendingAccountFormSchema>;
-
-type PendingAccountFormAPI = Omit<
-  PendingAccountFormInput,
-  "amount_due" | "balance_due"
-> & {
-  amount_due: number;
-  balance_due: number;
-  companyId: number;
-};
 
 const statusTranslations: Record<AccountStatus, string> = {
   Outstanding: "Pendiente",
@@ -136,282 +81,20 @@ const formatDecimal = (value: number | string): string => {
   });
 };
 
-const parseDecimal = (value: string): number => {
-  if (!value || value.trim() === "") return 0;
-  const normalizedValue = value.replace(",", ".").replace(/\s/g, "");
-  const parsed = parseFloat(normalizedValue);
-  if (isNaN(parsed)) return 0;
-
-  return parseFloat(parsed.toFixed(2));
-};
-
 const PendingAccountsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const { companyId, selectedCompanyId } = useUserCompany();
-  const { clientsResponse: clients } = useGetClients({
-    companyId: selectedCompanyId || companyId,
-    itemsPerPage: 1000,
-  });
-
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [clientPendingBalance, setClientPendingBalance] = useState<number>(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<PendingAccount | null>(
-    null
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
-  const {
-    pendingAccounts,
-    loading,
-    error,
-    createPendingAccount,
-    updatePendingAccount,
-    deletePendingAccount,
-    refetch,
-  } = usePendingAccounts({
+  const { pendingAccounts, loading, error, refetch } = usePendingAccounts({
     search: searchTerm,
     account_type:
       selectedType !== "all" ? (selectedType as AccountType) : undefined,
     status: selectedStatus !== "all" ? selectedStatus : undefined,
     companyId: selectedCompanyId || companyId,
   });
-
-  const form = useForm<PendingAccountFormInput>({
-    resolver: zodResolver(pendingAccountFormSchema),
-    defaultValues: {
-      account_type: "receivable",
-      clientId: undefined,
-      supplierId: undefined,
-      documentId: undefined,
-      amount_due: "",
-      balance_due: "",
-      currencyId: 1,
-      due_date: "",
-      status: "Outstanding",
-      notes: "",
-      external_code: "",
-    },
-    mode: "onChange",
-  });
-
-  const clientOptions = useMemo(() => {
-    if (!clients || clients.length === 0) {
-      return [];
-    }
-
-    const filteredClients = clients.filter((client) => {
-      const belongsToCompany =
-        !client.companyId || client.companyId === companyId;
-      return belongsToCompany;
-    });
-
-    const options = filteredClients
-      .filter((client) => client.id != null)
-      .map((client) => ({
-        value: client.id!.toString(),
-        label: `${client.legal_name || "Cliente sin nombre"}`,
-      }));
-
-    return options;
-  }, [clients, companyId]);
-
-  useEffect(() => {
-    if (selectedClientId) {
-      const clientIdNum = parseInt(selectedClientId);
-      const clientAccounts = pendingAccounts.filter(
-        (account) =>
-          account.clientId === clientIdNum &&
-          account.account_type === "receivable"
-      );
-
-      const totalPendingBalance = clientAccounts.reduce(
-        (sum, account) => sum + account.balance_due,
-        0
-      );
-
-      setClientPendingBalance(totalPendingBalance);
-
-      form.setValue("balance_due", formatDecimal(totalPendingBalance));
-    } else {
-      setClientPendingBalance(0);
-      form.setValue("balance_due", "");
-    }
-  }, [selectedClientId, pendingAccounts, form]);
-
-  useEffect(() => {
-    if (!isModalOpen) {
-      resetForm();
-    }
-  }, [isModalOpen]);
-
-  useEffect(() => {
-    if (editingAccount && editingAccount.clientId) {
-      const clientIdString = editingAccount.clientId.toString();
-      if (selectedClientId !== clientIdString) {
-        setSelectedClientId(clientIdString);
-      }
-    }
-  }, [editingAccount, selectedClientId]);
-
-  useEffect(() => {
-    if (!isModalOpen && form.formState.isSubmitSuccessful) {
-      refetch();
-    }
-  }, [isModalOpen, form.formState.isSubmitSuccessful, refetch]);
-
-  const onSubmit = async (values: PendingAccountFormInput) => {
-    try {
-      const targetCompanyId = selectedCompanyId || companyId;
-
-      if (!targetCompanyId) {
-        toast.error("No se puede crear la cobranza: Empresa no configurada");
-        return;
-      }
-
-      if (!values.amount_due || parseDecimal(values.amount_due) <= 0) {
-        toast.error("El monto debe ser mayor a 0");
-        return;
-      }
-
-      if (!values.due_date) {
-        toast.error("La fecha de vencimiento es requerida");
-        return;
-      }
-
-      if (values.account_type === "receivable" && !values.clientId) {
-        toast.error("El cliente es requerido para cuentas por cobrar");
-        return;
-      }
-
-      if (!values.currencyId) {
-        toast.error("La moneda es requerida");
-        return;
-      }
-
-      const amountDue = parseDecimal(values.amount_due);
-      const balanceDue = parseDecimal(values.balance_due);
-
-      if (isNaN(amountDue) || isNaN(balanceDue)) {
-        toast.error("Los montos deben ser números válidos");
-        return;
-      }
-
-      const apiData: PendingAccountFormAPI = {
-        ...values,
-        companyId: targetCompanyId,
-        amount_due: amountDue,
-        balance_due: balanceDue,
-      };
-
-      if (editingAccount && editingAccount.id) {
-        setIsModalOpen(false);
-        toast.success("Cuenta pendiente actualizada exitosamente");
-      } else {
-        setIsModalOpen(false);
-        toast.success("Cuenta pendiente creada exitosamente");
-      }
-    } catch (error) {
-      console.error("❌ Error en onSubmit:", error);
-      toast.error("Error al guardar la cuenta pendiente");
-    }
-  };
-
-  const handleClientChange = (value: string) => {
-    setSelectedClientId(value);
-    const clientIdNumber = value ? parseInt(value) : undefined;
-    form.setValue("clientId", clientIdNumber);
-  };
-
-  const handleDelete = (account: PendingAccount) => {
-    if (!account.id) {
-      toast.error("No se puede eliminar: Cuenta sin ID válido");
-      return;
-    }
-
-    toast.error(
-      `¿Eliminar la cuenta "${account.external_code || `ID: ${account.id}`}"?`,
-      {
-        description: "Esta acción no se puede deshacer.",
-        action: {
-          label: "Eliminar",
-          onClick: async () => {
-            try {
-              await deletePendingAccount(account.id.toString());
-              toast.success("Cuenta pendiente eliminada exitosamente");
-            } catch {
-              toast.error("Error al eliminar la cuenta pendiente");
-            }
-          },
-        },
-        cancel: {
-          label: "Cancelar",
-          onClick: () => {
-            toast.info("Eliminación cancelada");
-          },
-        },
-      }
-    );
-  };
-
-  const handleEdit = (account: PendingAccount) => {
-    const clientIdString = account.clientId?.toString() || "";
-    setSelectedClientId(clientIdString);
-
-    setEditingAccount(account);
-
-    form.reset({
-      account_type: account.account_type,
-      clientId: account.clientId,
-      supplierId: account.supplierId,
-      documentId: account.documentId,
-      amount_due: formatDecimal(account.amount_due),
-      balance_due: formatDecimal(account.balance_due),
-      currencyId: account.currencyId || 1,
-      due_date: account.due_date.split("T")[0],
-      status: account.status,
-      notes: account.notes || "",
-      external_code: account.external_code || "",
-    });
-
-    setIsModalOpen(true);
-  };
-  const resetForm = () => {
-    form.reset({
-      account_type: "receivable",
-      clientId: undefined,
-      supplierId: undefined,
-      documentId: undefined,
-      amount_due: "",
-      balance_due: "",
-      currencyId: 1,
-      due_date: "",
-      status: "Outstanding",
-      notes: "",
-      external_code: "",
-    });
-    setSelectedClientId("");
-    setClientPendingBalance(0);
-    setEditingAccount(null);
-  };
-
-  const handleAmountInput = (
-    field: { onChange: (value: string) => void },
-    value: string
-  ) => {
-    const cleanedValue = value.replace(/[^\d,]/g, "");
-    const commaCount = (cleanedValue.match(/,/g) || []).length;
-    if (commaCount > 1) return;
-
-    if (cleanedValue.includes(",")) {
-      const parts = cleanedValue.split(",");
-      if (parts[1].length > 2) return;
-    }
-
-    field.onChange(cleanedValue);
-  };
 
   const columns: ColumnDef<PendingAccount>[] = [
     {
@@ -496,32 +179,15 @@ const PendingAccountsPage = () => {
       id: "actions",
       header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => {
-        const account = row.original;
         return (
           <div className="flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0" disabled>
                   <MoreHorizontal className="h-4 w-4" />
                   <span className="sr-only">Acciones</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleEdit(account)}
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Editar</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(account)}
-                  className="cursor-pointer flex items-center gap-2 text-red_m"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Eliminar</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
             </DropdownMenu>
           </div>
         );
@@ -543,9 +209,6 @@ const PendingAccountsPage = () => {
     totalAccounts: pendingAccounts.length,
   };
 
-  const isSubmitting = form.formState.isSubmitting;
-  const formIsValid = form.formState.isValid;
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/20 overflow-hidden relative">
       <Toaster richColors position="top-right" />
@@ -563,6 +226,9 @@ const PendingAccountsPage = () => {
               <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
                 Cobranzas
               </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Vista de solo lectura - Consulta de cuentas pendientes
+              </p>
             </div>
           </div>
 
@@ -685,19 +351,6 @@ const PendingAccountsPage = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsModalOpen(true);
-                }}
-                className="gap-2 w-full sm:w-auto"
-                disabled={loading}
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nueva Cobranza</span>
-              </Button>
-            </div>
           </div>
 
           {loading ? (
@@ -738,242 +391,6 @@ const PendingAccountsPage = () => {
           )}
         </main>
       </div>
-
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="px-0 sm:px-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              {editingAccount ? "Editar Cobranza" : "Crear Nueva Cobranza"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingAccount
-                ? "Modifica la información de la cobranza"
-                : "Completa la información para crear una nueva cobranza"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-              <div className="grid gap-4 py-2 sm:py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="clientId"
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>Cliente *</FormLabel>
-                          <SelectSearchable
-                            value={selectedClientId}
-                            onValueChange={handleClientChange}
-                            placeholder="Seleccionar cliente..."
-                            options={clientOptions}
-                            emptyMessage="No se encontraron clientes."
-                            searchPlaceholder="Buscar cliente..."
-                            className="w-full"
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="account_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Cuenta *</FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona el tipo de cuenta" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="receivable">
-                                Por Cobrar
-                              </SelectItem>
-                              <SelectItem value="payable">Por Pagar</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="amount_due"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Monto Total *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              placeholder="0,00"
-                              className="w-full"
-                              disabled={isSubmitting}
-                              onChange={(e) =>
-                                handleAmountInput(field, e.target.value)
-                              }
-                              onBlur={(e) => {
-                                const value = e.target.value;
-                                if (value && !value.includes(",")) {
-                                  field.onChange(value + ",00");
-                                } else if (value.includes(",")) {
-                                  const parts = value.split(",");
-                                  if (parts[1].length === 1) {
-                                    field.onChange(
-                                      parts[0] + "," + parts[1] + "0"
-                                    );
-                                  }
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="due_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha de Vencimiento *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="date"
-                              className="w-full"
-                              disabled={isSubmitting}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                setTimeout(() => form.trigger("due_date"), 100);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estado</FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona el estado" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Outstanding">
-                                Pendiente
-                              </SelectItem>
-                              <SelectItem value="Partially Paid">
-                                Parcialmente Pagado
-                              </SelectItem>
-                              <SelectItem value="Paid">Pagado</SelectItem>
-                              <SelectItem value="Overdue">Vencido</SelectItem>
-                              <SelectItem value="Cancelled">
-                                Cancelado
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="balance_due"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Saldo Pendiente *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              placeholder="0,00"
-                              className="w-full bg-gray-100 cursor-not-allowed"
-                              readOnly
-                              disabled
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notas</FormLabel>
-                      <FormControl>
-                        <textarea
-                          {...field}
-                          placeholder="Información adicional sobre la cobranza..."
-                          className="bg-white flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          rows={3}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    resetForm();
-                  }}
-                  className="w-full sm:w-auto"
-                  disabled={isSubmitting}
-                >
-                  Cerrar
-                </Button>
-                <Button
-                  type="submit"
-                  className="w-full sm:w-auto"
-                  disabled={isSubmitting || !formIsValid}
-                >
-                  {isSubmitting
-                    ? "Guardando..."
-                    : editingAccount
-                    ? "Actualizar"
-                    : "Guardar"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

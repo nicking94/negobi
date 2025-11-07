@@ -1,24 +1,5 @@
-import api from "../../utils/api";
-import {
-  PostCompanyConfig,
-  GetCompanyConfigs,
-  PatchCompanyConfig,
-  DeleteCompanyConfig,
-} from "../companyConfig/companyConfig.route";
-
-export interface GetCompanyConfigsParams {
-  page?: number;
-  itemsPerPage?: number;
-  order?: "ASC" | "DESC";
-  search?: string;
-  companyId?: number;
-  show_available_stock?: boolean;
-  price_by_default?: string;
-  sync_with_app?: boolean;
-  unable_to_debt_client?: boolean;
-  connect_with_virtual_store?: boolean;
-  enable_data_replication?: boolean;
-}
+// services/companyConfig/companyConfig.service.ts
+import api from "@/utils/api";
 
 export interface WorkDays {
   monday: boolean;
@@ -56,6 +37,7 @@ export interface CreateCompanyConfigData {
   unable_to_debt_client?: boolean;
   connect_with_virtual_store?: boolean;
   enable_data_replication?: boolean;
+  external_code?: string;
 }
 
 export interface UpdateCompanyConfigData {
@@ -67,105 +49,76 @@ export interface UpdateCompanyConfigData {
   unable_to_debt_client?: boolean;
   connect_with_virtual_store?: boolean;
   enable_data_replication?: boolean;
+  external_code?: string;
 }
 
-export interface CompanyConfigResponse {
-  success: boolean;
-  data: CompanyConfig;
-}
-
-export interface CompanyConfigsListResponse {
-  success: boolean;
+interface PaginatedResponse {
   data: CompanyConfig[];
+  totalPages: number;
+  total: number;
 }
 
-export interface PaginatedCompanyConfigsResponse {
+interface ApiResponse {
   success: boolean;
-  data: {
-    data: CompanyConfig[];
-    totalPages: number;
-    total: number;
-  };
+  data: CompanyConfig | PaginatedResponse;
 }
 
 export const companyConfigService = {
   createCompanyConfig: async (
     configData: CreateCompanyConfigData
   ): Promise<CompanyConfig> => {
-    const response = await api.post(PostCompanyConfig, configData);
-    return response.data.data;
+    const response = await api.post<ApiResponse>("/company-config", configData);
+    return response.data.data as CompanyConfig;
   },
 
-  getCompanyConfigs: async (
-    params?: GetCompanyConfigsParams
-  ): Promise<CompanyConfig[]> => {
+  getCompanyConfigs: async (params?: any): Promise<CompanyConfig[]> => {
     const queryParams = new URLSearchParams();
 
-    queryParams.append("page", params?.page?.toString() || "1");
-    queryParams.append(
-      "itemsPerPage",
-      params?.itemsPerPage?.toString() || "10"
+    if (params) {
+      Object.keys(params).forEach((key) => {
+        if (params[key] !== undefined && params[key] !== null) {
+          if (key === "page" || key === "itemsPerPage") {
+            queryParams.append(key, parseInt(params[key]).toString());
+          } else {
+            queryParams.append(key, params[key].toString());
+          }
+        }
+      });
+    }
+
+    if (!params?.page) {
+      queryParams.append("page", "1");
+    }
+    if (!params?.itemsPerPage) {
+      queryParams.append("itemsPerPage", "10");
+    }
+
+    const response = await api.get<ApiResponse>(
+      `/company-config?${queryParams}`
     );
 
-    if (params?.companyId) {
-      queryParams.append("companyId", params.companyId.toString());
-    }
-    if (params?.search) {
-      queryParams.append("search", params.search);
-    }
-    if (params?.order) {
-      queryParams.append("order", params.order);
-    }
-    if (params?.show_available_stock !== undefined) {
-      queryParams.append(
-        "show_available_stock",
-        params.show_available_stock.toString()
-      );
-    }
-    if (params?.price_by_default) {
-      queryParams.append("price_by_default", params.price_by_default);
-    }
-    if (params?.sync_with_app !== undefined) {
-      queryParams.append("sync_with_app", params.sync_with_app.toString());
-    }
-    if (params?.unable_to_debt_client !== undefined) {
-      queryParams.append(
-        "unable_to_debt_client",
-        params.unable_to_debt_client.toString()
-      );
-    }
-    if (params?.connect_with_virtual_store !== undefined) {
-      queryParams.append(
-        "connect_with_virtual_store",
-        params.connect_with_virtual_store.toString()
-      );
-    }
-    if (params?.enable_data_replication !== undefined) {
-      queryParams.append(
-        "enable_data_replication",
-        params.enable_data_replication.toString()
-      );
-    }
-
-    const response = await api.get(`${GetCompanyConfigs}?${queryParams}`);
-    return response.data.data;
+    const responseData = response.data.data as PaginatedResponse;
+    return responseData.data || [];
   },
 
   updateCompanyConfig: async (
     id: string,
     updates: UpdateCompanyConfigData
   ): Promise<CompanyConfig> => {
-    const response = await api.patch(`${PatchCompanyConfig}/${id}`, updates);
-    return response.data.data;
+    const response = await api.patch<ApiResponse>(
+      `/company-config/${id}`,
+      updates
+    );
+    return response.data.data as CompanyConfig;
   },
 
   deleteCompanyConfig: async (id: string): Promise<void> => {
-    await api.delete(`${DeleteCompanyConfig}/${id}`);
+    await api.delete(`/company-config/${id}`);
   },
 
   getCompanyConfigById: async (id: string): Promise<CompanyConfig> => {
-    const response = await api.get(`${GetCompanyConfigs}/${id}`);
-    return response.data.data;
+    const response = await api.get<ApiResponse>(`/company-config/${id}`);
+    return response.data.data as CompanyConfig;
   },
 
   getCompanyConfigByCompanyId: async (
@@ -174,6 +127,7 @@ export const companyConfigService = {
     try {
       const configs = await companyConfigService.getCompanyConfigs({
         companyId,
+        page: 1,
         itemsPerPage: 1,
       });
       return configs.length > 0 ? configs[0] : null;

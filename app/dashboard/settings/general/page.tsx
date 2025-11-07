@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSidebar } from "@/context/SidebarContext";
+import { useUserCompany } from "@/hooks/auth/useUserCompany";
+import { useCompanyConfig } from "@/hooks/companyConfig/useCompanyConfig";
 import DashboardHeader from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/SideBar";
 import { Button } from "@/components/ui/button";
@@ -17,17 +19,53 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast, Toaster } from "sonner";
 
+const DAYS_LABELS = [
+  { id: 0, label: "Domingo", key: "sunday" },
+  { id: 1, label: "Lunes", key: "monday" },
+  { id: 2, label: "Martes", key: "tuesday" },
+  { id: 3, label: "Miércoles", key: "wednesday" },
+  { id: 4, label: "Jueves", key: "thursday" },
+  { id: 5, label: "Viernes", key: "friday" },
+  { id: 6, label: "Sábado", key: "saturday" },
+];
+
 const SettingsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { companyId } = useUserCompany();
+  const { config, loading, error, updateConfig, createConfig } =
+    useCompanyConfig(companyId);
+
   const [settings, setSettings] = useState({
     showAvailableStock: true,
-    defaultPrice: "price3",
-    syncServices: false,
-    ordersWithPositiveBalance: true,
-    workWeek: [1, 2, 3, 4, 5],
-    enableEcommerceSync: false,
+    defaultPrice: "regular",
+    syncWithApp: false,
+    unableToDebtClient: true,
+    workDays: {
+      monday: true,
+      tuesday: true,
+      wednesday: true,
+      thursday: true,
+      friday: true,
+      saturday: false,
+      sunday: false,
+    },
+    connectWithVirtualStore: false,
     enableDataReplication: true,
   });
+
+  useEffect(() => {
+    if (config) {
+      setSettings({
+        showAvailableStock: config.show_available_stock,
+        defaultPrice: config.price_by_default,
+        syncWithApp: config.sync_with_app,
+        unableToDebtClient: config.unable_to_debt_client,
+        workDays: config.work_days,
+        connectWithVirtualStore: config.connect_with_virtual_store,
+        enableDataReplication: config.enable_data_replication,
+      });
+    }
+  }, [config]);
 
   const handleSwitchChange = (key: string, value: boolean) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -37,19 +75,68 @@ const SettingsPage = () => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleWorkdayToggle = (dayIndex: number) => {
-    setSettings((prev) => {
-      const newWorkWeek = prev.workWeek.includes(dayIndex)
-        ? prev.workWeek.filter((day) => day !== dayIndex)
-        : [...prev.workWeek, dayIndex].sort();
-
-      return { ...prev, workWeek: newWorkWeek };
-    });
+  const handleWorkdayToggle = (dayKey: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      workDays: {
+        ...prev.workDays,
+        [dayKey]: !prev.workDays[dayKey as keyof typeof prev.workDays],
+      },
+    }));
   };
 
-  const handleSaveSettings = () => {
-    toast.success("Configuraciones guardadas exitosamente");
+  const handleSaveSettings = async () => {
+    if (!companyId) {
+      toast.error("No se pudo identificar la empresa");
+      return;
+    }
+
+    try {
+      const updateData = {
+        companyId,
+        show_available_stock: settings.showAvailableStock,
+        price_by_default: settings.defaultPrice,
+        sync_with_app: settings.syncWithApp,
+        work_days: settings.workDays,
+        unable_to_debt_client: settings.unableToDebtClient,
+        connect_with_virtual_store: settings.connectWithVirtualStore,
+        enable_data_replication: settings.enableDataReplication,
+      };
+
+      let result;
+      if (config) {
+        result = await updateConfig(updateData);
+      } else {
+        result = await createConfig(updateData);
+      }
+
+      if (result) {
+        toast.success("Configuraciones guardadas exitosamente");
+      } else {
+        toast.error("Error al guardar las configuraciones");
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Error al guardar las configuraciones");
+    }
   };
+
+  if (loading && !config) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full">
+          <DashboardHeader
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">Cargando configuración...</div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray_xxl/20 to-green_xxl/20 overflow-hidden relative">
@@ -67,10 +154,19 @@ const SettingsPage = () => {
             <h1 className="text-xl md:text-2xl font-semibold text-gray_b">
               Configuraciones generales
             </h1>
-            <Button onClick={handleSaveSettings}>Guardar cambios</Button>
+            <Button onClick={handleSaveSettings} disabled={loading}>
+              {loading ? "Guardando..." : "Guardar cambios"}
+            </Button>
           </div>
 
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+
           <div className="grid gap-8">
+            {/* Sección App */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray_b mb-4">App</h2>
 
@@ -114,10 +210,7 @@ const SettingsPage = () => {
                       <SelectValue placeholder="Seleccionar precio" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="price1">Precio 1</SelectItem>
-                      <SelectItem value="price2">Precio 2</SelectItem>
-                      <SelectItem value="price3">Precio 3</SelectItem>
-                      <SelectItem value="price4">Precio 4</SelectItem>
+                      <SelectItem value="regular">Regular</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -134,9 +227,9 @@ const SettingsPage = () => {
                   </div>
                   <Switch
                     id="sync-services"
-                    checked={settings.syncServices}
+                    checked={settings.syncWithApp}
                     onCheckedChange={(value) =>
-                      handleSwitchChange("syncServices", value)
+                      handleSwitchChange("syncWithApp", value)
                     }
                   />
                 </div>
@@ -153,15 +246,16 @@ const SettingsPage = () => {
                   </div>
                   <Switch
                     id="positive-balance"
-                    checked={settings.ordersWithPositiveBalance}
+                    checked={settings.unableToDebtClient}
                     onCheckedChange={(value) =>
-                      handleSwitchChange("ordersWithPositiveBalance", value)
+                      handleSwitchChange("unableToDebtClient", value)
                     }
                   />
                 </div>
               </div>
             </div>
 
+            {/* Sección Web */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray_b mb-4">Web</h2>
 
@@ -173,20 +267,16 @@ const SettingsPage = () => {
                     calendario de planificación de rutas.
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2">
-                    {[
-                      { id: 0, label: "Domingo" },
-                      { id: 1, label: "Lunes" },
-                      { id: 2, label: "Martes" },
-                      { id: 3, label: "Miércoles" },
-                      { id: 4, label: "Jueves" },
-                      { id: 5, label: "Viernes" },
-                      { id: 6, label: "Sábado" },
-                    ].map((day) => (
+                    {DAYS_LABELS.map((day) => (
                       <div key={day.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`day-${day.id}`}
-                          checked={settings.workWeek.includes(day.id)}
-                          onCheckedChange={() => handleWorkdayToggle(day.id)}
+                          checked={
+                            settings.workDays[
+                              day.key as keyof typeof settings.workDays
+                            ]
+                          }
+                          onCheckedChange={() => handleWorkdayToggle(day.key)}
                         />
                         <Label htmlFor={`day-${day.id}`} className="text-sm">
                           {day.label}
@@ -208,9 +298,9 @@ const SettingsPage = () => {
                   </div>
                   <Switch
                     id="ecommerce-sync"
-                    checked={settings.enableEcommerceSync}
+                    checked={settings.connectWithVirtualStore}
                     onCheckedChange={(value) =>
-                      handleSwitchChange("enableEcommerceSync", value)
+                      handleSwitchChange("connectWithVirtualStore", value)
                     }
                   />
                 </div>
