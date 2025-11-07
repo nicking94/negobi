@@ -38,6 +38,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+// Definir la interfaz para la estructura de ubicación
+interface Location {
+  coordinates: [number, number]; // [longitud, latitud]
+  address?: string;
+}
+
 const VisitsPage = () => {
   const { sidebarOpen, toggleSidebar } = useSidebar();
   const [searchTerm, setSearchTerm] = useState("");
@@ -170,7 +176,7 @@ const VisitsPage = () => {
       accessorKey: "location",
       header: "Ubicación",
       cell: ({ row }) => {
-        const location = row.getValue("location") as any;
+        const location = row.getValue("location") as Location;
         const coordinates = location?.coordinates;
 
         return (
